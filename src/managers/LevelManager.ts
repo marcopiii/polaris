@@ -46,7 +46,11 @@ export default class LevelManager {
   }
 
   getCurrentSpawnRate(): number {
-    return SPAWN_RATE_INITIAL + SPAWN_RATE_LEVEL_INCREMENT * (this.currentLevel - 1) + SPAWN_RATE_ACCELERATION * this.levelTimer;
+    return (
+      SPAWN_RATE_INITIAL +
+      SPAWN_RATE_LEVEL_INCREMENT * (this.currentLevel - 1) +
+      SPAWN_RATE_ACCELERATION * this.levelTimer
+    );
   }
 
   isLevelComplete(aliveEnemies: number): boolean {

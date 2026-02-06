@@ -20,7 +20,6 @@ export const BULLET_SPEED = 1.5; // 1.5 playfield radius per second
 // Damage system
 export const TERMINAL_RADIUS_INITIAL = 45; // 5% of playfield
 export const VISION_RADIUS_INITIAL = 900; // 100% of playfield
-export const VISION_RADIUS_DECREASE = 180; // 20% of playfield
 export const TERMINAL_RADIUS_INCREASE = 45; // 5% of playfield
 
 // Level system

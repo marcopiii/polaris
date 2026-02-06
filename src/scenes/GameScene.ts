@@ -5,7 +5,6 @@ import {
   PLAYFIELD_RADIUS,
   TERMINAL_RADIUS_INITIAL,
   VISION_RADIUS_INITIAL,
-  VISION_RADIUS_DECREASE,
   TERMINAL_RADIUS_INCREASE,
   COLORS,
   ENEMY_SIZE,
@@ -16,6 +15,7 @@ import Bullet from '../entities/Bullet';
 import ScoreManager from '../managers/ScoreManager';
 import LevelManager from '../managers/LevelManager';
 import AudioManager from '../managers/AudioManager';
+import PowerUpManager, { PowerUpType } from '../managers/PowerUpManager';
 import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
@@ -27,6 +27,7 @@ export default class GameScene extends Phaser.Scene {
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
   private audioManager!: AudioManager;
+  private powerUpManager!: PowerUpManager;
 
   private centerX!: number;
   private centerY!: number;
@@ -36,6 +37,8 @@ export default class GameScene extends Phaser.Scene {
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
+  private isPowerUpSelectionActive: boolean = false;
+  private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: 'GameScene' });
@@ -51,6 +54,7 @@ export default class GameScene extends Phaser.Scene {
     this.scoreManager = new ScoreManager();
     this.levelManager = new LevelManager();
     this.audioManager = new AudioManager(this);
+    this.powerUpManager = new PowerUpManager();
 
     // Set up blur effect
     this.setupBlurEffect();
@@ -129,8 +133,11 @@ export default class GameScene extends Phaser.Scene {
     // Update blur effect every frame
     this.updateBlurEffect();
 
+    // Pause game while power-up selection is active
+    if (this.isPowerUpSelectionActive) return;
+
     // Update player
-    const shootInfo = this.player.update(time, delta);
+    const shootInfo = this.player.update(time, delta, this.powerUpManager.getFireCooldown());
     if (shootInfo.shouldShoot) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
@@ -188,6 +195,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Check level completion
     if (this.levelManager.isLevelComplete(this.enemies.length)) {
+      const completedLevel = this.levelManager.getCurrentLevel();
       this.levelManager.completeLevel();
 
       // Reset vision radius with smooth transition
@@ -219,8 +227,10 @@ export default class GameScene extends Phaser.Scene {
         },
       });
 
-      // Start next level
-      this.levelManager.startLevel(this.levelManager.getCurrentLevel() + 1);
+      // Show power-up selection after a short delay
+      this.time.delayedCall(500, () => {
+        this.showPowerUpSelection(completedLevel);
+      });
     }
 
     // Check game over
@@ -230,16 +240,42 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private shoot(targetX: number, targetY: number) {
-    const bullet = new Bullet(
-      this,
-      this.player.x,
-      this.player.y,
-      targetX,
-      targetY,
-      this.centerX,
-      this.centerY
-    );
-    this.bullets.push(bullet);
+    const bulletCount = this.powerUpManager.getBulletCount();
+    const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
+    const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
+
+    if (bulletCount === 1) {
+      const bullet = new Bullet(
+        this,
+        this.player.x,
+        this.player.y,
+        targetX,
+        targetY,
+        this.centerX,
+        this.centerY
+      );
+      this.bullets.push(bullet);
+    } else {
+      // Center the spread around the aim direction
+      const startOffset = -((bulletCount - 1) / 2) * spreadAngle;
+      for (let i = 0; i < bulletCount; i++) {
+        const angle = baseAngle + startOffset + i * spreadAngle;
+        const dist = 100; // arbitrary distance to create target point
+        const tx = this.player.x + Math.cos(angle) * dist;
+        const ty = this.player.y + Math.sin(angle) * dist;
+        const bullet = new Bullet(
+          this,
+          this.player.x,
+          this.player.y,
+          tx,
+          ty,
+          this.centerX,
+          this.centerY
+        );
+        this.bullets.push(bullet);
+      }
+    }
+
     this.audioManager.playSound('shoot');
   }
 
@@ -285,7 +321,7 @@ export default class GameScene extends Phaser.Scene {
 
   private onEnemyReachedPlayer(enemy: Enemy) {
     enemy.destroy();
-    const newVisionRadius = this.visionRadius - VISION_RADIUS_DECREASE;
+    const newVisionRadius = this.visionRadius - this.powerUpManager.getVisionRadiusDecrease();
     this.audioManager.playSound('damage');
 
     // Screen shake on damage
@@ -386,6 +422,140 @@ export default class GameScene extends Phaser.Scene {
         },
       });
     }
+  }
+
+  private showPowerUpSelection(completedLevel: number) {
+    this.isPowerUpSelectionActive = true;
+    const nextLevel = completedLevel + 1;
+
+    // Semi-transparent backdrop
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x000000, 0.7);
+    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.powerUpUIElements.push(backdrop);
+
+    // Title
+    const title = this.add.text(
+      this.centerX,
+      this.centerY - 300,
+      `LEVEL ${completedLevel} COMPLETE`,
+      {
+        fontSize: '48px',
+        color: '#ffffff',
+        fontFamily: 'Arial, sans-serif',
+      }
+    );
+    title.setOrigin(0.5);
+    this.powerUpUIElements.push(title);
+
+    const subtitle = this.add.text(this.centerX, this.centerY - 230, 'Choose a Power-Up', {
+      fontSize: '28px',
+      color: '#cccccc',
+      fontFamily: 'Arial, sans-serif',
+    });
+    subtitle.setOrigin(0.5);
+    this.powerUpUIElements.push(subtitle);
+
+    // Get 3 random power-ups
+    const selection = this.powerUpManager.getRandomSelection();
+
+    // Render 3 cards
+    selection.forEach((powerUp, index) => {
+      const cardX = this.centerX + (index - 1) * 350;
+      const cardY = this.centerY + 20;
+      const stacks = this.powerUpManager.getStacks(powerUp.type);
+
+      // Card background
+      const cardBg = this.add.graphics();
+      cardBg.fillStyle(0x444444, 1);
+      cardBg.fillRoundedRect(cardX - 140, cardY - 120, 280, 300, 16);
+      cardBg.lineStyle(2, 0xffffff, 0.3);
+      cardBg.strokeRoundedRect(cardX - 140, cardY - 120, 280, 300, 16);
+      this.powerUpUIElements.push(cardBg);
+
+      // Power-up name
+      const nameText = this.add.text(cardX, cardY - 70, powerUp.name, {
+        fontSize: '26px',
+        color: '#ffffff',
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+      });
+      nameText.setOrigin(0.5);
+      this.powerUpUIElements.push(nameText);
+
+      // Description
+      const descText = this.add.text(cardX, cardY - 10, powerUp.description, {
+        fontSize: '18px',
+        color: '#aaaaaa',
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+        wordWrap: { width: 240 },
+      });
+      descText.setOrigin(0.5);
+      this.powerUpUIElements.push(descText);
+
+      // Stack count
+      if (stacks > 0) {
+        const stackText = this.add.text(cardX, cardY + 50, `Current: x${stacks}`, {
+          fontSize: '18px',
+          color: '#ffff00',
+          fontFamily: 'Arial, sans-serif',
+          align: 'center',
+        });
+        stackText.setOrigin(0.5);
+        this.powerUpUIElements.push(stackText);
+      }
+
+      // SELECT button
+      const selectBtn = this.add.text(cardX, cardY + 120, 'SELECT', {
+        fontSize: '22px',
+        color: '#ffffff',
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#666666',
+        padding: { x: 24, y: 10 },
+      });
+      selectBtn.setOrigin(0.5);
+      selectBtn.setInteractive({ useHandCursor: true });
+
+      selectBtn.on('pointerover', () => {
+        selectBtn.setStyle({ backgroundColor: '#888888' });
+      });
+      selectBtn.on('pointerout', () => {
+        selectBtn.setStyle({ backgroundColor: '#666666' });
+      });
+      selectBtn.on('pointerdown', () => {
+        this.selectPowerUp(powerUp.type, nextLevel);
+      });
+      this.powerUpUIElements.push(selectBtn);
+    });
+  }
+
+  private selectPowerUp(type: PowerUpType, nextLevel: number) {
+    this.powerUpManager.addPowerUp(type);
+
+    // Terminal Shrink: tween terminal radius down
+    if (type === PowerUpType.TERMINAL_SHRINK) {
+      const shrinkAmount = 0.04 * PLAYFIELD_RADIUS; // 36px
+      const newTerminal = Math.max(this.terminalRadius - shrinkAmount, TERMINAL_RADIUS_INITIAL);
+      this.tweens.add({
+        targets: this,
+        terminalRadius: newTerminal,
+        duration: 300,
+        ease: 'Quad.easeOut',
+        onUpdate: () => {
+          this.drawPlayfield();
+        },
+      });
+    }
+
+    // Destroy all UI elements
+    for (const el of this.powerUpUIElements) {
+      el.destroy();
+    }
+    this.powerUpUIElements = [];
+
+    this.isPowerUpSelectionActive = false;
+    this.levelManager.startLevel(nextLevel);
   }
 
   private gameOver() {

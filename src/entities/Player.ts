@@ -62,7 +62,11 @@ export default class Player {
     this.graphics.fillTriangle(tipX, tipY, baseX1, baseY1, baseX2, baseY2);
   }
 
-  update(_time: number, delta: number): { shouldShoot: boolean; targetX: number; targetY: number } {
+  update(
+    _time: number,
+    delta: number,
+    fireCooldown: number = FIRE_COOLDOWN
+  ): { shouldShoot: boolean; targetX: number; targetY: number } {
     // Update cooldown
     if (this.shootCooldown > 0) {
       this.shootCooldown -= delta;
@@ -75,7 +79,7 @@ export default class Player {
 
     if (this.isShooting && this.shootCooldown <= 0) {
       shouldShoot = true;
-      this.shootCooldown = FIRE_COOLDOWN;
+      this.shootCooldown = fireCooldown;
 
       const pointer = this.scene.input.activePointer;
       targetX = pointer.x;
