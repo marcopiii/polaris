@@ -25,7 +25,7 @@ export class ParticleEffects {
       scene.tweens.add({
         targets: particle,
         size: 0,
-        duration: 300 + Math.random() * 200,
+        duration: 600 + Math.random() * 400,
         ease: 'Cubic.easeIn',
         onUpdate: () => {
           particle.x += (particle.vx * 16) / 1000;
@@ -152,12 +152,18 @@ export class ParticleEffects {
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
+      const length = 6 + Math.random() * 10; // Splinter length (6-16px)
+      const width = 1 + Math.random() * 2; // Splinter width (1-3px)
+      const rotation = Math.atan2(vy, vx); // Orient along movement direction
+
       const particle = {
         x,
         y,
         vx,
         vy,
-        size: 2 + Math.random() * 7, // Variable particles (2-9px)
+        length,
+        width,
+        scale: 1,
       };
 
       // Create separate graphics for each particle
@@ -165,7 +171,7 @@ export class ParticleEffects {
 
       scene.tweens.add({
         targets: particle,
-        size: 0,
+        scale: 0,
         duration: 500 + Math.random() * 300, // Longer duration (500-800ms)
         ease: 'Cubic.easeIn',
         onUpdate: () => {
@@ -174,9 +180,34 @@ export class ParticleEffects {
           particle.vx *= 0.96; // Less deceleration for longer travel
           particle.vy *= 0.96;
 
+          const halfLen = (particle.length * particle.scale) / 2;
+          const halfWid = (particle.width * particle.scale) / 2;
+          const cos = Math.cos(rotation);
+          const sin = Math.sin(rotation);
+
           particleGraphics.clear();
           particleGraphics.fillStyle(COLORS.terminalRadiusHint, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
+          particleGraphics.fillPoints(
+            [
+              new Phaser.Geom.Point(
+                particle.x - halfLen * cos + halfWid * sin,
+                particle.y - halfLen * sin - halfWid * cos
+              ),
+              new Phaser.Geom.Point(
+                particle.x + halfLen * cos + halfWid * sin,
+                particle.y + halfLen * sin - halfWid * cos
+              ),
+              new Phaser.Geom.Point(
+                particle.x + halfLen * cos - halfWid * sin,
+                particle.y + halfLen * sin + halfWid * cos
+              ),
+              new Phaser.Geom.Point(
+                particle.x - halfLen * cos - halfWid * sin,
+                particle.y - halfLen * sin + halfWid * cos
+              ),
+            ],
+            true
+          );
         },
         onComplete: () => {
           particleGraphics.destroy();
