@@ -32,6 +32,11 @@ export const SPAWN_RATE_LEVEL_INCREMENT = 0.2; // increase per level
 // Scoring
 export const POINTS_PER_KILL = 10;
 
+// Orbital Shield
+export const SHIELD_ORBIT_RADIUS = 120; // pixels from center
+export const SHIELD_ORBIT_SPEED = 2.5; // radians per second
+export const SHIELD_SIZE = 14; // radius of shield circle
+
 // Colors
 export const COLORS = {
   player: 0xba0000,
