@@ -1,0 +1,105 @@
+import Phaser from 'phaser';
+import { BULLET_WIDTH, BULLET_HEIGHT, BULLET_SPEED, COLORS, PLAYFIELD_RADIUS } from '../constants';
+import { distance } from '../utils/MathUtils';
+
+export default class Bullet {
+  private graphics: Phaser.GameObjects.Graphics;
+  public x: number;
+  public y: number;
+  private velocityX: number;
+  private velocityY: number;
+  private centerX: number;
+  private centerY: number;
+  public active: boolean = true;
+
+  constructor(
+    scene: Phaser.Scene,
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number,
+    centerX: number,
+    centerY: number
+  ) {
+    this.x = startX;
+    this.y = startY;
+    this.centerX = centerX;
+    this.centerY = centerY;
+
+    // Calculate direction
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const normalizedX = dx / distance;
+    const normalizedY = dy / distance;
+
+    // Set velocity (BULLET_SPEED is in playfield radii per second, need pixels per second)
+    const pixelsPerSecond = BULLET_SPEED * PLAYFIELD_RADIUS;
+    this.velocityX = normalizedX * pixelsPerSecond;
+    this.velocityY = normalizedY * pixelsPerSecond;
+
+    // Create graphics
+    this.graphics = scene.add.graphics();
+    this.draw();
+  }
+
+  private draw() {
+    this.graphics.clear();
+
+    // Calculate rotation angle
+    const angle = Math.atan2(this.velocityY, this.velocityX);
+
+    // Draw glowing oval
+    this.graphics.fillStyle(COLORS.bullet, 1);
+
+    // Save transform state
+    this.graphics.save();
+    this.graphics.translateCanvas(this.x, this.y);
+    this.graphics.rotateCanvas(angle);
+
+    // Draw bullet as ellipse
+    this.graphics.fillEllipse(0, 0, BULLET_WIDTH, BULLET_HEIGHT);
+
+    // Add glow effect (multiple layers with alpha)
+    this.graphics.fillStyle(COLORS.bullet, 0.5);
+    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 2, BULLET_HEIGHT + 2);
+    this.graphics.fillStyle(COLORS.bullet, 0.2);
+    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 4, BULLET_HEIGHT + 4);
+
+    this.graphics.restore();
+  }
+
+  update(delta: number) {
+    if (!this.active) return;
+
+    const deltaSec = delta / 1000;
+    this.x += this.velocityX * deltaSec;
+    this.y += this.velocityY * deltaSec;
+
+    // Check if out of bounds
+    if (this.checkOutOfBounds()) {
+      this.destroy();
+      return;
+    }
+
+    this.draw();
+  }
+
+  private checkOutOfBounds(): boolean {
+    const distanceFromCenter = distance(this.x, this.y, this.centerX, this.centerY);
+    return distanceFromCenter > PLAYFIELD_RADIUS;
+  }
+
+  destroy() {
+    this.active = false;
+    this.graphics.destroy();
+  }
+
+  getBounds(): { x: number; y: number; radius: number } {
+    return {
+      x: this.x,
+      y: this.y,
+      radius: Math.max(BULLET_WIDTH, BULLET_HEIGHT) / 2,
+    };
+  }
+}
