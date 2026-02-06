@@ -12,10 +12,15 @@ import {
 import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
 import Bullet from '../entities/Bullet';
+import OrbitalShield from '../entities/OrbitalShield';
 import ScoreManager from '../managers/ScoreManager';
 import LevelManager from '../managers/LevelManager';
 import AudioManager from '../managers/AudioManager';
-import PowerUpManager, { PowerUpType } from '../managers/PowerUpManager';
+import PowerUpManager, {
+  PowerUpType,
+  RARITY_COLORS,
+  type PowerUpDefinition,
+} from '../managers/PowerUpManager';
 import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
@@ -24,6 +29,7 @@ export default class GameScene extends Phaser.Scene {
   private player!: Player;
   private enemies: Enemy[] = [];
   private bullets: Bullet[] = [];
+  private shields: OrbitalShield[] = [];
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
   private audioManager!: AudioManager;
@@ -147,7 +153,8 @@ export default class GameScene extends Phaser.Scene {
       this.spawnEnemy();
     }
 
-    // Update enemies
+    // Update enemies with speed multiplier from Gravity Well power-up
+    const enemySpeedMult = this.powerUpManager.getEnemySpeedMultiplier();
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
       if (!enemy.active) {
@@ -155,7 +162,7 @@ export default class GameScene extends Phaser.Scene {
         continue;
       }
 
-      enemy.update(delta);
+      enemy.update(delta, enemySpeedMult);
 
       // Check if enemy edge touched terminal radius
       if (enemy.getRadius() - ENEMY_SIZE < this.terminalRadius) {
@@ -190,8 +197,14 @@ export default class GameScene extends Phaser.Scene {
       bullet.update(delta);
     }
 
+    // Update orbital shields
+    this.updateShields(delta);
+
     // Check collisions
     this.checkCollisions();
+
+    // Check shield-enemy collisions
+    this.checkShieldCollisions();
 
     // Check level completion
     if (this.levelManager.isLevelComplete(this.enemies.length)) {
@@ -243,6 +256,8 @@ export default class GameScene extends Phaser.Scene {
     const bulletCount = this.powerUpManager.getBulletCount();
     const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
     const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
+    const speedMult = this.powerUpManager.getBulletSpeedMultiplier();
+    const pierceCount = this.powerUpManager.getPierceCount();
 
     if (bulletCount === 1) {
       const bullet = new Bullet(
@@ -252,7 +267,9 @@ export default class GameScene extends Phaser.Scene {
         targetX,
         targetY,
         this.centerX,
-        this.centerY
+        this.centerY,
+        speedMult,
+        pierceCount
       );
       this.bullets.push(bullet);
     } else {
@@ -270,7 +287,9 @@ export default class GameScene extends Phaser.Scene {
           tx,
           ty,
           this.centerX,
-          this.centerY
+          this.centerY,
+          speedMult,
+          pierceCount
         );
         this.bullets.push(bullet);
       }
@@ -303,9 +322,15 @@ export default class GameScene extends Phaser.Scene {
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
 
-          bullet.destroy();
+          // Check piercing: bullet survives if it has pierce remaining
+          const bulletSurvives = bullet.onHitEnemy();
+
+          if (!bulletSurvives) {
+            bullet.destroy();
+            this.bullets.splice(i, 1);
+          }
+
           enemy.destroy();
-          this.bullets.splice(i, 1);
           this.enemies.splice(j, 1);
           this.scoreManager.addKill();
           this.audioManager.playSound('hit');
@@ -313,7 +338,111 @@ export default class GameScene extends Phaser.Scene {
           // Particle effects
           ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           ParticleEffects.createBulletHitParticles(this, hitX, hitY);
-          break;
+
+          // Chain lightning
+          this.processChainLightning(hitX, hitY);
+
+          if (!bulletSurvives) break;
+        }
+      }
+    }
+  }
+
+  private processChainLightning(originX: number, originY: number) {
+    const chainCount = this.powerUpManager.getChainCount();
+    if (chainCount <= 0) return;
+
+    const chainRange = this.powerUpManager.getChainRange();
+    let chainsRemaining = chainCount;
+    let currentX = originX;
+    let currentY = originY;
+    const hitSet = new Set<Enemy>();
+
+    while (chainsRemaining > 0) {
+      // Find closest enemy within range that hasn't been hit yet
+      let closestEnemy: Enemy | null = null;
+      let closestDist = Infinity;
+
+      for (const enemy of this.enemies) {
+        if (!enemy.active || hitSet.has(enemy)) continue;
+        const dist = distance(currentX, currentY, enemy.x, enemy.y);
+        if (dist < chainRange && dist < closestDist) {
+          closestDist = dist;
+          closestEnemy = enemy;
+        }
+      }
+
+      if (!closestEnemy) break;
+
+      hitSet.add(closestEnemy);
+      const targetBounds = closestEnemy.getBounds();
+
+      // Lightning visual
+      ParticleEffects.createChainLightningEffect(
+        this,
+        currentX,
+        currentY,
+        targetBounds.x,
+        targetBounds.y
+      );
+
+      // Kill the chained enemy
+      ParticleEffects.createEnemyDeathParticles(this, targetBounds.x, targetBounds.y);
+      currentX = targetBounds.x;
+      currentY = targetBounds.y;
+      closestEnemy.destroy();
+      this.scoreManager.addKill();
+
+      chainsRemaining--;
+    }
+
+    // Clean up destroyed enemies
+    this.enemies = this.enemies.filter((e) => e.active);
+  }
+
+  private updateShields(delta: number) {
+    const targetCount = this.powerUpManager.getShieldCount();
+
+    // Spawn new shields if needed
+    while (this.shields.length < targetCount) {
+      const angleOffset = (Math.PI * 2 * this.shields.length) / targetCount;
+      const shield = new OrbitalShield(this, this.centerX, this.centerY, angleOffset);
+      this.shields.push(shield);
+    }
+
+    // Update existing shields
+    for (const shield of this.shields) {
+      shield.update(delta);
+    }
+  }
+
+  private checkShieldCollisions() {
+    for (const shield of this.shields) {
+      if (!shield.active) continue;
+
+      const shieldBounds = shield.getBounds();
+
+      for (let j = this.enemies.length - 1; j >= 0; j--) {
+        const enemy = this.enemies[j];
+        if (!enemy.active) continue;
+
+        const enemyBounds = enemy.getBounds();
+        const dist = distance(shieldBounds.x, shieldBounds.y, enemyBounds.x, enemyBounds.y);
+
+        if (dist < shieldBounds.radius + enemyBounds.radius) {
+          const hitX = enemyBounds.x;
+          const hitY = enemyBounds.y;
+
+          enemy.destroy();
+          this.enemies.splice(j, 1);
+          this.scoreManager.addKill();
+          this.audioManager.playSound('hit');
+
+          ParticleEffects.createShieldHitParticles(this, hitX, hitY);
+          ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+
+          // Chain lightning from shield kills too
+          this.processChainLightning(hitX, hitY);
         }
       }
     }
@@ -424,6 +553,8 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // ─── Radial Power-Up Selection UI ─────────────────────────────────────
+
   private showPowerUpSelection(completedLevel: number) {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
@@ -434,10 +565,10 @@ export default class GameScene extends Phaser.Scene {
     backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.powerUpUIElements.push(backdrop);
 
-    // Title
+    // Title at top
     const title = this.add.text(
       this.centerX,
-      this.centerY - 300,
+      this.centerY - 420,
       `LEVEL ${completedLevel} COMPLETE`,
       {
         fontSize: '48px',
@@ -448,7 +579,7 @@ export default class GameScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.powerUpUIElements.push(title);
 
-    const subtitle = this.add.text(this.centerX, this.centerY - 230, 'Choose a Power-Up', {
+    const subtitle = this.add.text(this.centerX, this.centerY - 360, 'Choose a Power-Up', {
       fontSize: '28px',
       color: '#cccccc',
       fontFamily: 'Arial, sans-serif',
@@ -456,26 +587,82 @@ export default class GameScene extends Phaser.Scene {
     subtitle.setOrigin(0.5);
     this.powerUpUIElements.push(subtitle);
 
-    // Get 3 random power-ups
+    // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
 
-    // Render 3 cards
-    selection.forEach((powerUp, index) => {
-      const cardX = this.centerX + (index - 1) * 350;
-      const cardY = this.centerY + 20;
-      const stacks = this.powerUpManager.getStacks(powerUp.type);
+    // Draw central hub circle
+    const hubGraphics = this.add.graphics();
+    hubGraphics.lineStyle(2, 0xffffff, 0.3);
+    hubGraphics.strokeCircle(this.centerX, this.centerY, 60);
+    hubGraphics.fillStyle(0x222222, 0.8);
+    hubGraphics.fillCircle(this.centerX, this.centerY, 60);
 
-      // Card background
-      const cardBg = this.add.graphics();
-      cardBg.fillStyle(0x444444, 1);
-      cardBg.fillRoundedRect(cardX - 140, cardY - 120, 280, 300, 16);
-      cardBg.lineStyle(2, 0xffffff, 0.3);
-      cardBg.strokeRoundedRect(cardX - 140, cardY - 120, 280, 300, 16);
-      this.powerUpUIElements.push(cardBg);
+    // Score display in hub
+    const scoreText = this.add.text(this.centerX, this.centerY - 12, `Score`, {
+      fontSize: '16px',
+      color: '#888888',
+      fontFamily: 'Arial, sans-serif',
+      align: 'center',
+    });
+    scoreText.setOrigin(0.5);
+    this.powerUpUIElements.push(scoreText);
+
+    const scoreValue = this.add.text(
+      this.centerX,
+      this.centerY + 12,
+      `${this.scoreManager.getScore()}`,
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+      }
+    );
+    scoreValue.setOrigin(0.5);
+    this.powerUpUIElements.push(scoreValue);
+    this.powerUpUIElements.push(hubGraphics);
+
+    // Render 3 power-up nodes arranged radially
+    const nodeRadius = 260; // Distance from center to each node
+    const startAngle = -Math.PI / 2; // Start at top
+
+    selection.forEach((powerUp, index) => {
+      const angle = startAngle + (index * (Math.PI * 2)) / 3;
+      const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
+      const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
+      const stacks = this.powerUpManager.getStacks(powerUp.type);
+      const rarityColor = RARITY_COLORS[powerUp.rarity];
+
+      // Connection line from hub to node
+      const lineGraphics = this.add.graphics();
+      lineGraphics.lineStyle(2, rarityColor, 0.3);
+      lineGraphics.beginPath();
+      lineGraphics.moveTo(this.centerX + Math.cos(angle) * 60, this.centerY + Math.sin(angle) * 60);
+      lineGraphics.lineTo(nodeX - Math.cos(angle) * 100, nodeY - Math.sin(angle) * 100);
+      lineGraphics.strokePath();
+      this.powerUpUIElements.push(lineGraphics);
+
+      // Node background circle
+      const nodeBg = this.add.graphics();
+      nodeBg.fillStyle(0x333333, 0.9);
+      nodeBg.fillCircle(nodeX, nodeY, 100);
+      nodeBg.lineStyle(3, rarityColor, 0.6);
+      nodeBg.strokeCircle(nodeX, nodeY, 100);
+      this.powerUpUIElements.push(nodeBg);
+
+      // Rarity label
+      const rarityText = this.add.text(nodeX, nodeY - 65, powerUp.rarity, {
+        fontSize: '13px',
+        color: '#' + rarityColor.toString(16).padStart(6, '0'),
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+      });
+      rarityText.setOrigin(0.5);
+      this.powerUpUIElements.push(rarityText);
 
       // Power-up name
-      const nameText = this.add.text(cardX, cardY - 70, powerUp.name, {
-        fontSize: '26px',
+      const nameText = this.add.text(nodeX, nodeY - 35, powerUp.name, {
+        fontSize: '22px',
         color: '#ffffff',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
@@ -484,19 +671,19 @@ export default class GameScene extends Phaser.Scene {
       this.powerUpUIElements.push(nameText);
 
       // Description
-      const descText = this.add.text(cardX, cardY - 10, powerUp.description, {
-        fontSize: '18px',
+      const descText = this.add.text(nodeX, nodeY + 5, powerUp.description, {
+        fontSize: '14px',
         color: '#aaaaaa',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
-        wordWrap: { width: 240 },
+        wordWrap: { width: 170 },
       });
       descText.setOrigin(0.5);
       this.powerUpUIElements.push(descText);
 
       // Stack count
       if (stacks > 0) {
-        const stackText = this.add.text(cardX, cardY + 50, `Current: x${stacks}`, {
+        const stackText = this.add.text(nodeX, nodeY + 40, `x${stacks}`, {
           fontSize: '18px',
           color: '#ffff00',
           fontFamily: 'Arial, sans-serif',
@@ -506,35 +693,36 @@ export default class GameScene extends Phaser.Scene {
         this.powerUpUIElements.push(stackText);
       }
 
-      // SELECT button
-      const selectBtn = this.add.text(cardX, cardY + 120, 'SELECT', {
-        fontSize: '22px',
-        color: '#ffffff',
-        fontFamily: 'Arial, sans-serif',
-        backgroundColor: '#666666',
-        padding: { x: 24, y: 10 },
-      });
-      selectBtn.setOrigin(0.5);
-      selectBtn.setInteractive({ useHandCursor: true });
+      // Interactive hit area (invisible circle covering the node)
+      const hitArea = this.add.circle(nodeX, nodeY, 100, 0x000000, 0);
+      hitArea.setInteractive({ useHandCursor: true });
 
-      selectBtn.on('pointerover', () => {
-        selectBtn.setStyle({ backgroundColor: '#888888' });
+      hitArea.on('pointerover', () => {
+        nodeBg.clear();
+        nodeBg.fillStyle(0x444444, 0.95);
+        nodeBg.fillCircle(nodeX, nodeY, 105);
+        nodeBg.lineStyle(4, rarityColor, 1);
+        nodeBg.strokeCircle(nodeX, nodeY, 105);
       });
-      selectBtn.on('pointerout', () => {
-        selectBtn.setStyle({ backgroundColor: '#666666' });
+      hitArea.on('pointerout', () => {
+        nodeBg.clear();
+        nodeBg.fillStyle(0x333333, 0.9);
+        nodeBg.fillCircle(nodeX, nodeY, 100);
+        nodeBg.lineStyle(3, rarityColor, 0.6);
+        nodeBg.strokeCircle(nodeX, nodeY, 100);
       });
-      selectBtn.on('pointerdown', () => {
-        this.selectPowerUp(powerUp.type, nextLevel);
+      hitArea.on('pointerdown', () => {
+        this.selectPowerUp(powerUp, nextLevel);
       });
-      this.powerUpUIElements.push(selectBtn);
+      this.powerUpUIElements.push(hitArea);
     });
   }
 
-  private selectPowerUp(type: PowerUpType, nextLevel: number) {
-    this.powerUpManager.addPowerUp(type);
+  private selectPowerUp(powerUp: PowerUpDefinition, nextLevel: number) {
+    this.powerUpManager.addPowerUp(powerUp.type);
 
     // Terminal Shrink: tween terminal radius down
-    if (type === PowerUpType.TERMINAL_SHRINK) {
+    if (powerUp.type === PowerUpType.TERMINAL_SHRINK) {
       const shrinkAmount = 0.04 * PLAYFIELD_RADIUS; // 36px
       const newTerminal = Math.max(this.terminalRadius - shrinkAmount, TERMINAL_RADIUS_INITIAL);
       this.tweens.add({
@@ -548,6 +736,23 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
+    // Vision Restore: immediately restore vision
+    if (powerUp.type === PowerUpType.VISION_RESTORE) {
+      const restoreAmount = this.powerUpManager.getVisionRestoreAmount();
+      const newVision = Math.min(this.visionRadius + restoreAmount, VISION_RADIUS_INITIAL);
+      this.tweens.add({
+        targets: this,
+        visionRadius: newVision,
+        duration: 300,
+        ease: 'Quad.easeOut',
+        onUpdate: () => {
+          this.drawPlayfield();
+        },
+      });
+    }
+
+    // Orbital Shield: shields will be spawned in updateShields on next frame
+
     // Destroy all UI elements
     for (const el of this.powerUpUIElements) {
       el.destroy();
@@ -559,6 +764,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private gameOver() {
+    // Clean up shields
+    for (const shield of this.shields) {
+      shield.destroy();
+    }
+    this.shields = [];
+
     this.audioManager.playSound('gameOver');
     this.scene.start('GameOverScene', { score: this.scoreManager.getScore() });
   }
