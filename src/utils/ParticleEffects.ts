@@ -132,6 +132,102 @@ export class ParticleEffects {
     });
   }
 
+  static createChainLightningEffect(
+    scene: Phaser.Scene,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number
+  ) {
+    const graphics = scene.add.graphics();
+    const tweenTarget = { alpha: 1 };
+
+    // Draw a jagged lightning bolt between two points
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const segments = 6;
+
+    scene.tweens.add({
+      targets: tweenTarget,
+      alpha: 0,
+      duration: 250,
+      ease: 'Quad.easeIn',
+      onUpdate: () => {
+        graphics.clear();
+        graphics.lineStyle(3, 0x88ccff, tweenTarget.alpha);
+        graphics.beginPath();
+        graphics.moveTo(fromX, fromY);
+
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          graphics.lineTo(px, py);
+        }
+
+        graphics.lineTo(toX, toY);
+        graphics.strokePath();
+
+        // Glow layer
+        graphics.lineStyle(6, 0x44aaff, tweenTarget.alpha * 0.3);
+        graphics.beginPath();
+        graphics.moveTo(fromX, fromY);
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          graphics.lineTo(px, py);
+        }
+        graphics.lineTo(toX, toY);
+        graphics.strokePath();
+      },
+      onComplete: () => {
+        graphics.destroy();
+      },
+    });
+  }
+
+  static createShieldHitParticles(scene: Phaser.Scene, x: number, y: number) {
+    const particleCount = 5;
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 60 + Math.random() * 30;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+
+      const particle = {
+        x,
+        y,
+        vx,
+        vy,
+        size: 3,
+      };
+
+      const particleGraphics = scene.add.graphics();
+
+      scene.tweens.add({
+        targets: particle,
+        size: 0,
+        duration: 200 + Math.random() * 100,
+        ease: 'Cubic.easeIn',
+        onUpdate: () => {
+          particle.x += (particle.vx * 16) / 1000;
+          particle.y += (particle.vy * 16) / 1000;
+          particle.vx *= 0.9;
+          particle.vy *= 0.9;
+
+          particleGraphics.clear();
+          particleGraphics.fillStyle(0x88ccff, 1.0);
+          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
+        },
+        onComplete: () => {
+          particleGraphics.destroy();
+        },
+      });
+    }
+  }
+
   static createTerminalHitParticles(
     scene: Phaser.Scene,
     x: number,
