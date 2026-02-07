@@ -31,6 +31,7 @@ import PowerUpManager, {
   getConsumableDefinition,
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
+import GamepadManager from '../managers/GamepadManager';
 import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
@@ -52,6 +53,7 @@ export default class GameScene extends Phaser.Scene {
   private levelManager!: LevelManager;
   private audioManager!: AudioManager;
   private powerUpManager!: PowerUpManager;
+  private gamepadManager!: GamepadManager;
 
   private centerX!: number;
   private centerY!: number;
@@ -63,6 +65,12 @@ export default class GameScene extends Phaser.Scene {
   private playfieldTremble: number = 0;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
+  private powerUpSelectedIndex: number = 0;
+  private powerUpCardHighlights: Phaser.GameObjects.Graphics[] = [];
+  private powerUpSelectionData: { selection: PowerUpDefinition[]; nextLevel: number } = {
+    selection: [],
+    nextLevel: 0,
+  };
 
   // Consumable state
   private laserBeamTimer: number = 0;
@@ -106,6 +114,7 @@ export default class GameScene extends Phaser.Scene {
     this.levelManager = new LevelManager();
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
+    this.gamepadManager = new GamepadManager(this);
 
     // Set up blur effect
     this.setupBlurEffect();
@@ -120,6 +129,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Create player
     this.player = new Player(this, this.centerX, this.centerY, BENCHMARK_MODE);
+    this.player.setGamepadManager(this.gamepadManager);
 
     // Set up consumable keybindings
     this.setupConsumableKeys();
@@ -153,13 +163,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Apply power-ups from ?powerups= query param
-    {
-      for (const { type, count } of parsePowerUpsParam()) {
-        const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
-        if (powerUpType) {
-          for (let i = 0; i < count; i++) {
-            this.powerUpManager.addPowerUp(powerUpType);
-          }
+    for (const { type, count } of parsePowerUpsParam()) {
+      const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
+      if (powerUpType) {
+        for (let i = 0; i < count; i++) {
+          this.powerUpManager.addPowerUp(powerUpType);
         }
       }
     }
@@ -640,7 +648,11 @@ export default class GameScene extends Phaser.Scene {
     this.updateBlurEffect();
 
     // Pause game while power-up selection, equip screen, or benchmark end is active
-    if (this.isPowerUpSelectionActive || this.benchmarkDone) return;
+    if (this.isPowerUpSelectionActive || this.benchmarkDone) {
+      this.updatePowerUpGamepadNavigation();
+      this.gamepadManager.updatePrevState();
+      return;
+    }
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
@@ -815,6 +827,8 @@ export default class GameScene extends Phaser.Scene {
     if (this.terminalRadius >= PLAYFIELD_RADIUS) {
       this.gameOver();
     }
+
+    this.gamepadManager.updatePrevState();
   }
 
   private shoot(targetX: number, targetY: number) {
@@ -1260,6 +1274,8 @@ export default class GameScene extends Phaser.Scene {
   private showPowerUpSelection(completedLevel: number) {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
+    this.powerUpSelectedIndex = 0;
+    this.powerUpCardHighlights = [];
 
     // In benchmark mode, auto-select the first power-up
     if (BENCHMARK_MODE) {
@@ -1300,6 +1316,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
+    this.powerUpSelectionData = { selection, nextLevel };
 
     // Draw central hub circle
     const hubGraphics = this.add.graphics();
@@ -1381,6 +1398,11 @@ export default class GameScene extends Phaser.Scene {
         this.powerUpUIElements.push(rarityText);
       }
 
+      // Gamepad highlight border (drawn on top, only visible for selected card)
+      const highlight = this.add.graphics();
+      this.powerUpCardHighlights.push(highlight);
+      this.powerUpUIElements.push(highlight);
+
       // Power-up name
       const nameText = this.add.text(nodeX, nodeY - 35 * PX, powerUp.name, {
         fontSize: `${22 * PX}px`,
@@ -1446,6 +1468,41 @@ export default class GameScene extends Phaser.Scene {
       });
       this.powerUpUIElements.push(hitArea);
     });
+
+    this.drawPowerUpHighlight();
+  }
+
+  private drawPowerUpHighlight() {
+    const nodeRadius = 260 * PX;
+    const startAngle = -Math.PI / 2;
+    this.powerUpCardHighlights.forEach((highlight, index) => {
+      highlight.clear();
+      if (index === this.powerUpSelectedIndex) {
+        const angle = startAngle + (index * (Math.PI * 2)) / 3;
+        const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
+        const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
+        highlight.lineStyle(4 * PX, 0xffff00, 1);
+        highlight.strokeCircle(nodeX, nodeY, 105 * PX);
+      }
+    });
+  }
+
+  private updatePowerUpGamepadNavigation() {
+    const { selection, nextLevel } = this.powerUpSelectionData;
+    if (!this.isPowerUpSelectionActive || selection.length === 0) return;
+
+    const nav = this.gamepadManager.getHorizontalNavigation();
+    if (nav !== 0) {
+      this.powerUpSelectedIndex = Math.max(
+        0,
+        Math.min(selection.length - 1, this.powerUpSelectedIndex + nav)
+      );
+      this.drawPowerUpHighlight();
+    }
+
+    if (this.gamepadManager.isAJustPressed()) {
+      this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
+    }
   }
 
   private drawNodeBg(
@@ -1509,6 +1566,8 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
+    this.powerUpCardHighlights = [];
+    this.powerUpSelectionData = { selection: [], nextLevel: 0 };
 
     // Show equip screen if player has consumables, otherwise start next level
     if (this.powerUpManager.hasAnyConsumables()) {

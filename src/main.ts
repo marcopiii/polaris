@@ -13,6 +13,9 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   backgroundColor: COLORS.background,
   scene: [BootScene, MainMenuScene, GameScene, GameOverScene, LeaderboardScene],
+  input: {
+    gamepad: true,
+  },
   physics: {
     default: 'arcade',
     arcade: {
