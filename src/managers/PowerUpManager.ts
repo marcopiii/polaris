@@ -3,7 +3,6 @@ import { PLAYFIELD_RADIUS, BULLET_SPEED } from '../constants';
 export enum PowerUpType {
   RAPID_FIRE = 'RAPID_FIRE',
   BULLET_VELOCITY = 'BULLET_VELOCITY',
-  VISION_RESTORE = 'VISION_RESTORE',
   REINFORCED_VISION = 'REINFORCED_VISION',
   MULTI_SHOT = 'MULTI_SHOT',
   ENEMY_SLOWDOWN = 'ENEMY_SLOWDOWN',
@@ -49,13 +48,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     description: 'Bullets travel faster',
     rarity: PowerUpRarity.COMMON,
     weight: 30,
-  },
-  {
-    type: PowerUpType.VISION_RESTORE,
-    name: 'Vision Restore',
-    description: 'Instantly restore 20% vision',
-    rarity: PowerUpRarity.COMMON,
-    weight: 25,
   },
   {
     type: PowerUpType.REINFORCED_VISION,
@@ -137,11 +129,6 @@ export default class PowerUpManager {
   /** Vision radius decrease: PLAYFIELD_RADIUS / (5 + stacks) — base 180px */
   getVisionRadiusDecrease(): number {
     return PLAYFIELD_RADIUS / (5 + this.getStacks(PowerUpType.REINFORCED_VISION));
-  }
-
-  /** Vision restore amount: 20% of playfield radius per stack picked */
-  getVisionRestoreAmount(): number {
-    return 0.2 * PLAYFIELD_RADIUS;
   }
 
   /** Bullet count: 1 + stacks */

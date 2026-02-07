@@ -736,21 +736,6 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
-    // Vision Restore: immediately restore vision
-    if (powerUp.type === PowerUpType.VISION_RESTORE) {
-      const restoreAmount = this.powerUpManager.getVisionRestoreAmount();
-      const newVision = Math.min(this.visionRadius + restoreAmount, VISION_RADIUS_INITIAL);
-      this.tweens.add({
-        targets: this,
-        visionRadius: newVision,
-        duration: 300,
-        ease: 'Quad.easeOut',
-        onUpdate: () => {
-          this.drawPlayfield();
-        },
-      });
-    }
-
     // Orbital Shield: shields will be spawned in updateShields on next frame
 
     // Destroy all UI elements
