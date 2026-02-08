@@ -147,6 +147,71 @@ export class AudioGenerator {
     noiseSource.stop(this.audioContext.currentTime + duration);
   }
 
+  private laserGain: GainNode | null = null;
+  private laserOsc: OscillatorNode | null = null;
+  private laserLfo: OscillatorNode | null = null;
+
+  playLaser() {
+    this.stopLaser();
+
+    const duration = 3.0;
+    const oscillator = this.audioContext.createOscillator();
+    const lfo = this.audioContext.createOscillator();
+    const lfoGain = this.audioContext.createGain();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(120, this.audioContext.currentTime);
+
+    // LFO for wobble
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(8, this.audioContext.currentTime);
+    lfoGain.gain.setValueAtTime(15, this.audioContext.currentTime);
+    lfo.connect(lfoGain);
+    lfoGain.connect(oscillator.frequency);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    // Fade in, sustain, fade out
+    gainNode.gain.setValueAtTime(0.01, this.audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.25, this.audioContext.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.25, this.audioContext.currentTime + duration - 0.1);
+    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+    oscillator.start(this.audioContext.currentTime);
+    lfo.start(this.audioContext.currentTime);
+    oscillator.stop(this.audioContext.currentTime + duration);
+    lfo.stop(this.audioContext.currentTime + duration);
+
+    this.laserOsc = oscillator;
+    this.laserLfo = lfo;
+    this.laserGain = gainNode;
+
+    oscillator.onended = () => {
+      this.laserOsc = null;
+      this.laserLfo = null;
+      this.laserGain = null;
+    };
+  }
+
+  stopLaser() {
+    if (this.laserGain) {
+      this.laserGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+      this.laserGain.gain.setValueAtTime(this.laserGain.gain.value, this.audioContext.currentTime);
+      this.laserGain.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.05);
+    }
+    if (this.laserOsc) {
+      this.laserOsc.stop(this.audioContext.currentTime + 0.05);
+      this.laserOsc = null;
+    }
+    if (this.laserLfo) {
+      this.laserLfo.stop(this.audioContext.currentTime + 0.05);
+      this.laserLfo = null;
+    }
+    this.laserGain = null;
+  }
+
   private createNoiseBuffer(duration: number): AudioBuffer {
     const bufferSize = this.audioContext.sampleRate * duration;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);

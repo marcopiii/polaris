@@ -55,6 +55,7 @@ export default class GameScene extends Phaser.Scene {
   // Consumable state
   private laserBeamTimer: number = 0;
   private laserGraphics!: Phaser.GameObjects.Graphics;
+  private laserSparks: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   private slotHudElements: Phaser.GameObjects.Text[] = [];
 
   // Background dust particles
@@ -156,6 +157,7 @@ export default class GameScene extends Phaser.Scene {
 
   private activateSlot(slot: number) {
     if (this.isPowerUpSelectionActive) return;
+    if (this.laserBeamTimer > 0) return;
 
     const type = this.powerUpManager.useEquippedSlot(slot);
     if (!type) return;
@@ -218,18 +220,60 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager.playSound('shoot');
   }
 
+  private laserScaleUpDone: boolean = false;
+
   private activateLaserBeam() {
     this.laserBeamTimer = LASER_BEAM_DURATION;
-    this.audioManager.playSound('shoot');
+    this.laserScaleUpDone = false;
+    this.audioManager.playSound('laser');
+
+    // Tween player scale up
+    const scaleTarget = { value: 1.0 };
+    this.tweens.add({
+      targets: scaleTarget,
+      value: 2.0,
+      duration: 150,
+      ease: 'Quad.easeOut',
+      onUpdate: () => this.player.setScale(scaleTarget.value),
+      onComplete: () => {
+        this.laserScaleUpDone = true;
+      },
+    });
   }
 
   private updateLaserBeam(delta: number) {
+    // Always update and draw sparks
+    this.updateLaserSparks(delta);
+
     if (this.laserBeamTimer <= 0) {
       this.laserGraphics.clear();
+      this.drawLaserSparks();
       return;
     }
 
     this.laserBeamTimer -= delta;
+
+    if (this.laserBeamTimer <= 0) {
+      // Beam just ended — tween back to normal
+      this.laserGraphics.clear();
+      const downTarget = { value: this.player.getScale() };
+      this.tweens.add({
+        targets: downTarget,
+        value: 1.0,
+        duration: 200,
+        ease: 'Quad.easeOut',
+        onUpdate: () => this.player.setScale(downTarget.value),
+      });
+      return;
+    }
+
+    // Subtle screen tremble while beam is active
+    this.cameras.main.shake(delta, 0.004);
+
+    // Chaotic player pulsation while beam is active (after tween-in)
+    if (this.laserScaleUpDone) {
+      this.player.setScale(1.8 + Math.random() * 0.4);
+    }
 
     const pointer = this.input.activePointer;
     const aimAngle = Math.atan2(pointer.y - this.player.y, pointer.x - this.player.x);
@@ -241,7 +285,7 @@ export default class GameScene extends Phaser.Scene {
     const flicker = 0.85 + Math.random() * 0.15;
 
     // Outer glow
-    this.laserGraphics.fillStyle(0xff4400, 0.15 * beamAlpha * flicker);
+    this.laserGraphics.fillStyle(0xcccccc, 0.15 * beamAlpha * flicker);
     this.laserGraphics.slice(
       this.centerX,
       this.centerY,
@@ -252,8 +296,8 @@ export default class GameScene extends Phaser.Scene {
     );
     this.laserGraphics.fillPath();
 
-    // Core beam
-    this.laserGraphics.fillStyle(0xff8800, 0.5 * beamAlpha * flicker);
+    // Core beam — full hitbox width, bright white
+    this.laserGraphics.fillStyle(0xffffff, 0.8 * beamAlpha * flicker);
     this.laserGraphics.slice(
       this.centerX,
       this.centerY,
@@ -264,15 +308,31 @@ export default class GameScene extends Phaser.Scene {
     );
     this.laserGraphics.fillPath();
 
-    // White-hot center line
-    this.laserGraphics.lineStyle(3, 0xffffff, 0.7 * beamAlpha * flicker);
-    this.laserGraphics.beginPath();
-    this.laserGraphics.moveTo(this.centerX, this.centerY);
-    this.laserGraphics.lineTo(
-      this.centerX + Math.cos(aimAngle) * PLAYFIELD_RADIUS,
-      this.centerY + Math.sin(aimAngle) * PLAYFIELD_RADIUS
-    );
-    this.laserGraphics.strokePath();
+    // Draw sparks on top of beam
+    this.drawLaserSparks();
+
+    // Spawn sparks across the beam arc on the playfield edge
+    for (let s = 0; s < 5; s++) {
+      const spawnAngle = aimAngle + (Math.random() - 0.5) * LASER_BEAM_HALF_ANGLE * 2;
+      const spawnX = this.centerX + Math.cos(spawnAngle) * PLAYFIELD_RADIUS;
+      const spawnY = this.centerY + Math.sin(spawnAngle) * PLAYFIELD_RADIUS;
+      // Sideways: tangent to the edge with some inward component
+      const tangent = spawnAngle + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
+      const inward = spawnAngle + Math.PI;
+      const mix = 0.2 + Math.random() * 0.3; // 20-50% inward, rest tangential
+      const bounceAngle = Math.atan2(
+        Math.sin(tangent) * (1 - mix) + Math.sin(inward) * mix,
+        Math.cos(tangent) * (1 - mix) + Math.cos(inward) * mix,
+      );
+      const speed = 200 + Math.random() * 300;
+      this.laserSparks.push({
+        x: spawnX,
+        y: spawnY,
+        vx: Math.cos(bounceAngle) * speed,
+        vy: Math.sin(bounceAngle) * speed,
+        life: 0.6 + Math.random() * 0.6,
+      });
+    }
 
     // Hit enemies within the beam arc
     for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -296,6 +356,48 @@ export default class GameScene extends Phaser.Scene {
         enemy.destroy();
         this.enemies.splice(i, 1);
       }
+    }
+  }
+
+  private updateLaserSparks(delta: number) {
+    const deltaSec = delta / 1000;
+
+    for (let i = this.laserSparks.length - 1; i >= 0; i--) {
+      const s = this.laserSparks[i];
+      s.x += s.vx * deltaSec;
+      s.y += s.vy * deltaSec;
+      s.life -= deltaSec;
+
+      // Clamp inside playfield — bounce off edge
+      const dx = s.x - this.centerX;
+      const dy = s.y - this.centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > PLAYFIELD_RADIUS) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        s.x = this.centerX + nx * PLAYFIELD_RADIUS;
+        s.y = this.centerY + ny * PLAYFIELD_RADIUS;
+        const dot = s.vx * nx + s.vy * ny;
+        s.vx -= 2 * dot * nx;
+        s.vy -= 2 * dot * ny;
+      }
+
+      if (s.life <= 0) {
+        this.laserSparks.splice(i, 1);
+      }
+    }
+  }
+
+  private drawLaserSparks() {
+    for (const s of this.laserSparks) {
+      const alpha = s.life / 1.2;
+      const angle = Math.atan2(s.vy, s.vx);
+      this.laserGraphics.fillStyle(0xffffff, alpha);
+      this.laserGraphics.save();
+      this.laserGraphics.translateCanvas(s.x, s.y);
+      this.laserGraphics.rotateCanvas(angle);
+      this.laserGraphics.fillEllipse(0, 0, 14, 4);
+      this.laserGraphics.restore();
     }
   }
 
@@ -484,6 +586,14 @@ export default class GameScene extends Phaser.Scene {
     if (this.levelManager.isLevelComplete(this.enemies.length)) {
       const completedLevel = this.levelManager.getCurrentLevel();
       this.levelManager.completeLevel();
+
+      // Stop laser beam if active
+      if (this.laserBeamTimer > 0) {
+        this.laserBeamTimer = 0;
+        this.laserGraphics.clear();
+        this.player.setScale(1.0);
+        this.audioManager.stopSound('laser');
+      }
 
       // Reset vision radius with smooth transition
       this.tweens.add({
@@ -1372,8 +1482,11 @@ export default class GameScene extends Phaser.Scene {
     }
     this.shields = [];
 
-    // Clean up laser graphics
+    // Clean up laser beam
+    this.laserBeamTimer = 0;
     this.laserGraphics.clear();
+    this.player.setScale(1.0);
+    this.audioManager.stopSound('laser');
 
     // Clean up any active UI
     for (const el of this.powerUpUIElements) {

@@ -32,10 +32,25 @@ export default class AudioManager {
         case 'lightning':
           this.audioGenerator.playLightning();
           break;
+        case 'laser':
+          this.audioGenerator.playLaser();
+          break;
       }
     } catch (error) {
       console.warn('Audio playback failed:', error);
       this.enabled = false;
+    }
+  }
+
+  stopSound(key: string) {
+    try {
+      switch (key) {
+        case 'laser':
+          this.audioGenerator.stopLaser();
+          break;
+      }
+    } catch (error) {
+      console.warn('Audio stop failed:', error);
     }
   }
 
