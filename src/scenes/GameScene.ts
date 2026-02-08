@@ -8,6 +8,8 @@ import {
   TERMINAL_RADIUS_INCREASE,
   COLORS,
   ENEMY_SIZE,
+  LASER_BEAM_DURATION,
+  LASER_BEAM_HALF_ANGLE,
 } from '../constants';
 import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
@@ -46,6 +48,11 @@ export default class GameScene extends Phaser.Scene {
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
 
+  // Consumable state
+  private laserBeamTimer: number = 0;
+  private laserGraphics!: Phaser.GameObjects.Graphics;
+  private consumableHudElements: Phaser.GameObjects.Text[] = [];
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -69,12 +76,222 @@ export default class GameScene extends Phaser.Scene {
     this.playfieldGraphics = this.add.graphics();
     this.drawPlayfield();
 
+    // Laser beam graphics layer
+    this.laserGraphics = this.add.graphics();
+
     // Create player
     this.player = new Player(this, this.centerX, this.centerY);
+
+    // Set up consumable keybindings
+    this.setupConsumableKeys();
+
+    // Create consumable HUD
+    this.createConsumableHud();
 
     // Start first level
     this.levelManager.startLevel(1);
   }
+
+  private setupConsumableKeys() {
+    const keyboard = this.input.keyboard;
+    if (!keyboard) return;
+
+    keyboard.on('keydown-ONE', () => this.activateConsumable(PowerUpType.SHOCKWAVE));
+    keyboard.on('keydown-TWO', () => this.activateConsumable(PowerUpType.NOVA_BURST));
+    keyboard.on('keydown-THREE', () => this.activateConsumable(PowerUpType.LASER_BEAM));
+  }
+
+  // ─── Consumable HUD ──────────────────────────────────────────────────
+
+  private createConsumableHud() {
+    const consumables = [
+      { type: PowerUpType.SHOCKWAVE, key: '1', label: 'Shockwave' },
+      { type: PowerUpType.NOVA_BURST, key: '2', label: 'Nova Burst' },
+      { type: PowerUpType.LASER_BEAM, key: '3', label: 'Laser Beam' },
+    ];
+
+    const hudY = this.centerY + PLAYFIELD_RADIUS + 50;
+
+    consumables.forEach((c, i) => {
+      const hudX = this.centerX + (i - 1) * 250;
+      const text = this.add.text(hudX, hudY, '', {
+        fontSize: '20px',
+        color: '#888888',
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+      });
+      text.setOrigin(0.5);
+      text.setData('consumableType', c.type);
+      text.setData('consumableKey', c.key);
+      text.setData('consumableLabel', c.label);
+      this.consumableHudElements.push(text);
+    });
+  }
+
+  private updateConsumableHud() {
+    for (const text of this.consumableHudElements) {
+      const type = text.getData('consumableType') as PowerUpType;
+      const key = text.getData('consumableKey') as string;
+      const label = text.getData('consumableLabel') as string;
+      const count = this.powerUpManager.getConsumableCount(type);
+
+      if (count > 0) {
+        text.setText(`[${key}] ${label} x${count}`);
+        text.setColor('#ffffff');
+      } else {
+        text.setText(`[${key}] ${label}`);
+        text.setColor('#444444');
+      }
+    }
+  }
+
+  // ─── Consumable Activation ────────────────────────────────────────────
+
+  private activateConsumable(type: PowerUpType) {
+    if (this.isPowerUpSelectionActive) return;
+
+    if (!this.powerUpManager.useConsumable(type)) return;
+
+    switch (type) {
+      case PowerUpType.SHOCKWAVE:
+        this.activateShockwave();
+        break;
+      case PowerUpType.NOVA_BURST:
+        this.activateNovaBurst();
+        break;
+      case PowerUpType.LASER_BEAM:
+        this.activateLaserBeam();
+        break;
+    }
+  }
+
+  private activateShockwave() {
+    // Visual effect
+    ParticleEffects.createShockwaveEffect(this, this.centerX, this.centerY);
+    this.cameras.main.shake(200, 0.008);
+    this.audioManager.playSound('terminalGrow');
+
+    // Kill all enemies
+    for (const enemy of this.enemies) {
+      if (enemy.active) {
+        const bounds = enemy.getBounds();
+        ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
+        this.scoreManager.addKill();
+        enemy.destroy();
+      }
+    }
+    this.enemies = [];
+  }
+
+  private activateNovaBurst() {
+    const pierceCount = this.powerUpManager.getPierceCount();
+
+    // Fire 360 bullets, one per degree
+    for (let deg = 0; deg < 360; deg++) {
+      const angle = (deg * Math.PI) / 180;
+      const dist = 100;
+      const tx = this.player.x + Math.cos(angle) * dist;
+      const ty = this.player.y + Math.sin(angle) * dist;
+      const bullet = new Bullet(
+        this,
+        this.player.x,
+        this.player.y,
+        tx,
+        ty,
+        this.centerX,
+        this.centerY,
+        1,
+        pierceCount
+      );
+      this.bullets.push(bullet);
+    }
+
+    this.cameras.main.shake(100, 0.005);
+    this.audioManager.playSound('shoot');
+  }
+
+  private activateLaserBeam() {
+    this.laserBeamTimer = LASER_BEAM_DURATION;
+    this.audioManager.playSound('shoot');
+  }
+
+  private updateLaserBeam(delta: number) {
+    if (this.laserBeamTimer <= 0) {
+      this.laserGraphics.clear();
+      return;
+    }
+
+    this.laserBeamTimer -= delta;
+
+    const pointer = this.input.activePointer;
+    const aimAngle = Math.atan2(pointer.y - this.player.y, pointer.x - this.player.x);
+
+    // Draw laser beam as a filled arc/wedge
+    this.laserGraphics.clear();
+
+    const beamAlpha = Math.min(1, this.laserBeamTimer / 300); // Fade out in last 300ms
+    const flicker = 0.85 + Math.random() * 0.15;
+
+    // Outer glow
+    this.laserGraphics.fillStyle(0xff4400, 0.15 * beamAlpha * flicker);
+    this.laserGraphics.slice(
+      this.centerX,
+      this.centerY,
+      PLAYFIELD_RADIUS,
+      aimAngle - LASER_BEAM_HALF_ANGLE * 2,
+      aimAngle + LASER_BEAM_HALF_ANGLE * 2,
+      false
+    );
+    this.laserGraphics.fillPath();
+
+    // Core beam
+    this.laserGraphics.fillStyle(0xff8800, 0.5 * beamAlpha * flicker);
+    this.laserGraphics.slice(
+      this.centerX,
+      this.centerY,
+      PLAYFIELD_RADIUS,
+      aimAngle - LASER_BEAM_HALF_ANGLE,
+      aimAngle + LASER_BEAM_HALF_ANGLE,
+      false
+    );
+    this.laserGraphics.fillPath();
+
+    // White-hot center line
+    this.laserGraphics.lineStyle(3, 0xffffff, 0.7 * beamAlpha * flicker);
+    this.laserGraphics.beginPath();
+    this.laserGraphics.moveTo(this.centerX, this.centerY);
+    this.laserGraphics.lineTo(
+      this.centerX + Math.cos(aimAngle) * PLAYFIELD_RADIUS,
+      this.centerY + Math.sin(aimAngle) * PLAYFIELD_RADIUS
+    );
+    this.laserGraphics.strokePath();
+
+    // Hit enemies within the beam arc
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      if (!enemy.active) continue;
+
+      const enemyAngle = Math.atan2(enemy.y - this.centerY, enemy.x - this.centerX);
+      let angleDiff = enemyAngle - aimAngle;
+
+      // Normalize to [-PI, PI]
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+      if (Math.abs(angleDiff) < LASER_BEAM_HALF_ANGLE) {
+        const bounds = enemy.getBounds();
+        ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
+        ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
+        this.processChainLightning(bounds.x, bounds.y);
+        this.scoreManager.addKill();
+        this.audioManager.playSound('hit');
+        enemy.destroy();
+        this.enemies.splice(i, 1);
+      }
+    }
+  }
+
+  // ─── Core Game Logic ──────────────────────────────────────────────────
 
   private drawPlayfield() {
     this.playfieldGraphics.clear();
@@ -142,9 +359,15 @@ export default class GameScene extends Phaser.Scene {
     // Pause game while power-up selection is active
     if (this.isPowerUpSelectionActive) return;
 
-    // Update player
+    // Update laser beam (runs even if not active — clears graphics when timer is 0)
+    this.updateLaserBeam(delta);
+
+    // Update consumable HUD
+    this.updateConsumableHud();
+
+    // Update player — suppress normal shooting while laser is active
     const shootInfo = this.player.update(time, delta, this.powerUpManager.getFireCooldown());
-    if (shootInfo.shouldShoot) {
+    if (shootInfo.shouldShoot && this.laserBeamTimer <= 0) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
 
@@ -629,7 +852,6 @@ export default class GameScene extends Phaser.Scene {
       const angle = startAngle + (index * (Math.PI * 2)) / 3;
       const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
       const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
-      const stacks = this.powerUpManager.getStacks(powerUp.type);
       const rarityColor = RARITY_COLORS[powerUp.rarity];
 
       // Connection line from hub to node
@@ -641,23 +863,31 @@ export default class GameScene extends Phaser.Scene {
       lineGraphics.strokePath();
       this.powerUpUIElements.push(lineGraphics);
 
-      // Node background circle
+      // Node background circle — dashed border for consumables
       const nodeBg = this.add.graphics();
-      nodeBg.fillStyle(0x333333, 0.9);
-      nodeBg.fillCircle(nodeX, nodeY, 100);
-      nodeBg.lineStyle(3, rarityColor, 0.6);
-      nodeBg.strokeCircle(nodeX, nodeY, 100);
+      this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, false);
       this.powerUpUIElements.push(nodeBg);
 
-      // Rarity label
-      const rarityText = this.add.text(nodeX, nodeY - 65, powerUp.rarity, {
-        fontSize: '13px',
-        color: '#' + rarityColor.toString(16).padStart(6, '0'),
-        fontFamily: 'Arial, sans-serif',
-        align: 'center',
-      });
-      rarityText.setOrigin(0.5);
-      this.powerUpUIElements.push(rarityText);
+      // Consumable tag or rarity label
+      if (powerUp.consumable) {
+        const tagText = this.add.text(nodeX, nodeY - 65, 'CONSUMABLE', {
+          fontSize: '13px',
+          color: '#ffcc44',
+          fontFamily: 'Arial, sans-serif',
+          align: 'center',
+        });
+        tagText.setOrigin(0.5);
+        this.powerUpUIElements.push(tagText);
+      } else {
+        const rarityText = this.add.text(nodeX, nodeY - 65, powerUp.rarity, {
+          fontSize: '13px',
+          color: '#' + rarityColor.toString(16).padStart(6, '0'),
+          fontFamily: 'Arial, sans-serif',
+          align: 'center',
+        });
+        rarityText.setOrigin(0.5);
+        this.powerUpUIElements.push(rarityText);
+      }
 
       // Power-up name
       const nameText = this.add.text(nodeX, nodeY - 35, powerUp.name, {
@@ -680,16 +910,31 @@ export default class GameScene extends Phaser.Scene {
       descText.setOrigin(0.5);
       this.powerUpUIElements.push(descText);
 
-      // Stack count
-      if (stacks > 0) {
-        const stackText = this.add.text(nodeX, nodeY + 40, `x${stacks}`, {
-          fontSize: '18px',
-          color: '#ffff00',
-          fontFamily: 'Arial, sans-serif',
-          align: 'center',
-        });
-        stackText.setOrigin(0.5);
-        this.powerUpUIElements.push(stackText);
+      // Stack count or consumable quantity
+      if (powerUp.consumable) {
+        const qty = this.powerUpManager.getConsumableCount(powerUp.type);
+        if (qty > 0) {
+          const qtyText = this.add.text(nodeX, nodeY + 40, `Qty: ${qty}`, {
+            fontSize: '18px',
+            color: '#ffcc44',
+            fontFamily: 'Arial, sans-serif',
+            align: 'center',
+          });
+          qtyText.setOrigin(0.5);
+          this.powerUpUIElements.push(qtyText);
+        }
+      } else {
+        const stacks = this.powerUpManager.getStacks(powerUp.type);
+        if (stacks > 0) {
+          const stackText = this.add.text(nodeX, nodeY + 40, `x${stacks}`, {
+            fontSize: '18px',
+            color: '#ffff00',
+            fontFamily: 'Arial, sans-serif',
+            align: 'center',
+          });
+          stackText.setOrigin(0.5);
+          this.powerUpUIElements.push(stackText);
+        }
       }
 
       // Interactive hit area (invisible circle covering the node)
@@ -698,23 +943,53 @@ export default class GameScene extends Phaser.Scene {
 
       hitArea.on('pointerover', () => {
         nodeBg.clear();
-        nodeBg.fillStyle(0x444444, 0.95);
-        nodeBg.fillCircle(nodeX, nodeY, 105);
-        nodeBg.lineStyle(4, rarityColor, 1);
-        nodeBg.strokeCircle(nodeX, nodeY, 105);
+        this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, true);
       });
       hitArea.on('pointerout', () => {
         nodeBg.clear();
-        nodeBg.fillStyle(0x333333, 0.9);
-        nodeBg.fillCircle(nodeX, nodeY, 100);
-        nodeBg.lineStyle(3, rarityColor, 0.6);
-        nodeBg.strokeCircle(nodeX, nodeY, 100);
+        this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, false);
       });
       hitArea.on('pointerdown', () => {
         this.selectPowerUp(powerUp, nextLevel);
       });
       this.powerUpUIElements.push(hitArea);
     });
+  }
+
+  private drawNodeBg(
+    gfx: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    color: number,
+    isConsumable: boolean,
+    isHover: boolean
+  ) {
+    const radius = isHover ? 105 : 100;
+    const fillColor = isHover ? 0x444444 : 0x333333;
+    const fillAlpha = isHover ? 0.95 : 0.9;
+    const lineWidth = isHover ? 4 : 3;
+    const lineAlpha = isHover ? 1 : 0.6;
+
+    gfx.fillStyle(fillColor, fillAlpha);
+    gfx.fillCircle(x, y, radius);
+
+    if (isConsumable) {
+      // Dashed-style border: draw small arcs around the circle
+      const segments = 12;
+      const gapRatio = 0.3;
+      const segAngle = (Math.PI * 2) / segments;
+      gfx.lineStyle(lineWidth, color, lineAlpha);
+      for (let i = 0; i < segments; i++) {
+        const start = i * segAngle;
+        const end = start + segAngle * (1 - gapRatio);
+        gfx.beginPath();
+        gfx.arc(x, y, radius, start, end, false);
+        gfx.strokePath();
+      }
+    } else {
+      gfx.lineStyle(lineWidth, color, lineAlpha);
+      gfx.strokeCircle(x, y, radius);
+    }
   }
 
   private selectPowerUp(powerUp: PowerUpDefinition, nextLevel: number) {
@@ -753,6 +1028,9 @@ export default class GameScene extends Phaser.Scene {
       shield.destroy();
     }
     this.shields = [];
+
+    // Clean up laser graphics
+    this.laserGraphics.clear();
 
     this.audioManager.playSound('gameOver');
     this.scene.start('GameOverScene', { score: this.scoreManager.getScore() });
