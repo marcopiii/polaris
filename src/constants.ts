@@ -32,6 +32,10 @@ export const SPAWN_RATE_LEVEL_INCREMENT = 0.2; // increase per level
 // Scoring
 export const POINTS_PER_KILL = 10;
 
+// Consumables
+export const LASER_BEAM_DURATION = 3000; // milliseconds
+export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side = 6 deg total
+
 // Orbital Shield
 export const SHIELD_ORBIT_RADIUS = 120; // pixels from center
 export const SHIELD_ORBIT_SPEED = 2.5; // radians per second
