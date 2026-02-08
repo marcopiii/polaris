@@ -8,6 +8,7 @@ import {
   TERMINAL_RADIUS_INCREASE,
   COLORS,
   ENEMY_SIZE,
+  ENEMY_SPEED,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
 } from '../constants';
@@ -56,6 +57,12 @@ export default class GameScene extends Phaser.Scene {
   private laserGraphics!: Phaser.GameObjects.Graphics;
   private slotHudElements: Phaser.GameObjects.Text[] = [];
 
+  // Background dust particles
+  private dustParticles: { r: number; theta: number }[] = [];
+  private dustSpawnTimer: number = 0;
+  private dustSpawnBatch: number = 0;
+  private dustGraphics!: Phaser.GameObjects.Graphics;
+
   // Equip screen state
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
   private nextLevelForEquipScreen: number = 0;
@@ -81,6 +88,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Draw playfield
     this.playfieldGraphics = this.add.graphics();
+    this.dustGraphics = this.add.graphics();
     this.drawPlayfield();
 
     // Laser beam graphics layer
@@ -184,7 +192,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private activateNovaBurst() {
-    const pierceChance =this.powerUpManager.getPierceChance();
+    const pierceChance = this.powerUpManager.getPierceChance();
 
     // Fire 120 bullets, 3 degrees apart
     for (let deg = 0; deg < 360; deg += 3) {
@@ -293,6 +301,35 @@ export default class GameScene extends Phaser.Scene {
 
   // ─── Core Game Logic ──────────────────────────────────────────────────
 
+  private updateDustParticles(delta: number, slowZoneRadius: number, gravityStacks: number) {
+    const deltaSec = delta / 1000;
+
+    // Only spawn when gravity well is active
+    if (gravityStacks > 0) {
+      const spawnInterval = 0.5;
+      this.dustSpawnTimer += deltaSec;
+      while (this.dustSpawnTimer >= spawnInterval) {
+        this.dustSpawnTimer -= spawnInterval;
+        const offset = this.dustSpawnBatch % 2;
+        for (let i = 0; i < 12; i++) {
+          const slot = i * 2 + offset;
+          const theta = (slot / 24) * Math.PI * 2;
+          this.dustParticles.push({ r: slowZoneRadius, theta });
+        }
+        this.dustSpawnBatch++;
+      }
+    }
+
+    // Move and cull particles
+    for (let i = this.dustParticles.length - 1; i >= 0; i--) {
+      const p = this.dustParticles[i];
+      p.r -= ENEMY_SPEED * PLAYFIELD_RADIUS * deltaSec * 0.7;
+      if (p.r <= this.terminalRadius) {
+        this.dustParticles.splice(i, 1);
+      }
+    }
+  }
+
   private drawPlayfield() {
     this.playfieldGraphics.clear();
 
@@ -376,8 +413,10 @@ export default class GameScene extends Phaser.Scene {
       this.spawnEnemy();
     }
 
-    // Update enemies with speed multiplier from Gravity Well power-up
-    const enemySpeedMult = this.powerUpManager.getEnemySpeedMultiplier();
+    // Update enemies — Gravity Well slows enemies near terminal radius
+    const gravityStacks = this.powerUpManager.getGravityWellStacks();
+    const slowZoneRadius =
+      gravityStacks > 0 ? this.terminalRadius + 0.25 * (PLAYFIELD_RADIUS - this.terminalRadius) : 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
       if (!enemy.active) {
@@ -385,7 +424,8 @@ export default class GameScene extends Phaser.Scene {
         continue;
       }
 
-      enemy.update(delta, enemySpeedMult);
+      const speedMult = gravityStacks > 0 && enemy.getRadius() <= slowZoneRadius ? 0.7 : 1;
+      enemy.update(delta, speedMult);
 
       // Check if enemy edge touched terminal radius
       if (enemy.getRadius() - ENEMY_SIZE < this.terminalRadius) {
@@ -407,6 +447,17 @@ export default class GameScene extends Phaser.Scene {
         this.onEnemyReachedPlayer(enemy);
         this.enemies.splice(i, 1);
       }
+    }
+
+    // Update and draw background dust particles
+    this.updateDustParticles(delta, slowZoneRadius, gravityStacks);
+    this.drawPlayfield();
+    this.dustGraphics.clear();
+    for (const p of this.dustParticles) {
+      const px = this.centerX + Math.cos(p.theta) * p.r;
+      const py = this.centerY + Math.sin(p.theta) * p.r;
+      this.dustGraphics.fillStyle(0x939393, 1);
+      this.dustGraphics.fillCircle(px, py, 2);
     }
 
     // Update bullets
@@ -479,7 +530,7 @@ export default class GameScene extends Phaser.Scene {
     const bulletCount = this.powerUpManager.getBulletCount();
     const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
     const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
-    const pierceChance =this.powerUpManager.getPierceChance();
+    const pierceChance = this.powerUpManager.getPierceChance();
 
     if (bulletCount === 1) {
       const bullet = new Bullet(

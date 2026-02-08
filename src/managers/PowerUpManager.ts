@@ -249,9 +249,9 @@ export default class PowerUpManager {
     return CONSUMABLE_TYPES.has(type);
   }
 
-  /** Fire cooldown: 1000 / (4 + stacks) — base ~250ms, decreases with stacks */
+  /** Fire cooldown: 1000 / (2 + stacks) — base 500ms (2/s), decreases with stacks */
   getFireCooldown(): number {
-    return 1000 / (4 + this.getStacks(PowerUpType.RAPID_FIRE));
+    return 1000 / (2 + this.getStacks(PowerUpType.RAPID_FIRE));
   }
 
   /** Vision radius decrease: PLAYFIELD_RADIUS / (5 + stacks) — base 180px */
@@ -264,14 +264,14 @@ export default class PowerUpManager {
     return 1 + this.getStacks(PowerUpType.MULTI_SHOT);
   }
 
-  /** Enemy speed multiplier: max(0.25, 1 - 0.15 * stacks) */
-  getEnemySpeedMultiplier(): number {
-    return Math.max(0.25, 1 - 0.15 * this.getStacks(PowerUpType.ENEMY_SLOWDOWN));
+  /** Number of Gravity Well stacks */
+  getGravityWellStacks(): number {
+    return this.getStacks(PowerUpType.ENEMY_SLOWDOWN);
   }
 
-  /** Chance (0-1) for a bullet to pierce through an enemy. 10% per stack, capped at 100%. */
+  /** Chance (0-1) for a bullet to pierce through an enemy. 10% per stack, capped at 70%. */
   getPierceChance(): number {
-    return Math.min(1, this.getStacks(PowerUpType.PIERCING_ROUNDS) * 0.1);
+    return Math.min(0.7, this.getStacks(PowerUpType.PIERCING_ROUNDS) * 0.1);
   }
 
   /** Number of orbital shields */

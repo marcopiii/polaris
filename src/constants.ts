@@ -6,7 +6,7 @@ export const PLAYFIELD_RADIUS = 900;
 
 // Player
 export const PLAYER_SIZE = 10;
-export const FIRE_COOLDOWN = 250; // milliseconds
+export const FIRE_COOLDOWN = 500; // milliseconds
 
 // Enemy
 export const ENEMY_SIZE = 16;
