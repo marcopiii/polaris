@@ -132,6 +132,34 @@ export class ParticleEffects {
     });
   }
 
+  static createShockwaveEffect(scene: Phaser.Scene, centerX: number, centerY: number) {
+    // Two expanding rings: bright inner + faint outer
+    for (const ring of [
+      { color: 0xffaa00, width: 6, delay: 0 },
+      { color: 0xff4400, width: 3, delay: 80 },
+    ]) {
+      const graphics = scene.add.graphics();
+      const tweenTarget = { radius: 0, alpha: 1 };
+
+      scene.tweens.add({
+        targets: tweenTarget,
+        radius: PLAYFIELD_RADIUS,
+        alpha: 0,
+        duration: 600,
+        delay: ring.delay,
+        ease: 'Quad.easeOut',
+        onUpdate: () => {
+          graphics.clear();
+          graphics.lineStyle(ring.width, ring.color, tweenTarget.alpha);
+          graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
+        },
+        onComplete: () => {
+          graphics.destroy();
+        },
+      });
+    }
+  }
+
   static createChainLightningEffect(
     scene: Phaser.Scene,
     fromX: number,
