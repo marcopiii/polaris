@@ -63,6 +63,10 @@ export default class GameScene extends Phaser.Scene {
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
+  private isPaused: boolean = false;
+  private pauseUIElements: Phaser.GameObjects.GameObject[] = [];
+  private pauseButton!: Phaser.GameObjects.Text;
+  private escKey!: Phaser.Input.Keyboard.Key;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
   private powerUpSelectedIndex: number = 0;
@@ -142,6 +146,31 @@ export default class GameScene extends Phaser.Scene {
 
     // Animate UI elements in with overshoot
     this.animateHudEntrance();
+
+    // Pause button (top-right)
+    this.pauseButton = this.add.text(GAME_WIDTH - 60 * PX, 40 * PX, '||', {
+      fontSize: `${40 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    this.pauseButton.setOrigin(0.5);
+    this.pauseButton.setAlpha(0.5);
+    this.pauseButton.setInteractive({ useHandCursor: true });
+    this.pauseButton.on('pointerover', () => {
+      if (!this.isPaused) this.pauseButton.setAlpha(1);
+    });
+    this.pauseButton.on('pointerout', () => {
+      if (!this.isPaused) this.pauseButton.setAlpha(0.5);
+    });
+    this.pauseButton.on('pointerdown', () => {
+      this.togglePause();
+    });
+    this.pauseButton.setDepth(10);
+
+    // Escape key for pause
+    if (this.input.keyboard) {
+      this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    }
 
     // FPS counter (top-left corner)
     this.fpsText = this.add.text(16 * PX, 16 * PX, '', {
@@ -646,6 +675,19 @@ export default class GameScene extends Phaser.Scene {
 
     // Update blur effect every frame
     this.updateBlurEffect();
+
+    // Check pause toggle (Escape key or gamepad Start)
+    const escPressed = this.escKey && Phaser.Input.Keyboard.JustDown(this.escKey);
+    const startPressed = this.gamepadManager.isStartJustPressed();
+    if ((escPressed || startPressed) && !this.isPowerUpSelectionActive) {
+      this.togglePause();
+    }
+
+    // Skip game logic while paused
+    if (this.isPaused) {
+      this.gamepadManager.updatePrevState();
+      return;
+    }
 
     // Pause game while power-up selection, equip screen, or benchmark end is active
     if (this.isPowerUpSelectionActive || this.benchmarkDone) {
@@ -1267,6 +1309,77 @@ export default class GameScene extends Phaser.Scene {
         },
       });
     }
+  }
+
+  // ─── Pause ──────────────────────────────────────────────────────────────
+
+  private togglePause() {
+    if (this.isPaused) {
+      this.hidePauseUI();
+    } else {
+      this.showPauseUI();
+    }
+  }
+
+  private showPauseUI() {
+    this.isPaused = true;
+    this.pauseButton.setAlpha(0);
+
+    // Pause all active tweens
+    this.tweens.pauseAll();
+
+    // Semi-transparent backdrop
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x000000, 0.7);
+    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    backdrop.setDepth(20);
+    this.pauseUIElements.push(backdrop);
+
+    // PAUSED title
+    const title = this.add.text(this.centerX, this.centerY - 80 * PX, 'PAUSED', {
+      fontSize: `${64 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    title.setOrigin(0.5);
+    title.setDepth(21);
+    this.pauseUIElements.push(title);
+
+    // Resume button
+    const resumeBtn = this.add.text(this.centerX, this.centerY + 40 * PX, 'RESUME', {
+      fontSize: `${32 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+      backgroundColor: '#444444',
+      padding: { x: 24 * PX, y: 10 * PX },
+    });
+    resumeBtn.setOrigin(0.5);
+    resumeBtn.setDepth(21);
+    resumeBtn.setInteractive({ useHandCursor: true });
+
+    resumeBtn.on('pointerover', () => {
+      resumeBtn.setStyle({ backgroundColor: '#666666' });
+    });
+    resumeBtn.on('pointerout', () => {
+      resumeBtn.setStyle({ backgroundColor: '#444444' });
+    });
+    resumeBtn.on('pointerdown', () => {
+      this.togglePause();
+    });
+    this.pauseUIElements.push(resumeBtn);
+  }
+
+  private hidePauseUI() {
+    this.isPaused = false;
+    this.pauseButton.setAlpha(0.5);
+
+    // Resume all tweens
+    this.tweens.resumeAll();
+
+    for (const el of this.pauseUIElements) {
+      el.destroy();
+    }
+    this.pauseUIElements = [];
   }
 
   // ─── Radial Power-Up Selection UI ─────────────────────────────────────
