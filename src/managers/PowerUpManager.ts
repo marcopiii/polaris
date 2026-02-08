@@ -39,6 +39,9 @@ export interface PowerUpDefinition {
   consumable: boolean;
 }
 
+export const MAX_CONSUMABLE_INVENTORY = 16;
+export const MAX_EQUIPPED_SLOTS = 4;
+
 const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.SHOCKWAVE,
   PowerUpType.NOVA_BURST,
@@ -113,7 +116,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
   {
     type: PowerUpType.SHOCKWAVE,
     name: 'Shockwave',
-    description: 'Destroy all enemies at once [1]',
+    description: 'Destroy all enemies at once',
     rarity: PowerUpRarity.UNCOMMON,
     weight: 12,
     consumable: true,
@@ -121,7 +124,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
   {
     type: PowerUpType.NOVA_BURST,
     name: 'Nova Burst',
-    description: 'Fire 360 bullets in all directions [2]',
+    description: 'Fire 360 bullets in all directions',
     rarity: PowerUpRarity.UNCOMMON,
     weight: 12,
     consumable: true,
@@ -129,20 +132,26 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
   {
     type: PowerUpType.LASER_BEAM,
     name: 'Laser Beam',
-    description: 'Wide laser beam for 3 seconds [3]',
+    description: 'Wide laser beam for 3 seconds',
     rarity: PowerUpRarity.RARE,
     weight: 8,
     consumable: true,
   },
 ];
 
+export function getConsumableDefinition(type: PowerUpType): PowerUpDefinition | undefined {
+  return POWER_UP_DEFINITIONS.find((d) => d.type === type && d.consumable);
+}
+
 export default class PowerUpManager {
   private stacks: Map<PowerUpType, number> = new Map();
-  private consumables: Map<PowerUpType, number> = new Map();
+  private inventory: Map<PowerUpType, number> = new Map();
+  private equipped: (PowerUpType | null)[] = [null, null, null, null];
 
   addPowerUp(type: PowerUpType): void {
     if (CONSUMABLE_TYPES.has(type)) {
-      this.consumables.set(type, this.getConsumableCount(type) + 1);
+      if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return;
+      this.inventory.set(type, this.getInventoryCount(type) + 1);
     } else {
       this.stacks.set(type, this.getStacks(type) + 1);
     }
@@ -152,16 +161,88 @@ export default class PowerUpManager {
     return this.stacks.get(type) ?? 0;
   }
 
-  getConsumableCount(type: PowerUpType): number {
-    return this.consumables.get(type) ?? 0;
+  /** Count of a consumable type in inventory only (not equipped) */
+  getInventoryCount(type: PowerUpType): number {
+    return this.inventory.get(type) ?? 0;
   }
 
-  /** Use a consumable. Returns true if it was available. */
-  useConsumable(type: PowerUpType): boolean {
-    const count = this.getConsumableCount(type);
-    if (count <= 0) return false;
-    this.consumables.set(type, count - 1);
+  /** Total owned count of a consumable type (inventory + equipped) */
+  getConsumableCount(type: PowerUpType): number {
+    let count = this.inventory.get(type) ?? 0;
+    for (const slot of this.equipped) {
+      if (slot === type) count++;
+    }
+    return count;
+  }
+
+  /** Total number of consumables owned (inventory + equipped) */
+  getTotalConsumableCount(): number {
+    let total = 0;
+    for (const count of this.inventory.values()) {
+      total += count;
+    }
+    for (const slot of this.equipped) {
+      if (slot !== null) total++;
+    }
+    return total;
+  }
+
+  getEquippedSlot(slot: number): PowerUpType | null {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
+    return this.equipped[slot] ?? null;
+  }
+
+  /** Equip a consumable from inventory to a slot. Returns true on success. */
+  equipToSlot(slot: number, type: PowerUpType): boolean {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
+    if (!CONSUMABLE_TYPES.has(type)) return false;
+    const invCount = this.getInventoryCount(type);
+    if (invCount <= 0) return false;
+
+    // If slot already has something, unequip it first
+    this.unequipSlot(slot);
+
+    // Remove from inventory, place in slot
+    this.inventory.set(type, invCount - 1);
+    if (this.getInventoryCount(type) <= 0) this.inventory.delete(type);
+    this.equipped[slot] = type;
     return true;
+  }
+
+  /** Unequip a slot back to inventory. Returns true if slot had something. */
+  unequipSlot(slot: number): boolean {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
+    const type = this.equipped[slot];
+    if (!type) return false;
+
+    this.inventory.set(type, this.getInventoryCount(type) + 1);
+    this.equipped[slot] = null;
+    return true;
+  }
+
+  /** Use the consumable in the given equipped slot. Returns the type, or null. */
+  useEquippedSlot(slot: number): PowerUpType | null {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
+    const type = this.equipped[slot];
+    if (!type) return null;
+    this.equipped[slot] = null;
+    return type;
+  }
+
+  /** Check if the player owns any consumables (inventory or equipped) */
+  hasAnyConsumables(): boolean {
+    return this.getTotalConsumableCount() > 0;
+  }
+
+  /** Get inventory entries (type + count) for equip screen UI */
+  getInventoryEntries(): { type: PowerUpType; count: number }[] {
+    const entries: { type: PowerUpType; count: number }[] = [];
+    for (const [type, count] of this.inventory.entries()) {
+      if (count > 0) {
+        entries.push({ type, count });
+      }
+    }
+    return entries;
   }
 
   isConsumable(type: PowerUpType): boolean {
@@ -210,7 +291,13 @@ export default class PowerUpManager {
 
   /** Return 3 weighted-random power-ups (no duplicates) */
   getRandomSelection(): PowerUpDefinition[] {
-    const pool = [...POWER_UP_DEFINITIONS];
+    let pool = [...POWER_UP_DEFINITIONS];
+
+    // If consumable inventory is full, exclude consumables from pool
+    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) {
+      pool = pool.filter((p) => !p.consumable);
+    }
+
     const selected: PowerUpDefinition[] = [];
 
     for (let i = 0; i < 3 && pool.length > 0; i++) {
@@ -232,6 +319,7 @@ export default class PowerUpManager {
 
   reset(): void {
     this.stacks.clear();
-    this.consumables.clear();
+    this.inventory.clear();
+    this.equipped = [null, null, null, null];
   }
 }

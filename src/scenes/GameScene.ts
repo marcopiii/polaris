@@ -21,6 +21,9 @@ import AudioManager from '../managers/AudioManager';
 import PowerUpManager, {
   PowerUpType,
   RARITY_COLORS,
+  MAX_EQUIPPED_SLOTS,
+  MAX_CONSUMABLE_INVENTORY,
+  getConsumableDefinition,
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
 import { distance } from '../utils/MathUtils';
@@ -51,7 +54,11 @@ export default class GameScene extends Phaser.Scene {
   // Consumable state
   private laserBeamTimer: number = 0;
   private laserGraphics!: Phaser.GameObjects.Graphics;
-  private consumableHudElements: Phaser.GameObjects.Text[] = [];
+  private slotHudElements: Phaser.GameObjects.Text[] = [];
+
+  // Equip screen state
+  private equipUIElements: Phaser.GameObjects.GameObject[] = [];
+  private nextLevelForEquipScreen: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -96,24 +103,19 @@ export default class GameScene extends Phaser.Scene {
     const keyboard = this.input.keyboard;
     if (!keyboard) return;
 
-    keyboard.on('keydown-ONE', () => this.activateConsumable(PowerUpType.SHOCKWAVE));
-    keyboard.on('keydown-TWO', () => this.activateConsumable(PowerUpType.NOVA_BURST));
-    keyboard.on('keydown-THREE', () => this.activateConsumable(PowerUpType.LASER_BEAM));
+    keyboard.on('keydown-ONE', () => this.activateSlot(0));
+    keyboard.on('keydown-TWO', () => this.activateSlot(1));
+    keyboard.on('keydown-THREE', () => this.activateSlot(2));
+    keyboard.on('keydown-FOUR', () => this.activateSlot(3));
   }
 
   // ─── Consumable HUD ──────────────────────────────────────────────────
 
   private createConsumableHud() {
-    const consumables = [
-      { type: PowerUpType.SHOCKWAVE, key: '1', label: 'Shockwave' },
-      { type: PowerUpType.NOVA_BURST, key: '2', label: 'Nova Burst' },
-      { type: PowerUpType.LASER_BEAM, key: '3', label: 'Laser Beam' },
-    ];
-
     const hudY = this.centerY + PLAYFIELD_RADIUS + 50;
 
-    consumables.forEach((c, i) => {
-      const hudX = this.centerX + (i - 1) * 250;
+    for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
+      const hudX = this.centerX + (i - 1.5) * 200;
       const text = this.add.text(hudX, hudY, '', {
         fontSize: '20px',
         color: '#888888',
@@ -121,25 +123,22 @@ export default class GameScene extends Phaser.Scene {
         align: 'center',
       });
       text.setOrigin(0.5);
-      text.setData('consumableType', c.type);
-      text.setData('consumableKey', c.key);
-      text.setData('consumableLabel', c.label);
-      this.consumableHudElements.push(text);
-    });
+      this.slotHudElements.push(text);
+    }
   }
 
   private updateConsumableHud() {
-    for (const text of this.consumableHudElements) {
-      const type = text.getData('consumableType') as PowerUpType;
-      const key = text.getData('consumableKey') as string;
-      const label = text.getData('consumableLabel') as string;
-      const count = this.powerUpManager.getConsumableCount(type);
+    for (let i = 0; i < this.slotHudElements.length; i++) {
+      const text = this.slotHudElements[i];
+      const type = this.powerUpManager.getEquippedSlot(i);
 
-      if (count > 0) {
-        text.setText(`[${key}] ${label} x${count}`);
+      if (type) {
+        const def = getConsumableDefinition(type);
+        const name = def ? def.name : type;
+        text.setText(`[${i + 1}] ${name}`);
         text.setColor('#ffffff');
       } else {
-        text.setText(`[${key}] ${label}`);
+        text.setText(`[${i + 1}] ---`);
         text.setColor('#444444');
       }
     }
@@ -147,10 +146,11 @@ export default class GameScene extends Phaser.Scene {
 
   // ─── Consumable Activation ────────────────────────────────────────────
 
-  private activateConsumable(type: PowerUpType) {
+  private activateSlot(slot: number) {
     if (this.isPowerUpSelectionActive) return;
 
-    if (!this.powerUpManager.useConsumable(type)) return;
+    const type = this.powerUpManager.useEquippedSlot(slot);
+    if (!type) return;
 
     switch (type) {
       case PowerUpType.SHOCKWAVE:
@@ -356,7 +356,7 @@ export default class GameScene extends Phaser.Scene {
     // Update blur effect every frame
     this.updateBlurEffect();
 
-    // Pause game while power-up selection is active
+    // Pause game while power-up selection or equip screen is active
     if (this.isPowerUpSelectionActive) return;
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
@@ -1012,15 +1012,295 @@ export default class GameScene extends Phaser.Scene {
 
     // Orbital Shield: shields will be spawned in updateShields on next frame
 
-    // Destroy all UI elements
+    // Destroy all power-up UI elements
     for (const el of this.powerUpUIElements) {
       el.destroy();
     }
     this.powerUpUIElements = [];
 
-    this.isPowerUpSelectionActive = false;
-    this.levelManager.startLevel(nextLevel);
+    // Show equip screen if player has consumables, otherwise start next level
+    if (this.powerUpManager.hasAnyConsumables()) {
+      this.showEquipScreen(nextLevel);
+    } else {
+      this.isPowerUpSelectionActive = false;
+      this.levelManager.startLevel(nextLevel);
+    }
   }
+
+  // ─── Equip Consumables Screen ─────────────────────────────────────────
+
+  private showEquipScreen(nextLevel: number) {
+    this.nextLevelForEquipScreen = nextLevel;
+    // isPowerUpSelectionActive stays true to keep game paused
+    this.renderEquipScreen();
+  }
+
+  private renderEquipScreen() {
+    // Clear previous equip UI
+    for (const el of this.equipUIElements) {
+      el.destroy();
+    }
+    this.equipUIElements = [];
+
+    // Backdrop
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x000000, 0.7);
+    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.equipUIElements.push(backdrop);
+
+    // Title
+    const title = this.add.text(this.centerX, this.centerY - 350, 'EQUIP CONSUMABLES', {
+      fontSize: '42px',
+      color: '#ffffff',
+      fontFamily: 'Arial, sans-serif',
+    });
+    title.setOrigin(0.5);
+    this.equipUIElements.push(title);
+
+    const subtitle = this.add.text(
+      this.centerX,
+      this.centerY - 290,
+      `Inventory: ${this.powerUpManager.getTotalConsumableCount()} / ${MAX_CONSUMABLE_INVENTORY}`,
+      {
+        fontSize: '22px',
+        color: '#aaaaaa',
+        fontFamily: 'Arial, sans-serif',
+      }
+    );
+    subtitle.setOrigin(0.5);
+    this.equipUIElements.push(subtitle);
+
+    const hint = this.add.text(
+      this.centerX,
+      this.centerY - 255,
+      'Click an inventory item to equip. Click an equipped slot to unequip.',
+      {
+        fontSize: '16px',
+        color: '#666666',
+        fontFamily: 'Arial, sans-serif',
+      }
+    );
+    hint.setOrigin(0.5);
+    this.equipUIElements.push(hint);
+
+    // ─── 4 Equip Slots ───
+    for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
+      const slotX = this.centerX + (i - 1.5) * 200;
+      const slotY = this.centerY - 150;
+      const equipped = this.powerUpManager.getEquippedSlot(i);
+
+      const slotGfx = this.add.graphics();
+
+      if (equipped) {
+        const def = getConsumableDefinition(equipped);
+        const rarityColor = def ? RARITY_COLORS[def.rarity] : 0xffffff;
+
+        // Filled slot
+        slotGfx.fillStyle(0x444444, 0.9);
+        slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        slotGfx.lineStyle(2, rarityColor, 0.8);
+        slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+
+        this.equipUIElements.push(slotGfx);
+
+        // Slot number
+        const slotNum = this.add.text(slotX, slotY - 25, `[${i + 1}]`, {
+          fontSize: '16px',
+          color: '#888888',
+          fontFamily: 'Arial, sans-serif',
+        });
+        slotNum.setOrigin(0.5);
+        this.equipUIElements.push(slotNum);
+
+        // Item name
+        const itemName = this.add.text(slotX, slotY + 5, def?.name ?? equipped, {
+          fontSize: '20px',
+          color: '#ffffff',
+          fontFamily: 'Arial, sans-serif',
+        });
+        itemName.setOrigin(0.5);
+        this.equipUIElements.push(itemName);
+
+        // Click to unequip
+        const hitArea = this.add.rectangle(slotX, slotY, 160, 90, 0x000000, 0);
+        hitArea.setInteractive({ useHandCursor: true });
+        hitArea.on('pointerdown', () => {
+          this.powerUpManager.unequipSlot(i);
+          this.renderEquipScreen();
+        });
+        hitArea.on('pointerover', () => {
+          slotGfx.clear();
+          slotGfx.fillStyle(0x555555, 0.95);
+          slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+          slotGfx.lineStyle(3, rarityColor, 1);
+          slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        });
+        hitArea.on('pointerout', () => {
+          slotGfx.clear();
+          slotGfx.fillStyle(0x444444, 0.9);
+          slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+          slotGfx.lineStyle(2, rarityColor, 0.8);
+          slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        });
+        this.equipUIElements.push(hitArea);
+      } else {
+        // Empty slot
+        slotGfx.fillStyle(0x222222, 0.7);
+        slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        slotGfx.lineStyle(2, 0x666666, 0.4);
+        slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+
+        this.equipUIElements.push(slotGfx);
+
+        const slotNum = this.add.text(slotX, slotY - 10, `[${i + 1}]`, {
+          fontSize: '16px',
+          color: '#666666',
+          fontFamily: 'Arial, sans-serif',
+        });
+        slotNum.setOrigin(0.5);
+        this.equipUIElements.push(slotNum);
+
+        const emptyText = this.add.text(slotX, slotY + 15, 'Empty', {
+          fontSize: '16px',
+          color: '#555555',
+          fontFamily: 'Arial, sans-serif',
+        });
+        emptyText.setOrigin(0.5);
+        this.equipUIElements.push(emptyText);
+      }
+    }
+
+    // ─── Inventory Section ───
+    const invEntries = this.powerUpManager.getInventoryEntries();
+
+    if (invEntries.length > 0) {
+      const invTitle = this.add.text(this.centerX, this.centerY + 20, 'INVENTORY', {
+        fontSize: '22px',
+        color: '#aaaaaa',
+        fontFamily: 'Arial, sans-serif',
+      });
+      invTitle.setOrigin(0.5);
+      this.equipUIElements.push(invTitle);
+
+      invEntries.forEach((entry, idx) => {
+        const itemY = this.centerY + 80 + idx * 60;
+        const def = getConsumableDefinition(entry.type);
+        const name = def?.name ?? entry.type;
+        const rarityColor = def ? RARITY_COLORS[def.rarity] : 0xaaaaaa;
+
+        // Item background
+        const itemGfx = this.add.graphics();
+        itemGfx.fillStyle(0x333333, 0.8);
+        itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+        itemGfx.lineStyle(2, rarityColor, 0.5);
+        itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+        this.equipUIElements.push(itemGfx);
+
+        // Item text
+        const itemText = this.add.text(this.centerX, itemY, `${name}  x${entry.count}`, {
+          fontSize: '22px',
+          color: '#ffffff',
+          fontFamily: 'Arial, sans-serif',
+        });
+        itemText.setOrigin(0.5);
+        this.equipUIElements.push(itemText);
+
+        // Click to equip to first empty slot
+        const hitArea = this.add.rectangle(this.centerX, itemY, 400, 44, 0x000000, 0);
+        hitArea.setInteractive({ useHandCursor: true });
+        hitArea.on('pointerdown', () => {
+          // Find first empty slot
+          for (let s = 0; s < MAX_EQUIPPED_SLOTS; s++) {
+            if (!this.powerUpManager.getEquippedSlot(s)) {
+              this.powerUpManager.equipToSlot(s, entry.type);
+              this.renderEquipScreen();
+              return;
+            }
+          }
+        });
+        hitArea.on('pointerover', () => {
+          itemGfx.clear();
+          itemGfx.fillStyle(0x444444, 0.9);
+          itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+          itemGfx.lineStyle(3, rarityColor, 0.8);
+          itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+        });
+        hitArea.on('pointerout', () => {
+          itemGfx.clear();
+          itemGfx.fillStyle(0x333333, 0.8);
+          itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+          itemGfx.lineStyle(2, rarityColor, 0.5);
+          itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+        });
+        this.equipUIElements.push(hitArea);
+      });
+    } else {
+      const emptyInv = this.add.text(
+        this.centerX,
+        this.centerY + 60,
+        'All consumables are equipped',
+        {
+          fontSize: '20px',
+          color: '#666666',
+          fontFamily: 'Arial, sans-serif',
+        }
+      );
+      emptyInv.setOrigin(0.5);
+      this.equipUIElements.push(emptyInv);
+    }
+
+    // ─── READY Button ───
+    const readyY = this.centerY + 320;
+
+    const readyGfx = this.add.graphics();
+    readyGfx.fillStyle(0x228833, 0.9);
+    readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+    readyGfx.lineStyle(2, 0x44cc55, 0.8);
+    readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+    this.equipUIElements.push(readyGfx);
+
+    const readyText = this.add.text(this.centerX, readyY, 'READY', {
+      fontSize: '28px',
+      color: '#ffffff',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold',
+    });
+    readyText.setOrigin(0.5);
+    this.equipUIElements.push(readyText);
+
+    const readyHit = this.add.rectangle(this.centerX, readyY, 200, 60, 0x000000, 0);
+    readyHit.setInteractive({ useHandCursor: true });
+    readyHit.on('pointerdown', () => {
+      this.confirmEquipment();
+    });
+    readyHit.on('pointerover', () => {
+      readyGfx.clear();
+      readyGfx.fillStyle(0x33aa44, 0.95);
+      readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+      readyGfx.lineStyle(3, 0x66ee77, 1);
+      readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+    });
+    readyHit.on('pointerout', () => {
+      readyGfx.clear();
+      readyGfx.fillStyle(0x228833, 0.9);
+      readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+      readyGfx.lineStyle(2, 0x44cc55, 0.8);
+      readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+    });
+    this.equipUIElements.push(readyHit);
+  }
+
+  private confirmEquipment() {
+    for (const el of this.equipUIElements) {
+      el.destroy();
+    }
+    this.equipUIElements = [];
+
+    this.isPowerUpSelectionActive = false;
+    this.levelManager.startLevel(this.nextLevelForEquipScreen);
+  }
+
+  // ─── Game Over ────────────────────────────────────────────────────────
 
   private gameOver() {
     // Clean up shields
@@ -1031,6 +1311,16 @@ export default class GameScene extends Phaser.Scene {
 
     // Clean up laser graphics
     this.laserGraphics.clear();
+
+    // Clean up any active UI
+    for (const el of this.powerUpUIElements) {
+      el.destroy();
+    }
+    this.powerUpUIElements = [];
+    for (const el of this.equipUIElements) {
+      el.destroy();
+    }
+    this.equipUIElements = [];
 
     this.audioManager.playSound('gameOver');
     this.scene.start('GameOverScene', { score: this.scoreManager.getScore() });
