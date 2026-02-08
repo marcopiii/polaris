@@ -269,9 +269,9 @@ export default class PowerUpManager {
     return Math.max(0.25, 1 - 0.15 * this.getStacks(PowerUpType.ENEMY_SLOWDOWN));
   }
 
-  /** Number of enemies a bullet can pierce through (0 = normal, destroys on hit) */
-  getPierceCount(): number {
-    return this.getStacks(PowerUpType.PIERCING_ROUNDS);
+  /** Chance (0-1) for a bullet to pierce through an enemy. 10% per stack, capped at 100%. */
+  getPierceChance(): number {
+    return Math.min(1, this.getStacks(PowerUpType.PIERCING_ROUNDS) * 0.1);
   }
 
   /** Number of orbital shields */

@@ -18,7 +18,7 @@ export const BULLET_HEIGHT = 6;
 export const BULLET_SPEED = 1.5; // 1.5 playfield radius per second
 
 // Damage system
-export const TERMINAL_RADIUS_INITIAL = 45; // 5% of playfield
+export const TERMINAL_RADIUS_INITIAL = 72; // 8% of playfield
 export const VISION_RADIUS_INITIAL = 900; // 100% of playfield
 export const TERMINAL_RADIUS_INCREASE = 45; // 5% of playfield
 
@@ -40,6 +40,7 @@ export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side
 export const SHIELD_ORBIT_RADIUS = 120; // pixels from center
 export const SHIELD_ORBIT_SPEED = 2.5; // radians per second
 export const SHIELD_SIZE = 14; // radius of shield circle
+export const SHIELD_MAX_HITS = 3; // hits before shield is destroyed
 
 // Colors
 export const COLORS = {

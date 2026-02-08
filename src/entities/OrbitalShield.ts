@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SHIELD_ORBIT_RADIUS, SHIELD_ORBIT_SPEED, SHIELD_SIZE } from '../constants';
+import { SHIELD_ORBIT_RADIUS, SHIELD_ORBIT_SPEED, SHIELD_SIZE, SHIELD_MAX_HITS } from '../constants';
 
 export default class OrbitalShield {
   private graphics: Phaser.GameObjects.Graphics;
@@ -9,6 +9,7 @@ export default class OrbitalShield {
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
+  private hitsRemaining: number = SHIELD_MAX_HITS;
 
   constructor(scene: Phaser.Scene, centerX: number, centerY: number, startAngle: number) {
     this.centerX = centerX;
@@ -29,15 +30,15 @@ export default class OrbitalShield {
     this.graphics.clear();
 
     // Outer glow
-    this.graphics.fillStyle(0x44aaff, 0.15);
+    this.graphics.fillStyle(0xcccccc, 0.15);
     this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE + 6);
 
     // Mid glow
-    this.graphics.fillStyle(0x44aaff, 0.3);
+    this.graphics.fillStyle(0xdddddd, 0.3);
     this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE + 3);
 
     // Core
-    this.graphics.fillStyle(0x88ccff, 0.8);
+    this.graphics.fillStyle(0xffffff, 0.8);
     this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE);
   }
 
@@ -49,6 +50,16 @@ export default class OrbitalShield {
 
     this.updatePosition();
     this.draw();
+  }
+
+  /** Register a hit. Returns true if shield is destroyed. */
+  onHit(): boolean {
+    this.hitsRemaining--;
+    if (this.hitsRemaining <= 0) {
+      this.destroy();
+      return true;
+    }
+    return false;
   }
 
   getBounds(): { x: number; y: number; radius: number } {

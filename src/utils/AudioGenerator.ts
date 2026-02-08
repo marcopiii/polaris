@@ -122,6 +122,31 @@ export class AudioGenerator {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
+  playLightning() {
+    const duration = 0.12;
+    const oscillator = this.audioContext.createOscillator();
+    const noiseSource = this.audioContext.createBufferSource();
+    const gainNode = this.audioContext.createGain();
+
+    noiseSource.buffer = this.createNoiseBuffer(duration);
+    oscillator.type = 'sine';
+
+    oscillator.connect(gainNode);
+    noiseSource.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + duration);
+
+    gainNode.gain.setValueAtTime(0.26, this.audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+    oscillator.start(this.audioContext.currentTime);
+    noiseSource.start(this.audioContext.currentTime);
+    oscillator.stop(this.audioContext.currentTime + duration);
+    noiseSource.stop(this.audioContext.currentTime + duration);
+  }
+
   private createNoiseBuffer(duration: number): AudioBuffer {
     const bufferSize = this.audioContext.sampleRate * duration;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);

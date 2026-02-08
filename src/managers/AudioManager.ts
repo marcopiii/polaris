@@ -29,6 +29,9 @@ export default class AudioManager {
         case 'gameOver':
           this.audioGenerator.playGameOver();
           break;
+        case 'lightning':
+          this.audioGenerator.playLightning();
+          break;
       }
     } catch (error) {
       console.warn('Audio playback failed:', error);

@@ -11,7 +11,7 @@ export default class Bullet {
   private centerX: number;
   private centerY: number;
   public active: boolean = true;
-  public pierceRemaining: number;
+  public pierceChance: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -22,13 +22,13 @@ export default class Bullet {
     centerX: number,
     centerY: number,
     speedMultiplier: number = 1,
-    pierceCount: number = 0
+    pierceChance: number = 0
   ) {
     this.x = startX;
     this.y = startY;
     this.centerX = centerX;
     this.centerY = centerY;
-    this.pierceRemaining = pierceCount;
+    this.pierceChance = pierceChance;
 
     // Calculate direction
     const dx = targetX - startX;
@@ -94,13 +94,9 @@ export default class Bullet {
     return distanceFromCenter > PLAYFIELD_RADIUS;
   }
 
-  /** Returns true if the bullet should survive the hit (piercing) */
+  /** Returns true if the bullet should survive the hit (probabilistic piercing) */
   onHitEnemy(): boolean {
-    if (this.pierceRemaining > 0) {
-      this.pierceRemaining--;
-      return true;
-    }
-    return false;
+    return Math.random() < this.pierceChance;
   }
 
   destroy() {

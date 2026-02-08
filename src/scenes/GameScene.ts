@@ -184,10 +184,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private activateNovaBurst() {
-    const pierceCount = this.powerUpManager.getPierceCount();
+    const pierceChance =this.powerUpManager.getPierceChance();
 
-    // Fire 360 bullets, one per degree
-    for (let deg = 0; deg < 360; deg++) {
+    // Fire 120 bullets, 3 degrees apart
+    for (let deg = 0; deg < 360; deg += 3) {
       const angle = (deg * Math.PI) / 180;
       const dist = 100;
       const tx = this.player.x + Math.cos(angle) * dist;
@@ -201,7 +201,7 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         1,
-        pierceCount
+        pierceChance
       );
       this.bullets.push(bullet);
     }
@@ -479,7 +479,7 @@ export default class GameScene extends Phaser.Scene {
     const bulletCount = this.powerUpManager.getBulletCount();
     const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
     const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
-    const pierceCount = this.powerUpManager.getPierceCount();
+    const pierceChance =this.powerUpManager.getPierceChance();
 
     if (bulletCount === 1) {
       const bullet = new Bullet(
@@ -491,7 +491,7 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         1,
-        pierceCount
+        pierceChance
       );
       this.bullets.push(bullet);
     } else {
@@ -511,7 +511,7 @@ export default class GameScene extends Phaser.Scene {
           this.centerX,
           this.centerY,
           1,
-          pierceCount
+          pierceChance
         );
         this.bullets.push(bullet);
       }
@@ -579,6 +579,7 @@ export default class GameScene extends Phaser.Scene {
     let currentX = originX;
     let currentY = originY;
     const hitSet = new Set<Enemy>();
+    let playedSound = false;
 
     while (chainsRemaining > 0) {
       // Find closest enemy within range that hasn't been hit yet
@@ -595,6 +596,11 @@ export default class GameScene extends Phaser.Scene {
       }
 
       if (!closestEnemy) break;
+
+      if (!playedSound) {
+        this.audioManager.playSound('lightning');
+        playedSound = true;
+      }
 
       hitSet.add(closestEnemy);
       const targetBounds = closestEnemy.getBounds();
@@ -665,9 +671,15 @@ export default class GameScene extends Phaser.Scene {
 
           // Chain lightning from shield kills too
           this.processChainLightning(hitX, hitY);
+
+          // Shield takes damage
+          if (shield.onHit()) break; // shield destroyed, stop checking enemies for it
         }
       }
     }
+
+    // Remove destroyed shields
+    this.shields = this.shields.filter((s) => s.active);
   }
 
   private onEnemyReachedPlayer(enemy: Enemy) {

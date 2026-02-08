@@ -182,7 +182,7 @@ export class ParticleEffects {
       ease: 'Quad.easeIn',
       onUpdate: () => {
         graphics.clear();
-        graphics.lineStyle(3, 0x88ccff, tweenTarget.alpha);
+        graphics.lineStyle(3, 0xffffff, tweenTarget.alpha);
         graphics.beginPath();
         graphics.moveTo(fromX, fromY);
 
@@ -197,7 +197,7 @@ export class ParticleEffects {
         graphics.strokePath();
 
         // Glow layer
-        graphics.lineStyle(6, 0x44aaff, tweenTarget.alpha * 0.3);
+        graphics.lineStyle(6, 0xcccccc, tweenTarget.alpha * 0.3);
         graphics.beginPath();
         graphics.moveTo(fromX, fromY);
         for (let i = 1; i < segments; i++) {
