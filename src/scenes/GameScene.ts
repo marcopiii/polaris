@@ -256,7 +256,6 @@ export default class GameScene extends Phaser.Scene {
     const bulletCount = this.powerUpManager.getBulletCount();
     const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
     const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
-    const speedMult = this.powerUpManager.getBulletSpeedMultiplier();
     const pierceCount = this.powerUpManager.getPierceCount();
 
     if (bulletCount === 1) {
@@ -268,7 +267,7 @@ export default class GameScene extends Phaser.Scene {
         targetY,
         this.centerX,
         this.centerY,
-        speedMult,
+        1,
         pierceCount
       );
       this.bullets.push(bullet);
@@ -288,7 +287,7 @@ export default class GameScene extends Phaser.Scene {
           ty,
           this.centerX,
           this.centerY,
-          speedMult,
+          1,
           pierceCount
         );
         this.bullets.push(bullet);

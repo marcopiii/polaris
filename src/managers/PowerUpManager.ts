@@ -1,8 +1,7 @@
-import { PLAYFIELD_RADIUS, BULLET_SPEED } from '../constants';
+import { PLAYFIELD_RADIUS } from '../constants';
 
 export enum PowerUpType {
   RAPID_FIRE = 'RAPID_FIRE',
-  BULLET_VELOCITY = 'BULLET_VELOCITY',
   REINFORCED_VISION = 'REINFORCED_VISION',
   MULTI_SHOT = 'MULTI_SHOT',
   ENEMY_SLOWDOWN = 'ENEMY_SLOWDOWN',
@@ -39,13 +38,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.RAPID_FIRE,
     name: 'Rapid Fire',
     description: 'Increase fire rate',
-    rarity: PowerUpRarity.COMMON,
-    weight: 30,
-  },
-  {
-    type: PowerUpType.BULLET_VELOCITY,
-    name: 'Bullet Velocity',
-    description: 'Bullets travel faster',
     rarity: PowerUpRarity.COMMON,
     weight: 30,
   },
@@ -114,16 +106,6 @@ export default class PowerUpManager {
   /** Fire cooldown: 1000 / (4 + stacks) — base ~250ms, decreases with stacks */
   getFireCooldown(): number {
     return 1000 / (4 + this.getStacks(PowerUpType.RAPID_FIRE));
-  }
-
-  /** Bullet speed multiplier: 1 + 0.25 * stacks */
-  getBulletSpeedMultiplier(): number {
-    return 1 + 0.25 * this.getStacks(PowerUpType.BULLET_VELOCITY);
-  }
-
-  /** Bullet speed in playfield radii per second */
-  getBulletSpeed(): number {
-    return BULLET_SPEED * this.getBulletSpeedMultiplier();
   }
 
   /** Vision radius decrease: PLAYFIELD_RADIUS / (5 + stacks) — base 180px */
