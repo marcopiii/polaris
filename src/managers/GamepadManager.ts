@@ -28,14 +28,6 @@ export default class GamepadManager {
     return Math.atan2(ly, lx);
   }
 
-  /** Returns true if the fire button is held (right trigger, right bumper, or A/Cross). */
-  isShooting(): boolean {
-    const pad = this.getPad();
-    if (!pad) return false;
-
-    return pad.R2 > 0.3 || pad.buttons[5]?.pressed || pad.A;
-  }
-
   /** Returns true if the given button was just pressed this frame. */
   isButtonJustPressed(index: number): boolean {
     const pad = this.getPad();
@@ -55,11 +47,6 @@ export default class GamepadManager {
   /** Returns true if Start (button 9) was just pressed. */
   isStartJustPressed(): boolean {
     return this.isButtonJustPressed(9);
-  }
-
-  /** Returns true if B (button 1) was just pressed. */
-  isBJustPressed(): boolean {
-    return this.isButtonJustPressed(1);
   }
 
   /** Returns -1 for left, 1 for right, 0 for no horizontal input. D-pad or left stick. */

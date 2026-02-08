@@ -80,13 +80,12 @@ export default class Player {
       this.shootCooldown -= delta;
     }
 
-    // Check if should shoot (pointer or gamepad)
-    const gamepadShooting = this.gamepadManager?.isShooting() ?? false;
+    // Check if should shoot (pointer or gamepad stick movement)
     let shouldShoot = false;
     let targetX = 0;
     let targetY = 0;
 
-    if ((this.isShooting || gamepadShooting) && this.shootCooldown <= 0) {
+    if ((this.isShooting || gamepadAiming) && this.shootCooldown <= 0) {
       shouldShoot = true;
       this.shootCooldown = fireCooldown;
 
@@ -94,7 +93,7 @@ export default class Player {
         targetX = aimTarget.x;
         targetY = aimTarget.y;
         this.rotation = angleBetween(this.x, this.y, targetX, targetY);
-      } else if (gamepadAiming || gamepadShooting) {
+      } else if (gamepadAiming) {
         // Project target from player position along the aim direction
         targetX = this.x + Math.cos(this.rotation) * PLAYFIELD_RADIUS;
         targetY = this.y + Math.sin(this.rotation) * PLAYFIELD_RADIUS;
