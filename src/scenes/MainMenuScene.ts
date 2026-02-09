@@ -17,6 +17,7 @@ export default class MainMenuScene extends Phaser.Scene {
   private logoDom!: Phaser.GameObjects.DOMElement;
   private buttonDom!: Phaser.GameObjects.DOMElement;
   private enemyCircle?: Phaser.GameObjects.Graphics;
+  private enemyPos = { x: 0, y: 0 };
   private isAnimating = false;
 
   constructor() {
@@ -192,9 +193,8 @@ export default class MainMenuScene extends Phaser.Scene {
       },
     });
 
-    // Morph button into enemy circle using Phaser Graphics (centered at button position)
-    const bx = this.buttonDom.x;
-    const by = this.buttonDom.y;
+    // Morph button into enemy circle and move it toward center
+    this.enemyPos = { x: this.buttonDom.x, y: this.buttonDom.y };
     const startW = buttonRect.width * canvasScale;
     const startH = buttonRect.height * canvasScale;
     const endSize = 32;
@@ -204,7 +204,22 @@ export default class MainMenuScene extends Phaser.Scene {
 
     // Draw initial rect immediately (matches the button appearance without text)
     this.enemyCircle.fillStyle(0x444444, 1);
-    this.enemyCircle.fillRoundedRect(bx - startW / 2, by - startH / 2, startW, startH, 4);
+    this.enemyCircle.fillRoundedRect(
+      this.enemyPos.x - startW / 2,
+      this.enemyPos.y - startH / 2,
+      startW,
+      startH,
+      4
+    );
+
+    // Move enemy circle toward center
+    this.tweens.add({
+      targets: this.enemyPos,
+      x: centerX,
+      y: centerY + 150,
+      duration: 900,
+      ease: 'Quad.easeInOut',
+    });
 
     this.time.delayedCall(50, () => {
       this.tweens.add({
@@ -218,8 +233,8 @@ export default class MainMenuScene extends Phaser.Scene {
           this.enemyCircle!.clear();
           this.enemyCircle!.fillStyle(0x333333, 1);
           this.enemyCircle!.fillRoundedRect(
-            bx - morph.w / 2,
-            by - morph.h / 2,
+            this.enemyPos.x - morph.w / 2,
+            this.enemyPos.y - morph.h / 2,
             morph.w,
             morph.h,
             morph.cornerR
@@ -228,13 +243,34 @@ export default class MainMenuScene extends Phaser.Scene {
       });
     });
 
+    // Keep redrawing at current position after morph completes
+    const posTracker = this.time.addEvent({
+      delay: 16,
+      loop: true,
+      callback: () => {
+        if (!this.enemyCircle) {
+          posTracker.destroy();
+          return;
+        }
+        this.enemyCircle.clear();
+        this.enemyCircle.fillStyle(0x333333, 1);
+        this.enemyCircle.fillRoundedRect(
+          this.enemyPos.x - morph.w / 2,
+          this.enemyPos.y - morph.h / 2,
+          morph.w,
+          morph.h,
+          morph.cornerR
+        );
+      },
+    });
+
     this.time.delayedCall(300, onComplete);
   }
 
   private animatePhase2(onComplete: () => void) {
     // O is at screen center after Phase 1
     const oPos = { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
-    const btnPos = { x: this.buttonDom.x, y: this.buttonDom.y };
+    const btnPos = { x: this.enemyPos.x, y: this.enemyPos.y };
 
     const angle = Math.atan2(btnPos.y - oPos.y, btnPos.x - oPos.x);
 
@@ -278,7 +314,7 @@ export default class MainMenuScene extends Phaser.Scene {
   }
 
   private animatePhase3() {
-    const btnPos = { x: this.buttonDom.x, y: this.buttonDom.y };
+    const btnPos = { x: this.enemyPos.x, y: this.enemyPos.y };
 
     // Destroy enemy circle graphic
     this.enemyCircle?.destroy();

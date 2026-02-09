@@ -23,7 +23,7 @@ export default class GameOverScene extends Phaser.Scene {
     const title = this.add.text(centerX, centerY - 300, 'GAME OVER', {
       fontSize: '64px',
       color: '#ff4444',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     title.setOrigin(0.5);
 
@@ -31,7 +31,7 @@ export default class GameOverScene extends Phaser.Scene {
     const scoreText = this.add.text(centerX, centerY - 200, `Score: ${this.finalScore}`, {
       fontSize: '32px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     scoreText.setOrigin(0.5);
 
@@ -42,7 +42,7 @@ export default class GameOverScene extends Phaser.Scene {
     const restartButton = this.add.text(centerX - 100, centerY + 200, 'RESTART', {
       fontSize: '24px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
       backgroundColor: '#444444',
       padding: { x: 20, y: 10 },
     });
@@ -65,7 +65,7 @@ export default class GameOverScene extends Phaser.Scene {
     const menuButton = this.add.text(centerX + 100, centerY + 200, 'MAIN MENU', {
       fontSize: '24px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
       backgroundColor: '#444444',
       padding: { x: 20, y: 10 },
     });
@@ -94,7 +94,7 @@ export default class GameOverScene extends Phaser.Scene {
     const leaderboardTitle = this.add.text(x, y, 'LEADERBOARD', {
       fontSize: '24px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     leaderboardTitle.setOrigin(0.5);
 
@@ -118,7 +118,7 @@ export default class GameOverScene extends Phaser.Scene {
     const promptText = this.add.text(x, y, 'New High Score! Enter your name:', {
       fontSize: '18px',
       color: '#ffff00',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     promptText.setOrigin(0.5);
 

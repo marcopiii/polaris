@@ -143,7 +143,7 @@ export default class GameScene extends Phaser.Scene {
       const text = this.add.text(hudX, hudY, '', {
         fontSize: '20px',
         color: '#888888',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
       });
       text.setOrigin(0.5);
@@ -181,7 +181,7 @@ export default class GameScene extends Phaser.Scene {
     const labelText = this.add.text(hudX, hudY, label, {
       fontSize: '18px',
       color,
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     labelText.setOrigin(0, 0);
     labelText.setRotation(angle);
@@ -192,7 +192,7 @@ export default class GameScene extends Phaser.Scene {
     const valueText = this.add.text(valueX, valueY, '0', {
       fontSize: '32px',
       color,
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     valueText.setOrigin(0, 0);
     valueText.setRotation(angle);
@@ -1119,7 +1119,7 @@ export default class GameScene extends Phaser.Scene {
       {
         fontSize: '48px',
         color: '#ffffff',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
       }
     );
     title.setOrigin(0.5);
@@ -1128,7 +1128,7 @@ export default class GameScene extends Phaser.Scene {
     const subtitle = this.add.text(this.centerX, this.centerY - 360, 'Choose a Power-Up', {
       fontSize: '28px',
       color: '#cccccc',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     subtitle.setOrigin(0.5);
     this.powerUpUIElements.push(subtitle);
@@ -1147,7 +1147,7 @@ export default class GameScene extends Phaser.Scene {
     const scoreText = this.add.text(this.centerX, this.centerY - 12, `Score`, {
       fontSize: '16px',
       color: '#888888',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
       align: 'center',
     });
     scoreText.setOrigin(0.5);
@@ -1160,7 +1160,7 @@ export default class GameScene extends Phaser.Scene {
       {
         fontSize: '24px',
         color: '#ffffff',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
       }
     );
@@ -1197,7 +1197,7 @@ export default class GameScene extends Phaser.Scene {
         const tagText = this.add.text(nodeX, nodeY - 65, 'CONSUMABLE', {
           fontSize: '13px',
           color: '#ffcc44',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
           align: 'center',
         });
         tagText.setOrigin(0.5);
@@ -1206,7 +1206,7 @@ export default class GameScene extends Phaser.Scene {
         const rarityText = this.add.text(nodeX, nodeY - 65, powerUp.rarity, {
           fontSize: '13px',
           color: '#' + rarityColor.toString(16).padStart(6, '0'),
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
           align: 'center',
         });
         rarityText.setOrigin(0.5);
@@ -1217,7 +1217,7 @@ export default class GameScene extends Phaser.Scene {
       const nameText = this.add.text(nodeX, nodeY - 35, powerUp.name, {
         fontSize: '22px',
         color: '#ffffff',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
       });
       nameText.setOrigin(0.5);
@@ -1227,7 +1227,7 @@ export default class GameScene extends Phaser.Scene {
       const descText = this.add.text(nodeX, nodeY + 5, powerUp.description, {
         fontSize: '14px',
         color: '#aaaaaa',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
         wordWrap: { width: 170 },
       });
@@ -1241,7 +1241,7 @@ export default class GameScene extends Phaser.Scene {
           const qtyText = this.add.text(nodeX, nodeY + 40, `Qty: ${qty}`, {
             fontSize: '18px',
             color: '#ffcc44',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: "'Rajdhani', sans-serif",
             align: 'center',
           });
           qtyText.setOrigin(0.5);
@@ -1253,7 +1253,7 @@ export default class GameScene extends Phaser.Scene {
           const stackText = this.add.text(nodeX, nodeY + 40, `x${stacks}`, {
             fontSize: '18px',
             color: '#ffff00',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: "'Rajdhani', sans-serif",
             align: 'center',
           });
           stackText.setOrigin(0.5);
@@ -1376,7 +1376,7 @@ export default class GameScene extends Phaser.Scene {
     const title = this.add.text(this.centerX, this.centerY - 350, 'EQUIP CONSUMABLES', {
       fontSize: '42px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
     });
     title.setOrigin(0.5);
     this.equipUIElements.push(title);
@@ -1388,7 +1388,7 @@ export default class GameScene extends Phaser.Scene {
       {
         fontSize: '22px',
         color: '#aaaaaa',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
       }
     );
     subtitle.setOrigin(0.5);
@@ -1401,7 +1401,7 @@ export default class GameScene extends Phaser.Scene {
       {
         fontSize: '16px',
         color: '#666666',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
       }
     );
     hint.setOrigin(0.5);
@@ -1431,7 +1431,7 @@ export default class GameScene extends Phaser.Scene {
         const slotNum = this.add.text(slotX, slotY - 25, `[${i + 1}]`, {
           fontSize: '16px',
           color: '#888888',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         });
         slotNum.setOrigin(0.5);
         this.equipUIElements.push(slotNum);
@@ -1440,7 +1440,7 @@ export default class GameScene extends Phaser.Scene {
         const itemName = this.add.text(slotX, slotY + 5, def?.name ?? equipped, {
           fontSize: '20px',
           color: '#ffffff',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         });
         itemName.setOrigin(0.5);
         this.equipUIElements.push(itemName);
@@ -1479,7 +1479,7 @@ export default class GameScene extends Phaser.Scene {
         const slotNum = this.add.text(slotX, slotY - 10, `[${i + 1}]`, {
           fontSize: '16px',
           color: '#666666',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         });
         slotNum.setOrigin(0.5);
         this.equipUIElements.push(slotNum);
@@ -1487,7 +1487,7 @@ export default class GameScene extends Phaser.Scene {
         const emptyText = this.add.text(slotX, slotY + 15, 'Empty', {
           fontSize: '16px',
           color: '#555555',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         });
         emptyText.setOrigin(0.5);
         this.equipUIElements.push(emptyText);
@@ -1501,7 +1501,7 @@ export default class GameScene extends Phaser.Scene {
       const invTitle = this.add.text(this.centerX, this.centerY + 20, 'INVENTORY', {
         fontSize: '22px',
         color: '#aaaaaa',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "'Rajdhani', sans-serif",
       });
       invTitle.setOrigin(0.5);
       this.equipUIElements.push(invTitle);
@@ -1524,7 +1524,7 @@ export default class GameScene extends Phaser.Scene {
         const itemText = this.add.text(this.centerX, itemY, `${name}  x${entry.count}`, {
           fontSize: '22px',
           color: '#ffffff',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         });
         itemText.setOrigin(0.5);
         this.equipUIElements.push(itemText);
@@ -1566,7 +1566,7 @@ export default class GameScene extends Phaser.Scene {
         {
           fontSize: '20px',
           color: '#666666',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: "'Rajdhani', sans-serif",
         }
       );
       emptyInv.setOrigin(0.5);
@@ -1586,7 +1586,7 @@ export default class GameScene extends Phaser.Scene {
     const readyText = this.add.text(this.centerX, readyY, 'READY', {
       fontSize: '28px',
       color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'Rajdhani', sans-serif",
       fontStyle: 'bold',
     });
     readyText.setOrigin(0.5);
