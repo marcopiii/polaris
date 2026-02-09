@@ -135,7 +135,10 @@ export default class MainMenuScene extends Phaser.Scene {
 
     const canvasScale = GAME_WIDTH / this.sys.game.canvas.clientWidth;
 
-    // Measure P/LARIS inner-edge distances from the O center (in CSS pixels)
+    // Measure P/LARIS inner-edge distances from the O center in unscaled local CSS pixels.
+    // getBoundingClientRect returns viewport pixels (includes parent scale), so divide out
+    // the logo scale so the push translateX works in the parent's local coordinate space.
+    const logoScale = PX * 1.4;
     const polarisEl = logoNode.querySelector('[data-logo-part="polaris"]') as HTMLElement | null;
     let pDist = 0;
     let larisDist = 0;
@@ -143,10 +146,10 @@ export default class MainMenuScene extends Phaser.Scene {
       const polarisCx =
         polarisEl.getBoundingClientRect().left + polarisEl.getBoundingClientRect().width / 2;
       if (pSpan) {
-        pDist = polarisCx - pSpan.getBoundingClientRect().right;
+        pDist = (polarisCx - pSpan.getBoundingClientRect().right) / logoScale;
       }
       if (larisSpan) {
-        larisDist = larisSpan.getBoundingClientRect().left - polarisCx;
+        larisDist = (larisSpan.getBoundingClientRect().left - polarisCx) / logoScale;
       }
     }
 
