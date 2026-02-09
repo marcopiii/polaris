@@ -177,13 +177,18 @@ export default class GameScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
     });
     this.streakLabel.setOrigin(0, 0);
+    this.streakLabel.setRotation(angle);
 
-    this.streakValue = this.add.text(hudX, hudY + 22, '0', {
+    const lineOffset = 22;
+    const valueX = hudX + Math.sin(-angle) * lineOffset;
+    const valueY = hudY + Math.cos(-angle) * lineOffset;
+    this.streakValue = this.add.text(valueX, valueY, '0', {
       fontSize: '32px',
       color,
       fontFamily: 'Arial, sans-serif',
     });
     this.streakValue.setOrigin(0, 0);
+    this.streakValue.setRotation(angle);
   }
 
   private updateStreakHud() {
