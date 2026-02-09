@@ -1,5 +1,6 @@
 export class AudioGenerator {
   private audioContext: AudioContext;
+  private noiseBufferCache = new Map<number, AudioBuffer>();
 
   constructor() {
     const AudioContextClass =
@@ -33,7 +34,7 @@ export class AudioGenerator {
     const duration = 0.15;
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
-    const noiseBuffer = this.createNoiseBuffer(duration);
+    const noiseBuffer = this.getNoiseBuffer(duration);
     const noiseSource = this.audioContext.createBufferSource();
 
     noiseSource.buffer = noiseBuffer;
@@ -128,7 +129,7 @@ export class AudioGenerator {
     const noiseSource = this.audioContext.createBufferSource();
     const gainNode = this.audioContext.createGain();
 
-    noiseSource.buffer = this.createNoiseBuffer(duration);
+    noiseSource.buffer = this.getNoiseBuffer(duration);
     oscillator.type = 'sine';
 
     oscillator.connect(gainNode);
@@ -241,7 +242,7 @@ export class AudioGenerator {
 
     // Metallic shatter: noise + descending tone
     const noiseSource = this.audioContext.createBufferSource();
-    noiseSource.buffer = this.createNoiseBuffer(duration);
+    noiseSource.buffer = this.getNoiseBuffer(duration);
     const noiseGain = this.audioContext.createGain();
     noiseSource.connect(noiseGain);
     noiseGain.connect(this.audioContext.destination);
@@ -264,15 +265,17 @@ export class AudioGenerator {
     osc.stop(t + duration);
   }
 
-  private createNoiseBuffer(duration: number): AudioBuffer {
-    const bufferSize = this.audioContext.sampleRate * duration;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const output = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 0.2 - 0.1;
+  private getNoiseBuffer(duration: number): AudioBuffer {
+    let buffer = this.noiseBufferCache.get(duration);
+    if (!buffer) {
+      const bufferSize = this.audioContext.sampleRate * duration;
+      buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+      const output = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 0.2 - 0.1;
+      }
+      this.noiseBufferCache.set(duration, buffer);
     }
-
     return buffer;
   }
 }
