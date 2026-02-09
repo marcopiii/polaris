@@ -190,7 +190,7 @@ export default class GameScene extends Phaser.Scene {
       if (enemy.active) {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
-        this.scoreManager.addKill();
+        this.scoreManager.addKill(enemy.tier);
         enemy.destroy();
       }
     }
@@ -355,7 +355,7 @@ export default class GameScene extends Phaser.Scene {
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
         this.processChainLightning(bounds.x, bounds.y);
-        this.scoreManager.addKill();
+        this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
         this.enemies.splice(i, 1);
@@ -688,7 +688,7 @@ export default class GameScene extends Phaser.Scene {
   private spawnEnemy() {
     const randomAngle = Math.random() * Math.PI * 2;
     const health = this.rollEnemyHealth();
-    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health, health);
+    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health);
     this.enemies.push(enemy);
   }
 
@@ -744,7 +744,7 @@ export default class GameScene extends Phaser.Scene {
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
-            this.scoreManager.addKill();
+            this.scoreManager.addKill(enemy.tier);
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           } else {
             ParticleEffects.createEnemyHitParticles(this, hitX, hitY, bx, by);
@@ -811,7 +811,7 @@ export default class GameScene extends Phaser.Scene {
       currentX = targetBounds.x;
       currentY = targetBounds.y;
       closestEnemy.destroy();
-      this.scoreManager.addKill();
+      this.scoreManager.addKill(closestEnemy.tier);
 
       chainsRemaining--;
     }

@@ -28,11 +28,10 @@ export default class Enemy {
     theta: number,
     centerX: number,
     centerY: number,
-    health: number = 1,
-    tier: number = 1
+    health: number = 1
   ) {
     this.scene = scene;
-    this.tier = tier;
+    this.tier = health;
     this.centerX = centerX;
     this.centerY = centerY;
     this.health = health;
