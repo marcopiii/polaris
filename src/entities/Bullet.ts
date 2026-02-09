@@ -53,21 +53,10 @@ export default class Bullet {
     this.velocityX = normalizedX * pixelsPerSecond;
     this.velocityY = normalizedY * pixelsPerSecond;
 
-    // Create graphics
+    // Create graphics: draw once at origin with rotation, then position via setPosition
     this.graphics = scene.add.graphics();
-    this.draw();
-  }
-
-  private draw() {
-    this.graphics.clear();
-
-    // Calculate rotation angle
     const angle = Math.atan2(this.velocityY, this.velocityX);
-
-    // Save transform state
-    this.graphics.save();
-    this.graphics.translateCanvas(this.x, this.y);
-    this.graphics.rotateCanvas(angle);
+    this.graphics.setRotation(angle);
 
     // Outer glow (drawn first, behind core)
     this.graphics.fillStyle(COLORS.bullet, 0.15);
@@ -77,7 +66,7 @@ export default class Bullet {
     this.graphics.fillStyle(COLORS.bullet, 1);
     this.graphics.fillEllipse(0, 0, BULLET_WIDTH, BULLET_HEIGHT);
 
-    this.graphics.restore();
+    this.graphics.setPosition(this.x, this.y);
   }
 
   update(delta: number) {
@@ -93,7 +82,8 @@ export default class Bullet {
       return;
     }
 
-    this.draw();
+    // Move the Graphics object; no shape redraw needed
+    this.graphics.setPosition(this.x, this.y);
   }
 
   private checkOutOfBounds(): boolean {

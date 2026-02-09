@@ -44,10 +44,10 @@ export default class Enemy {
       theta,
     };
 
-    // Create graphics
+    // Create graphics and draw once at origin; position via setPosition
     this.graphics = scene.add.graphics();
     this.updatePosition();
-    this.draw();
+    this.drawShape();
   }
 
   /** Compute the visual/collision size for a given health value. */
@@ -65,10 +65,12 @@ export default class Enemy {
     this.y = this.centerY + cartesian.y;
   }
 
-  private draw() {
+  /** Redraw the shape at origin. Only needed when displaySize changes. */
+  private drawShape() {
     this.graphics.clear();
     this.graphics.fillStyle(COLORS.enemy, 1);
-    this.graphics.fillCircle(this.x, this.y, this.displaySize);
+    this.graphics.fillCircle(0, 0, this.displaySize);
+    this.graphics.setPosition(this.x, this.y);
   }
 
   update(delta: number, speedMultiplier: number = 1) {
@@ -80,7 +82,8 @@ export default class Enemy {
     this.polar.r -= moveAmount;
 
     this.updatePosition();
-    this.draw();
+    // Move the Graphics object; no shape redraw needed
+    this.graphics.setPosition(this.x, this.y);
   }
 
   /**
@@ -95,7 +98,7 @@ export default class Enemy {
     }
     // Shrink to new health-based size
     this.displaySize = Enemy.sizeForHealth(this.health);
-    this.draw();
+    this.drawShape();
 
     // Brief white flash to indicate a non-lethal hit
     this.flashWhite();
@@ -103,14 +106,14 @@ export default class Enemy {
   }
 
   private flashWhite() {
-    // Overdraw a white circle, then restore normal color after a short delay
+    // Overdraw a white circle at origin, then restore normal color after a short delay
     this.graphics.clear();
     this.graphics.fillStyle(0xffffff, 1);
-    this.graphics.fillCircle(this.x, this.y, this.displaySize);
+    this.graphics.fillCircle(0, 0, this.displaySize);
 
     this.scene.time.delayedCall(60, () => {
       if (this.active) {
-        this.draw();
+        this.drawShape();
       }
     });
   }

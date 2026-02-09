@@ -21,6 +21,8 @@ export default class OrbitalShield {
   private arcAngle: number = SHIELD_ARC_ANGLE;
   private _innerR: number = 0;
   private _outerR: number = 0;
+  private lastOrbitRadius: number = -1;
+  private lastArcAngle: number = -1;
 
   constructor(
     scene: Phaser.Scene,
@@ -35,21 +37,30 @@ export default class OrbitalShield {
     this.slotAngle = slotAngle;
 
     this.graphics = scene.add.graphics();
+    this.graphics.setPosition(centerX, centerY);
   }
 
-  private draw() {
-    this.graphics.clear();
-
-    const halfArc = this.arcAngle / 2;
-    const startAngle = this.angle - halfArc;
-    const endAngle = this.angle + halfArc;
+  /** Redraw the arc shape at origin. Only needed when orbitRadius or arcAngle changes. */
+  private drawShape() {
+    this.lastOrbitRadius = this.orbitRadius;
+    this.lastArcAngle = this.arcAngle;
 
     this._innerR = this.orbitRadius - SHIELD_THICKNESS / 2;
     this._outerR = this.orbitRadius + SHIELD_THICKNESS / 2;
 
+    const halfArc = this.arcAngle / 2;
+
+    this.graphics.clear();
     this.graphics.lineStyle(SHIELD_THICKNESS, 0xffffff, 1);
     this.graphics.beginPath();
-    this.graphics.arc(this.centerX, this.centerY, this.orbitRadius, startAngle, endAngle, false);
+    this.graphics.arc(
+      0,
+      0,
+      this.orbitRadius,
+      this.slotAngle - halfArc,
+      this.slotAngle + halfArc,
+      false
+    );
     this.graphics.strokePath();
   }
 
@@ -62,7 +73,11 @@ export default class OrbitalShield {
     this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
     this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
 
-    this.draw();
+    // Only redraw shape when geometry changes; rotation handled by setRotation
+    if (this.orbitRadius !== this.lastOrbitRadius || this.arcAngle !== this.lastArcAngle) {
+      this.drawShape();
+    }
+    this.graphics.setRotation(rotation);
   }
 
   /** Register a hit. Returns true if shield is destroyed. */
