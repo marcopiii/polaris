@@ -100,6 +100,14 @@ export default class Player {
     return { shouldShoot, targetX, targetY };
   }
 
+  setScale(scale: number) {
+    this.scale = scale;
+  }
+
+  getScale(): number {
+    return this.scale;
+  }
+
   getRotation(): number {
     return this.rotation;
   }

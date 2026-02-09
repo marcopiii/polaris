@@ -40,12 +40,12 @@ export default class Enemy {
     this.graphics.fillCircle(this.x, this.y, ENEMY_SIZE);
   }
 
-  update(delta: number) {
+  update(delta: number, speedMultiplier: number = 1) {
     if (!this.active) return;
 
-    // Move toward center
+    // Move toward center with speed multiplier from power-ups
     const deltaSec = delta / 1000;
-    const moveAmount = ENEMY_SPEED * PLAYFIELD_RADIUS * deltaSec;
+    const moveAmount = ENEMY_SPEED * PLAYFIELD_RADIUS * deltaSec * speedMultiplier;
     this.polar.r -= moveAmount;
 
     this.updatePosition();

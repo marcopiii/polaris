@@ -132,6 +132,221 @@ export class ParticleEffects {
     });
   }
 
+  static createShockwaveEffect(scene: Phaser.Scene, centerX: number, centerY: number) {
+    // Two expanding rings: bright inner + faint outer
+    for (const ring of [
+      { color: 0xffaa00, width: 6, delay: 0 },
+      { color: 0xff4400, width: 3, delay: 80 },
+    ]) {
+      const graphics = scene.add.graphics();
+      const tweenTarget = { radius: 0, alpha: 1 };
+
+      scene.tweens.add({
+        targets: tweenTarget,
+        radius: PLAYFIELD_RADIUS,
+        alpha: 0,
+        duration: 600,
+        delay: ring.delay,
+        ease: 'Quad.easeOut',
+        onUpdate: () => {
+          graphics.clear();
+          graphics.lineStyle(ring.width, ring.color, tweenTarget.alpha);
+          graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
+        },
+        onComplete: () => {
+          graphics.destroy();
+        },
+      });
+    }
+  }
+
+  static createChainLightningEffect(
+    scene: Phaser.Scene,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number
+  ) {
+    const graphics = scene.add.graphics();
+    const tweenTarget = { alpha: 1 };
+
+    // Draw a jagged lightning bolt between two points
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const segments = 6;
+
+    scene.tweens.add({
+      targets: tweenTarget,
+      alpha: 0,
+      duration: 250,
+      ease: 'Quad.easeIn',
+      onUpdate: () => {
+        graphics.clear();
+        graphics.lineStyle(3, 0xffffff, tweenTarget.alpha);
+        graphics.beginPath();
+        graphics.moveTo(fromX, fromY);
+
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          graphics.lineTo(px, py);
+        }
+
+        graphics.lineTo(toX, toY);
+        graphics.strokePath();
+
+        // Glow layer
+        graphics.lineStyle(6, 0xcccccc, tweenTarget.alpha * 0.3);
+        graphics.beginPath();
+        graphics.moveTo(fromX, fromY);
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          graphics.lineTo(px, py);
+        }
+        graphics.lineTo(toX, toY);
+        graphics.strokePath();
+      },
+      onComplete: () => {
+        graphics.destroy();
+      },
+    });
+  }
+
+  static createShieldHitParticles(
+    scene: Phaser.Scene,
+    centerX: number,
+    centerY: number,
+    shieldAngle: number,
+    arcAngle: number,
+    radius: number
+  ) {
+    const particleCount = 6;
+    const halfArc = arcAngle / 2;
+
+    for (let i = 0; i < particleCount; i++) {
+      // Scatter particles along the arc
+      const a = shieldAngle + (Math.random() - 0.5) * halfArc;
+      const px = centerX + Math.cos(a) * radius;
+      const py = centerY + Math.sin(a) * radius;
+      // Fly outward from center
+      const outAngle = a + (Math.random() - 0.5) * 0.5;
+      const speed = 80 + Math.random() * 60;
+
+      const particle = {
+        x: px,
+        y: py,
+        vx: Math.cos(outAngle) * speed,
+        vy: Math.sin(outAngle) * speed,
+        size: 2 + Math.random() * 2,
+      };
+
+      const particleGraphics = scene.add.graphics();
+
+      scene.tweens.add({
+        targets: particle,
+        size: 0,
+        duration: 250 + Math.random() * 150,
+        ease: 'Cubic.easeIn',
+        onUpdate: () => {
+          particle.x += (particle.vx * 16) / 1000;
+          particle.y += (particle.vy * 16) / 1000;
+          particle.vx *= 0.92;
+          particle.vy *= 0.92;
+
+          particleGraphics.clear();
+          particleGraphics.fillStyle(0xffffff, 1.0);
+          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
+        },
+        onComplete: () => {
+          particleGraphics.destroy();
+        },
+      });
+    }
+  }
+
+  static createShieldDestroyParticles(
+    scene: Phaser.Scene,
+    centerX: number,
+    centerY: number,
+    shieldAngle: number,
+    arcAngle: number,
+    radius: number
+  ) {
+    const particleCount = 18;
+    const halfArc = arcAngle / 2;
+
+    for (let i = 0; i < particleCount; i++) {
+      // Distribute evenly along the full arc
+      const t = i / (particleCount - 1);
+      const a = shieldAngle - halfArc + t * arcAngle;
+      const px = centerX + Math.cos(a) * radius;
+      const py = centerY + Math.sin(a) * radius;
+      // Fly outward with some spread
+      const outAngle = a + (Math.random() - 0.5) * 0.8;
+      const speed = 100 + Math.random() * 80;
+
+      const particle = {
+        x: px,
+        y: py,
+        vx: Math.cos(outAngle) * speed,
+        vy: Math.sin(outAngle) * speed,
+        size: 3 + Math.random() * 3,
+      };
+
+      const particleGraphics = scene.add.graphics();
+
+      scene.tweens.add({
+        targets: particle,
+        size: 0,
+        duration: 400 + Math.random() * 300,
+        ease: 'Cubic.easeIn',
+        onUpdate: () => {
+          particle.x += (particle.vx * 16) / 1000;
+          particle.y += (particle.vy * 16) / 1000;
+          particle.vx *= 0.94;
+          particle.vy *= 0.94;
+
+          particleGraphics.clear();
+          particleGraphics.fillStyle(0xffffff, 1.0);
+          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
+        },
+        onComplete: () => {
+          particleGraphics.destroy();
+        },
+      });
+    }
+
+    // Flash arc that fades out
+    const flashGraphics = scene.add.graphics();
+    const flash = { alpha: 1 };
+    scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        flashGraphics.clear();
+        flashGraphics.lineStyle(20, 0xffffff, flash.alpha * 0.5);
+        flashGraphics.beginPath();
+        flashGraphics.arc(
+          centerX,
+          centerY,
+          radius,
+          shieldAngle - halfArc,
+          shieldAngle + halfArc,
+          false
+        );
+        flashGraphics.strokePath();
+      },
+      onComplete: () => {
+        flashGraphics.destroy();
+      },
+    });
+  }
+
   static createTerminalHitParticles(
     scene: Phaser.Scene,
     x: number,

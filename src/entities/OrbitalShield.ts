@@ -1,0 +1,122 @@
+import Phaser from 'phaser';
+import {
+  SHIELD_ORBIT_OFFSET,
+  SHIELD_ARC_ANGLE,
+  SHIELD_ARC_SHRINK,
+  SHIELD_ARC_MIN,
+  SHIELD_THICKNESS,
+} from '../constants';
+
+export default class OrbitalShield {
+  private graphics: Phaser.GameObjects.Graphics;
+  private centerX: number;
+  private centerY: number;
+  private slotAngle: number;
+  private angle: number = 0;
+  private orbitRadius: number = 0;
+  public active: boolean = true;
+  public x: number = 0;
+  public y: number = 0;
+  public readonly slot: number;
+  private arcAngle: number = SHIELD_ARC_ANGLE;
+  private _innerR: number = 0;
+  private _outerR: number = 0;
+
+  constructor(
+    scene: Phaser.Scene,
+    centerX: number,
+    centerY: number,
+    slot: number,
+    slotAngle: number
+  ) {
+    this.centerX = centerX;
+    this.centerY = centerY;
+    this.slot = slot;
+    this.slotAngle = slotAngle;
+
+    this.graphics = scene.add.graphics();
+  }
+
+  private draw() {
+    this.graphics.clear();
+
+    const halfArc = this.arcAngle / 2;
+    const startAngle = this.angle - halfArc;
+    const endAngle = this.angle + halfArc;
+
+    this._innerR = this.orbitRadius - SHIELD_THICKNESS / 2;
+    this._outerR = this.orbitRadius + SHIELD_THICKNESS / 2;
+
+    this.graphics.lineStyle(SHIELD_THICKNESS, 0xffffff, 1);
+    this.graphics.beginPath();
+    this.graphics.arc(this.centerX, this.centerY, this.orbitRadius, startAngle, endAngle, false);
+    this.graphics.strokePath();
+  }
+
+  update(terminalRadius: number, rotation: number) {
+    if (!this.active) return;
+
+    this.orbitRadius = terminalRadius + SHIELD_ORBIT_OFFSET;
+    this.angle = this.slotAngle + rotation;
+
+    this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
+    this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
+
+    this.draw();
+  }
+
+  /** Register a hit. Returns true if shield is destroyed. */
+  onHit(): boolean {
+    this.arcAngle -= SHIELD_ARC_SHRINK;
+    if (this.arcAngle < SHIELD_ARC_MIN) {
+      this.destroy();
+      return true;
+    }
+    return false;
+  }
+
+  /** Check if a point (enemy center) collides with this arc shield */
+  checkCollision(ex: number, ey: number, enemyRadius: number): boolean {
+    const dx = ex - this.centerX;
+    const dy = ey - this.centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Check radial overlap: enemy circle vs arc band
+    if (dist + enemyRadius < this._innerR || dist - enemyRadius > this._outerR) {
+      return false;
+    }
+
+    // Check angular overlap
+    const enemyAngle = Math.atan2(dy, dx);
+    let diff = enemyAngle - this.angle;
+    // Normalize to [-PI, PI]
+    diff = ((diff + Math.PI) % (2 * Math.PI)) - Math.PI;
+    if (diff < -Math.PI) diff += 2 * Math.PI;
+
+    const halfArc = this.arcAngle / 2;
+    const angularExtent = dist > 0 ? enemyRadius / dist : Math.PI;
+
+    return Math.abs(diff) < halfArc + angularExtent;
+  }
+
+  getArcInfo(): {
+    centerX: number;
+    centerY: number;
+    angle: number;
+    arcAngle: number;
+    radius: number;
+  } {
+    return {
+      centerX: this.centerX,
+      centerY: this.centerY,
+      angle: this.angle,
+      arcAngle: this.arcAngle,
+      radius: this.orbitRadius,
+    };
+  }
+
+  destroy() {
+    this.active = false;
+    this.graphics.destroy();
+  }
+}

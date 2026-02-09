@@ -1,55 +1,264 @@
 import { PLAYFIELD_RADIUS } from '../constants';
 
 export enum PowerUpType {
+  // Passives (stackable)
   RAPID_FIRE = 'RAPID_FIRE',
   REINFORCED_VISION = 'REINFORCED_VISION',
-  TERMINAL_SHRINK = 'TERMINAL_SHRINK',
   MULTI_SHOT = 'MULTI_SHOT',
+  ENEMY_SLOWDOWN = 'ENEMY_SLOWDOWN',
+  TERMINAL_SHRINK = 'TERMINAL_SHRINK',
+  PIERCING_ROUNDS = 'PIERCING_ROUNDS',
+  ORBITAL_SHIELD = 'ORBITAL_SHIELD',
+  CHAIN_LIGHTNING = 'CHAIN_LIGHTNING',
+  // Consumables (one-use, activated during gameplay)
+  SHOCKWAVE = 'SHOCKWAVE',
+  NOVA_BURST = 'NOVA_BURST',
+  LASER_BEAM = 'LASER_BEAM',
 }
 
-interface PowerUpDefinition {
+export enum PowerUpRarity {
+  COMMON = 'COMMON',
+  UNCOMMON = 'UNCOMMON',
+  RARE = 'RARE',
+  LEGENDARY = 'LEGENDARY',
+}
+
+export const RARITY_COLORS: Record<PowerUpRarity, number> = {
+  [PowerUpRarity.COMMON]: 0xaaaaaa,
+  [PowerUpRarity.UNCOMMON]: 0x4488ff,
+  [PowerUpRarity.RARE]: 0xaa44ff,
+  [PowerUpRarity.LEGENDARY]: 0xffaa00,
+};
+
+export interface PowerUpDefinition {
   type: PowerUpType;
   name: string;
   description: string;
+  rarity: PowerUpRarity;
+  weight: number;
+  consumable: boolean;
 }
+
+export const MAX_CONSUMABLE_INVENTORY = 16;
+export const MAX_EQUIPPED_SLOTS = 4;
+
+const CONSUMABLE_TYPES = new Set<PowerUpType>([
+  PowerUpType.SHOCKWAVE,
+  PowerUpType.NOVA_BURST,
+  PowerUpType.LASER_BEAM,
+]);
 
 const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
   {
     type: PowerUpType.RAPID_FIRE,
     name: 'Rapid Fire',
     description: 'Increase fire rate',
+    rarity: PowerUpRarity.COMMON,
+    weight: 30,
+    consumable: false,
   },
   {
     type: PowerUpType.REINFORCED_VISION,
     name: 'Reinforced Vision',
     description: 'Reduce vision loss per hit',
-  },
-  {
-    type: PowerUpType.TERMINAL_SHRINK,
-    name: 'Terminal Shrink',
-    description: 'Shrink the terminal radius',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 20,
+    consumable: false,
   },
   {
     type: PowerUpType.MULTI_SHOT,
     name: 'Multi-Shot',
     description: 'Fire additional bullets',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 18,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.ENEMY_SLOWDOWN,
+    name: 'Gravity Well',
+    description: 'Enemies move 15% slower',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 18,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.TERMINAL_SHRINK,
+    name: 'Terminal Shrink',
+    description: 'Shrink the terminal radius',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 15,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.PIERCING_ROUNDS,
+    name: 'Piercing Rounds',
+    description: 'Bullets pierce through enemies',
+    rarity: PowerUpRarity.RARE,
+    weight: 10,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.ORBITAL_SHIELD,
+    name: 'Orbital Shield',
+    description: 'Orbiting shield destroys enemies',
+    rarity: PowerUpRarity.RARE,
+    weight: 8,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.CHAIN_LIGHTNING,
+    name: 'Chain Lightning',
+    description: 'Kills chain to nearby enemies',
+    rarity: PowerUpRarity.LEGENDARY,
+    weight: 5,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.SHOCKWAVE,
+    name: 'Shockwave',
+    description: 'Destroy all enemies at once',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 12,
+    consumable: true,
+  },
+  {
+    type: PowerUpType.NOVA_BURST,
+    name: 'Nova Burst',
+    description: 'Fire 360 bullets in all directions',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 12,
+    consumable: true,
+  },
+  {
+    type: PowerUpType.LASER_BEAM,
+    name: 'Laser Beam',
+    description: 'Wide laser beam for 3 seconds',
+    rarity: PowerUpRarity.RARE,
+    weight: 8,
+    consumable: true,
   },
 ];
 
+export function getConsumableDefinition(type: PowerUpType): PowerUpDefinition | undefined {
+  return POWER_UP_DEFINITIONS.find((d) => d.type === type && d.consumable);
+}
+
 export default class PowerUpManager {
   private stacks: Map<PowerUpType, number> = new Map();
+  private inventory: Map<PowerUpType, number> = new Map();
+  private equipped: (PowerUpType | null)[] = [null, null, null, null];
 
   addPowerUp(type: PowerUpType): void {
-    this.stacks.set(type, this.getStacks(type) + 1);
+    if (CONSUMABLE_TYPES.has(type)) {
+      if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return;
+      this.inventory.set(type, this.getInventoryCount(type) + 1);
+    } else {
+      this.stacks.set(type, this.getStacks(type) + 1);
+    }
   }
 
   getStacks(type: PowerUpType): number {
     return this.stacks.get(type) ?? 0;
   }
 
-  /** Fire cooldown: 1000 / (4 + stacks) — base ~250ms, decreases with stacks */
+  removeStack(type: PowerUpType): void {
+    const current = this.getStacks(type);
+    if (current > 0) {
+      this.stacks.set(type, current - 1);
+    }
+  }
+
+  /** Count of a consumable type in inventory only (not equipped) */
+  getInventoryCount(type: PowerUpType): number {
+    return this.inventory.get(type) ?? 0;
+  }
+
+  /** Total owned count of a consumable type (inventory + equipped) */
+  getConsumableCount(type: PowerUpType): number {
+    let count = this.inventory.get(type) ?? 0;
+    for (const slot of this.equipped) {
+      if (slot === type) count++;
+    }
+    return count;
+  }
+
+  /** Total number of consumables owned (inventory + equipped) */
+  getTotalConsumableCount(): number {
+    let total = 0;
+    for (const count of this.inventory.values()) {
+      total += count;
+    }
+    for (const slot of this.equipped) {
+      if (slot !== null) total++;
+    }
+    return total;
+  }
+
+  getEquippedSlot(slot: number): PowerUpType | null {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
+    return this.equipped[slot] ?? null;
+  }
+
+  /** Equip a consumable from inventory to a slot. Returns true on success. */
+  equipToSlot(slot: number, type: PowerUpType): boolean {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
+    if (!CONSUMABLE_TYPES.has(type)) return false;
+    const invCount = this.getInventoryCount(type);
+    if (invCount <= 0) return false;
+
+    // If slot already has something, unequip it first
+    this.unequipSlot(slot);
+
+    // Remove from inventory, place in slot
+    this.inventory.set(type, invCount - 1);
+    if (this.getInventoryCount(type) <= 0) this.inventory.delete(type);
+    this.equipped[slot] = type;
+    return true;
+  }
+
+  /** Unequip a slot back to inventory. Returns true if slot had something. */
+  unequipSlot(slot: number): boolean {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
+    const type = this.equipped[slot];
+    if (!type) return false;
+
+    this.inventory.set(type, this.getInventoryCount(type) + 1);
+    this.equipped[slot] = null;
+    return true;
+  }
+
+  /** Use the consumable in the given equipped slot. Returns the type, or null. */
+  useEquippedSlot(slot: number): PowerUpType | null {
+    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
+    const type = this.equipped[slot];
+    if (!type) return null;
+    this.equipped[slot] = null;
+    return type;
+  }
+
+  /** Check if the player owns any consumables (inventory or equipped) */
+  hasAnyConsumables(): boolean {
+    return this.getTotalConsumableCount() > 0;
+  }
+
+  /** Get inventory entries (type + count) for equip screen UI */
+  getInventoryEntries(): { type: PowerUpType; count: number }[] {
+    const entries: { type: PowerUpType; count: number }[] = [];
+    for (const [type, count] of this.inventory.entries()) {
+      if (count > 0) {
+        entries.push({ type, count });
+      }
+    }
+    return entries;
+  }
+
+  isConsumable(type: PowerUpType): boolean {
+    return CONSUMABLE_TYPES.has(type);
+  }
+
+  /** Fire cooldown: 1000 / (2 + stacks) — base 500ms (2/s), decreases with stacks */
   getFireCooldown(): number {
-    return 1000 / (4 + this.getStacks(PowerUpType.RAPID_FIRE));
+    return 1000 / (2 + this.getStacks(PowerUpType.RAPID_FIRE));
   }
 
   /** Vision radius decrease: PLAYFIELD_RADIUS / (5 + stacks) — base 180px */
@@ -62,13 +271,62 @@ export default class PowerUpManager {
     return 1 + this.getStacks(PowerUpType.MULTI_SHOT);
   }
 
-  /** Return 3 random power-ups from the 4 available */
+  /** Number of Gravity Well stacks */
+  getGravityWellStacks(): number {
+    return this.getStacks(PowerUpType.ENEMY_SLOWDOWN);
+  }
+
+  /** Chance (0-1) for a bullet to pierce through an enemy. 10% per stack, capped at 70%. */
+  getPierceChance(): number {
+    return Math.min(0.7, this.getStacks(PowerUpType.PIERCING_ROUNDS) * 0.1);
+  }
+
+  /** Number of orbital shields */
+  getShieldCount(): number {
+    return this.getStacks(PowerUpType.ORBITAL_SHIELD);
+  }
+
+  /** Number of chain lightning bounces per kill */
+  getChainCount(): number {
+    return this.getStacks(PowerUpType.CHAIN_LIGHTNING);
+  }
+
+  /** Chain lightning range in pixels */
+  getChainRange(): number {
+    return 150;
+  }
+
+  /** Return 3 weighted-random power-ups (no duplicates) */
   getRandomSelection(): PowerUpDefinition[] {
-    const shuffled = [...POWER_UP_DEFINITIONS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3);
+    let pool = [...POWER_UP_DEFINITIONS];
+
+    // If consumable inventory is full, exclude consumables from pool
+    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) {
+      pool = pool.filter((p) => !p.consumable);
+    }
+
+    const selected: PowerUpDefinition[] = [];
+
+    for (let i = 0; i < 3 && pool.length > 0; i++) {
+      const totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
+      let roll = Math.random() * totalWeight;
+
+      for (let j = 0; j < pool.length; j++) {
+        roll -= pool[j].weight;
+        if (roll <= 0) {
+          selected.push(pool[j]);
+          pool.splice(j, 1);
+          break;
+        }
+      }
+    }
+
+    return selected;
   }
 
   reset(): void {
     this.stacks.clear();
+    this.inventory.clear();
+    this.equipped = [null, null, null, null];
   }
 }
