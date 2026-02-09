@@ -169,17 +169,18 @@ export default class GameScene extends Phaser.Scene {
     const hudDist = PLAYFIELD_RADIUS + 50;
     const hudX = this.centerX + Math.cos(angle) * hudDist;
     const hudY = this.centerY + Math.sin(angle) * hudDist;
+    const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
     this.streakLabel = this.add.text(hudX, hudY, 'STREAK', {
       fontSize: '18px',
-      color: '#888888',
+      color,
       fontFamily: 'Arial, sans-serif',
     });
     this.streakLabel.setOrigin(0, 0);
 
     this.streakValue = this.add.text(hudX, hudY + 22, '0', {
       fontSize: '32px',
-      color: '#ffffff',
+      color,
       fontFamily: 'Arial, sans-serif',
     });
     this.streakValue.setOrigin(0, 0);
