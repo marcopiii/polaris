@@ -10,6 +10,7 @@ uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform float uVisionRadius;
 uniform float uPlayfieldRadius;
+uniform vec2 uDirection;
 
 varying vec2 outTexCoord;
 
@@ -18,36 +19,28 @@ void main() {
     vec2 pixelPos = uv * uResolution;
     float dist = distance(pixelPos, uCenter);
 
-    // Inside vision radius - no blur
-    if (dist <= uVisionRadius) {
+    // Inside vision radius or outside playfield - no blur
+    if (dist <= uVisionRadius || dist > uPlayfieldRadius) {
         gl_FragColor = texture2D(uMainSampler, uv);
         return;
     }
 
-    // Outside playfield - no blur
-    if (dist > uPlayfieldRadius) {
-        gl_FragColor = texture2D(uMainSampler, uv);
-        return;
-    }
-
-    // Apply circular blur in the ring between vision and playfield
-    vec4 color = vec4(0.0);
-    float total = 0.0;
+    // 9-tap Gaussian blur along uDirection (separable)
     float blurAmount = 0.005;
+    vec2 step = uDirection * blurAmount;
 
-    // Circular blur kernel (only sample within radius)
-    for (float x = -4.0; x <= 4.0; x += 1.0) {
-        for (float y = -4.0; y <= 4.0; y += 1.0) {
-            float sampleDist = length(vec2(x, y));
-            if (sampleDist <= 4.0) {
-                vec2 offset = vec2(x, y) * blurAmount;
-                color += texture2D(uMainSampler, uv + offset);
-                total += 1.0;
-            }
-        }
-    }
+    vec4 color = vec4(0.0);
+    color += texture2D(uMainSampler, uv - 4.0 * step) * 0.0162;
+    color += texture2D(uMainSampler, uv - 3.0 * step) * 0.0540;
+    color += texture2D(uMainSampler, uv - 2.0 * step) * 0.1218;
+    color += texture2D(uMainSampler, uv - 1.0 * step) * 0.1956;
+    color += texture2D(uMainSampler, uv              ) * 0.2248;
+    color += texture2D(uMainSampler, uv + 1.0 * step) * 0.1956;
+    color += texture2D(uMainSampler, uv + 2.0 * step) * 0.1218;
+    color += texture2D(uMainSampler, uv + 3.0 * step) * 0.0540;
+    color += texture2D(uMainSampler, uv + 4.0 * step) * 0.0162;
 
-    gl_FragColor = color / total;
+    gl_FragColor = color;
 }
 `;
 
@@ -71,6 +64,15 @@ export default class VisionBlurShader extends Phaser.Renderer.WebGL.Pipelines.Po
     this.set2f('uCenter', this.centerX, this.centerY);
     this.set1f('uVisionRadius', this.visionRadius);
     this.set1f('uPlayfieldRadius', this.playfieldRadius);
+  }
+
+  onDraw(renderTarget: Phaser.Renderer.WebGL.RenderTarget) {
+    // Two-pass separable blur: horizontal then vertical
+    this.set2f('uDirection', 1.0, 0.0);
+    this.bindAndDraw(renderTarget, this.fullFrame1);
+
+    this.set2f('uDirection', 0.0, 1.0);
+    this.bindAndDraw(this.fullFrame1);
   }
 
   setVisionParams(centerX: number, centerY: number, visionRadius: number, playfieldRadius: number) {
