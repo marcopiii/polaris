@@ -539,8 +539,9 @@ export default class GameScene extends Phaser.Scene {
       // Clamp inside playfield — bounce off edge
       const dx = s.x - this.centerX;
       const dy = s.y - this.centerY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > PLAYFIELD_RADIUS) {
+      const distSq = dx * dx + dy * dy;
+      if (distSq > PLAYFIELD_RADIUS * PLAYFIELD_RADIUS) {
+        const dist = Math.sqrt(distSq);
         const nx = dx / dist;
         const ny = dy / dist;
         s.x = this.centerX + nx * PLAYFIELD_RADIUS;

@@ -7,7 +7,7 @@ import {
   PLAYFIELD_RADIUS,
   PX,
 } from '../constants';
-import { distance } from '../utils/MathUtils';
+import { distanceSq } from '../utils/MathUtils';
 import { gameRandom } from '../utils/BenchmarkConfig';
 import { acquireGraphics, releaseGraphics } from '../utils/GraphicsPool';
 
@@ -88,8 +88,9 @@ export default class Bullet {
   }
 
   private checkOutOfBounds(): boolean {
-    const distanceFromCenter = distance(this.x, this.y, this.centerX, this.centerY);
-    return distanceFromCenter > PLAYFIELD_RADIUS;
+    return (
+      distanceSq(this.x, this.y, this.centerX, this.centerY) > PLAYFIELD_RADIUS * PLAYFIELD_RADIUS
+    );
   }
 
   /** Returns true if the bullet should survive the hit (probabilistic piercing) */

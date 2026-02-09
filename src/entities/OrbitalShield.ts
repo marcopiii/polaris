@@ -95,14 +95,16 @@ export default class OrbitalShield {
   checkCollision(ex: number, ey: number, enemyRadius: number): boolean {
     const dx = ex - this.centerX;
     const dy = ey - this.centerY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const distSq = dx * dx + dy * dy;
 
-    // Check radial overlap: enemy circle vs arc band
-    if (dist + enemyRadius < this._innerR || dist - enemyRadius > this._outerR) {
-      return false;
-    }
+    // Early reject with squared distances (avoids sqrt for most enemies)
+    const farEdge = this._outerR + enemyRadius;
+    if (distSq > farEdge * farEdge) return false;
+    const nearEdge = this._innerR - enemyRadius;
+    if (nearEdge > 0 && distSq < nearEdge * nearEdge) return false;
 
-    // Check angular overlap
+    // Only compute sqrt + atan2 for the few enemies in the radial band
+    const dist = Math.sqrt(distSq);
     const enemyAngle = Math.atan2(dy, dx);
     let diff = enemyAngle - this.angle;
     // Normalize to [-PI, PI]
