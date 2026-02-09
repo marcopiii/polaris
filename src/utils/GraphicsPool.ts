@@ -13,6 +13,7 @@ export function initGraphicsPool(scene: Phaser.Scene) {
 export function acquireGraphics(fallbackScene?: Phaser.Scene): Phaser.GameObjects.Graphics {
   if (activeScene && pool.length > 0) {
     const g = pool.pop()!;
+    activeScene.sys.displayList.add(g);
     g.setVisible(true);
     g.setActive(true);
     return g;
@@ -32,6 +33,7 @@ export function releaseGraphics(g: Phaser.GameObjects.Graphics) {
     g.setRotation(0);
     g.setScale(1, 1);
     g.setAlpha(1);
+    g.removeFromDisplayList();
     pool.push(g);
   } else {
     g.destroy();
