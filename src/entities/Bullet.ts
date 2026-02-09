@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
-import { BULLET_WIDTH, BULLET_HEIGHT, BULLET_SPEED, COLORS, PLAYFIELD_RADIUS } from '../constants';
+import {
+  BULLET_WIDTH,
+  BULLET_HEIGHT,
+  BULLET_SPEED,
+  COLORS,
+  PLAYFIELD_RADIUS,
+  PX,
+} from '../constants';
 import { distance } from '../utils/MathUtils';
 
 export default class Bullet {
@@ -68,9 +75,9 @@ export default class Bullet {
 
     // Add glow effect (multiple layers with alpha)
     this.graphics.fillStyle(COLORS.bullet, 0.5);
-    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 2, BULLET_HEIGHT + 2);
+    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 2 * PX, BULLET_HEIGHT + 2 * PX);
     this.graphics.fillStyle(COLORS.bullet, 0.2);
-    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 4, BULLET_HEIGHT + 4);
+    this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 4 * PX, BULLET_HEIGHT + 4 * PX);
 
     this.graphics.restore();
   }

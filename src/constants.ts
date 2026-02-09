@@ -1,15 +1,24 @@
-export const GAME_WIDTH = 2048;
-export const GAME_HEIGHT = 2048;
+// ─── Fundamental Scale ──────────────────────────────────────────────────
+// PLAYFIELD_RADIUS is the single source of truth for sizing.
+// All pixel measurements are expressed relative to it via the PX factor.
+// To change the internal resolution, adjust PLAYFIELD_RADIUS only.
+export const PLAYFIELD_RADIUS = 1800;
 
-// Playfield
-export const PLAYFIELD_RADIUS = 900;
+// Scale factor relative to the original 900-px design.
+// Multiply any hard-coded pixel value from the original design by PX.
+const BASE_PLAYFIELD_RADIUS = 900;
+export const PX = PLAYFIELD_RADIUS / BASE_PLAYFIELD_RADIUS;
+
+// Game world derived from playfield (maintains original proportions)
+export const GAME_WIDTH = Math.ceil(2048 * PX);
+export const GAME_HEIGHT = Math.ceil(2048 * PX);
 
 // Player
-export const PLAYER_SIZE = 10;
+export const PLAYER_SIZE = 10 * PX;
 export const FIRE_COOLDOWN = 500; // milliseconds
 
 // Enemy
-export const ENEMY_SIZE = 16;
+export const ENEMY_SIZE = 16 * PX;
 export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
 
 // Enemy Health System
@@ -26,14 +35,14 @@ export const ENEMY_LEVEL_EXP = 3.6;
 export const ENEMY_LEVEL_GAP = 3;
 
 // Bullet
-export const BULLET_WIDTH = 24;
-export const BULLET_HEIGHT = 6;
+export const BULLET_WIDTH = 24 * PX;
+export const BULLET_HEIGHT = 6 * PX;
 export const BULLET_SPEED = 1.5; // 1.5 playfield radius per second
 
 // Damage system
-export const TERMINAL_RADIUS_INITIAL = 72; // 8% of playfield
-export const VISION_RADIUS_INITIAL = 900; // 100% of playfield
-export const TERMINAL_RADIUS_INCREASE = 45; // 5% of playfield
+export const TERMINAL_RADIUS_INITIAL = 72 * PX;
+export const VISION_RADIUS_INITIAL = PLAYFIELD_RADIUS; // 100% of playfield
+export const TERMINAL_RADIUS_INCREASE = 45 * PX;
 
 // Level system
 export const LEVEL_BASE_DURATION = 20; // seconds
@@ -50,13 +59,13 @@ export const LASER_BEAM_DURATION = 3000; // milliseconds
 export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side = 6 deg total
 
 // Orbital Shield
-export const SHIELD_ORBIT_OFFSET = 60; // pixels outside the terminal radius
+export const SHIELD_ORBIT_OFFSET = 60 * PX; // pixels outside the terminal radius
 export const SHIELD_MAX_SLOTS = 8; // max shields around the player
 export const SHIELD_ORBIT_SPEED = 1.5; // radians per second
 export const SHIELD_ARC_ANGLE = (43 * Math.PI) / 180; // initial arc width in radians
 export const SHIELD_ARC_SHRINK = (3 * Math.PI) / 180; // shrink per hit in radians
 export const SHIELD_ARC_MIN = (19 * Math.PI) / 180; // destroyed when below this
-export const SHIELD_THICKNESS = 15; // arc thickness in pixels
+export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 
 // Colors
 export const COLORS = {

@@ -14,6 +14,7 @@ import {
   LASER_BEAM_HALF_ANGLE,
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
+  PX,
 } from '../constants';
 import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
@@ -139,13 +140,13 @@ export default class GameScene extends Phaser.Scene {
   // ─── Consumable HUD ──────────────────────────────────────────────────
 
   private createConsumableHud() {
-    const hudY = this.centerY + PLAYFIELD_RADIUS + 50;
+    const hudY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;
 
     for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
-      const hudX = this.centerX + (i - 1.5) * 200;
+      const hudX = this.centerX + (i - 1.5) * 200 * PX;
       const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
       const text = this.add.text(hudX, hudY, '', {
-        fontSize: '20px',
+        fontSize: `${36 * PX}px`,
         color,
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
@@ -177,24 +178,24 @@ export default class GameScene extends Phaser.Scene {
     label: string
   ): { label: Phaser.GameObjects.Text; value: Phaser.GameObjects.Text } {
     const angle = (angleDeg * Math.PI) / 180;
-    const hudDist = PLAYFIELD_RADIUS + 15;
+    const hudDist = PLAYFIELD_RADIUS + 15 * PX;
     const hudX = this.centerX + Math.cos(angle) * hudDist;
     const hudY = this.centerY + Math.sin(angle) * hudDist;
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
     const labelText = this.add.text(hudX, hudY, label, {
-      fontSize: '18px',
+      fontSize: `${32 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
     labelText.setOrigin(0, 0);
     labelText.setRotation(angle);
 
-    const lineOffset = 22;
+    const lineOffset = 40 * PX;
     const valueX = hudX + Math.sin(-angle) * lineOffset;
     const valueY = hudY + Math.cos(-angle) * lineOffset;
     const valueText = this.add.text(valueX, valueY, '0', {
-      fontSize: '32px',
+      fontSize: `${58 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -418,7 +419,7 @@ export default class GameScene extends Phaser.Scene {
         Math.sin(tangent) * (1 - mix) + Math.sin(inward) * mix,
         Math.cos(tangent) * (1 - mix) + Math.cos(inward) * mix
       );
-      const speed = 200 + Math.random() * 300;
+      const speed = (200 + Math.random() * 300) * PX;
       this.laserSparks.push({
         x: spawnX,
         y: spawnY,
@@ -490,7 +491,7 @@ export default class GameScene extends Phaser.Scene {
       this.laserGraphics.save();
       this.laserGraphics.translateCanvas(s.x, s.y);
       this.laserGraphics.rotateCanvas(angle);
-      this.laserGraphics.fillEllipse(0, 0, 14, 4);
+      this.laserGraphics.fillEllipse(0, 0, 14 * PX, 4 * PX);
       this.laserGraphics.restore();
     }
   }
@@ -537,13 +538,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Draw vision radius edge (subtle indicator)
     if (this.visionRadius < PLAYFIELD_RADIUS) {
-      this.playfieldGraphics.lineStyle(4, 0xffffff, 0.2);
+      this.playfieldGraphics.lineStyle(4 * PX, 0xffffff, 0.2);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.visionRadius);
     }
 
     // Draw terminal radius hint (danger zone)
     if (this.terminalRadius > 0) {
-      this.playfieldGraphics.lineStyle(2, COLORS.terminalRadiusHint, 1);
+      this.playfieldGraphics.lineStyle(2 * PX, COLORS.terminalRadiusHint, 1);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.terminalRadius);
     }
   }
@@ -654,7 +655,7 @@ export default class GameScene extends Phaser.Scene {
       const px = this.centerX + Math.cos(p.theta) * p.r;
       const py = this.centerY + Math.sin(p.theta) * p.r;
       this.dustGraphics.fillStyle(0x939393, 1);
-      this.dustGraphics.fillCircle(px, py, 2);
+      this.dustGraphics.fillCircle(px, py, 2 * PX);
     }
 
     // Update bullets
@@ -712,7 +713,7 @@ export default class GameScene extends Phaser.Scene {
       ParticleEffects.createLevelCompleteWave(this, this.centerX, this.centerY);
 
       // Playfield edge tremble
-      this.playfieldTremble = 20;
+      this.playfieldTremble = 20 * PX;
       this.tweens.add({
         targets: this,
         playfieldTremble: 0,
@@ -1141,10 +1142,10 @@ export default class GameScene extends Phaser.Scene {
     // Title at top
     const title = this.add.text(
       this.centerX,
-      this.centerY - 420,
+      this.centerY - 420 * PX,
       `LEVEL ${completedLevel} COMPLETE`,
       {
-        fontSize: '48px',
+        fontSize: `${48 * PX}px`,
         color: '#ffffff',
         fontFamily: "'Rajdhani', sans-serif",
       }
@@ -1152,8 +1153,8 @@ export default class GameScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.powerUpUIElements.push(title);
 
-    const subtitle = this.add.text(this.centerX, this.centerY - 360, 'Choose a Power-Up', {
-      fontSize: '28px',
+    const subtitle = this.add.text(this.centerX, this.centerY - 360 * PX, 'Choose a Power-Up', {
+      fontSize: `${28 * PX}px`,
       color: '#cccccc',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -1165,14 +1166,14 @@ export default class GameScene extends Phaser.Scene {
 
     // Draw central hub circle
     const hubGraphics = this.add.graphics();
-    hubGraphics.lineStyle(2, 0xffffff, 0.3);
-    hubGraphics.strokeCircle(this.centerX, this.centerY, 60);
+    hubGraphics.lineStyle(2 * PX, 0xffffff, 0.3);
+    hubGraphics.strokeCircle(this.centerX, this.centerY, 60 * PX);
     hubGraphics.fillStyle(0x222222, 0.8);
-    hubGraphics.fillCircle(this.centerX, this.centerY, 60);
+    hubGraphics.fillCircle(this.centerX, this.centerY, 60 * PX);
 
     // Score display in hub
-    const scoreText = this.add.text(this.centerX, this.centerY - 12, `Score`, {
-      fontSize: '16px',
+    const scoreText = this.add.text(this.centerX, this.centerY - 12 * PX, `Score`, {
+      fontSize: `${16 * PX}px`,
       color: '#888888',
       fontFamily: "'Rajdhani', sans-serif",
       align: 'center',
@@ -1182,10 +1183,10 @@ export default class GameScene extends Phaser.Scene {
 
     const scoreValue = this.add.text(
       this.centerX,
-      this.centerY + 12,
+      this.centerY + 12 * PX,
       `${this.scoreManager.getScore()}`,
       {
-        fontSize: '24px',
+        fontSize: `${24 * PX}px`,
         color: '#ffffff',
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
@@ -1196,7 +1197,7 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpUIElements.push(hubGraphics);
 
     // Render 3 power-up nodes arranged radially
-    const nodeRadius = 260; // Distance from center to each node
+    const nodeRadius = 260 * PX; // Distance from center to each node
     const startAngle = -Math.PI / 2; // Start at top
 
     selection.forEach((powerUp, index) => {
@@ -1207,10 +1208,13 @@ export default class GameScene extends Phaser.Scene {
 
       // Connection line from hub to node
       const lineGraphics = this.add.graphics();
-      lineGraphics.lineStyle(2, rarityColor, 0.3);
+      lineGraphics.lineStyle(2 * PX, rarityColor, 0.3);
       lineGraphics.beginPath();
-      lineGraphics.moveTo(this.centerX + Math.cos(angle) * 60, this.centerY + Math.sin(angle) * 60);
-      lineGraphics.lineTo(nodeX - Math.cos(angle) * 100, nodeY - Math.sin(angle) * 100);
+      lineGraphics.moveTo(
+        this.centerX + Math.cos(angle) * 60 * PX,
+        this.centerY + Math.sin(angle) * 60 * PX
+      );
+      lineGraphics.lineTo(nodeX - Math.cos(angle) * 100 * PX, nodeY - Math.sin(angle) * 100 * PX);
       lineGraphics.strokePath();
       this.powerUpUIElements.push(lineGraphics);
 
@@ -1221,8 +1225,8 @@ export default class GameScene extends Phaser.Scene {
 
       // Consumable tag or rarity label
       if (powerUp.consumable) {
-        const tagText = this.add.text(nodeX, nodeY - 65, 'CONSUMABLE', {
-          fontSize: '13px',
+        const tagText = this.add.text(nodeX, nodeY - 65 * PX, 'CONSUMABLE', {
+          fontSize: `${13 * PX}px`,
           color: '#ffcc44',
           fontFamily: "'Rajdhani', sans-serif",
           align: 'center',
@@ -1230,8 +1234,8 @@ export default class GameScene extends Phaser.Scene {
         tagText.setOrigin(0.5);
         this.powerUpUIElements.push(tagText);
       } else {
-        const rarityText = this.add.text(nodeX, nodeY - 65, powerUp.rarity, {
-          fontSize: '13px',
+        const rarityText = this.add.text(nodeX, nodeY - 65 * PX, powerUp.rarity, {
+          fontSize: `${13 * PX}px`,
           color: '#' + rarityColor.toString(16).padStart(6, '0'),
           fontFamily: "'Rajdhani', sans-serif",
           align: 'center',
@@ -1241,8 +1245,8 @@ export default class GameScene extends Phaser.Scene {
       }
 
       // Power-up name
-      const nameText = this.add.text(nodeX, nodeY - 35, powerUp.name, {
-        fontSize: '22px',
+      const nameText = this.add.text(nodeX, nodeY - 35 * PX, powerUp.name, {
+        fontSize: `${22 * PX}px`,
         color: '#ffffff',
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
@@ -1251,12 +1255,12 @@ export default class GameScene extends Phaser.Scene {
       this.powerUpUIElements.push(nameText);
 
       // Description
-      const descText = this.add.text(nodeX, nodeY + 5, powerUp.description, {
-        fontSize: '14px',
+      const descText = this.add.text(nodeX, nodeY + 5 * PX, powerUp.description, {
+        fontSize: `${14 * PX}px`,
         color: '#aaaaaa',
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
-        wordWrap: { width: 170 },
+        wordWrap: { width: 170 * PX },
       });
       descText.setOrigin(0.5);
       this.powerUpUIElements.push(descText);
@@ -1265,8 +1269,8 @@ export default class GameScene extends Phaser.Scene {
       if (powerUp.consumable) {
         const qty = this.powerUpManager.getConsumableCount(powerUp.type);
         if (qty > 0) {
-          const qtyText = this.add.text(nodeX, nodeY + 40, `Qty: ${qty}`, {
-            fontSize: '18px',
+          const qtyText = this.add.text(nodeX, nodeY + 40 * PX, `Qty: ${qty}`, {
+            fontSize: `${18 * PX}px`,
             color: '#ffcc44',
             fontFamily: "'Rajdhani', sans-serif",
             align: 'center',
@@ -1277,8 +1281,8 @@ export default class GameScene extends Phaser.Scene {
       } else {
         const stacks = this.powerUpManager.getStacks(powerUp.type);
         if (stacks > 0) {
-          const stackText = this.add.text(nodeX, nodeY + 40, `x${stacks}`, {
-            fontSize: '18px',
+          const stackText = this.add.text(nodeX, nodeY + 40 * PX, `x${stacks}`, {
+            fontSize: `${18 * PX}px`,
             color: '#ffff00',
             fontFamily: "'Rajdhani', sans-serif",
             align: 'center',
@@ -1289,7 +1293,7 @@ export default class GameScene extends Phaser.Scene {
       }
 
       // Interactive hit area (invisible circle covering the node)
-      const hitArea = this.add.circle(nodeX, nodeY, 100, 0x000000, 0);
+      const hitArea = this.add.circle(nodeX, nodeY, 100 * PX, 0x000000, 0);
       hitArea.setInteractive({ useHandCursor: true });
 
       hitArea.on('pointerover', () => {
@@ -1315,10 +1319,10 @@ export default class GameScene extends Phaser.Scene {
     isConsumable: boolean,
     isHover: boolean
   ) {
-    const radius = isHover ? 105 : 100;
+    const radius = (isHover ? 105 : 100) * PX;
     const fillColor = isHover ? 0x444444 : 0x333333;
     const fillAlpha = isHover ? 0.95 : 0.9;
-    const lineWidth = isHover ? 4 : 3;
+    const lineWidth = (isHover ? 4 : 3) * PX;
     const lineAlpha = isHover ? 1 : 0.6;
 
     gfx.fillStyle(fillColor, fillAlpha);
@@ -1400,8 +1404,8 @@ export default class GameScene extends Phaser.Scene {
     this.equipUIElements.push(backdrop);
 
     // Title
-    const title = this.add.text(this.centerX, this.centerY - 350, 'EQUIP CONSUMABLES', {
-      fontSize: '42px',
+    const title = this.add.text(this.centerX, this.centerY - 350 * PX, 'EQUIP CONSUMABLES', {
+      fontSize: `${42 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -1410,10 +1414,10 @@ export default class GameScene extends Phaser.Scene {
 
     const subtitle = this.add.text(
       this.centerX,
-      this.centerY - 290,
+      this.centerY - 290 * PX,
       `Inventory: ${this.powerUpManager.getTotalConsumableCount()} / ${MAX_CONSUMABLE_INVENTORY}`,
       {
-        fontSize: '22px',
+        fontSize: `${22 * PX}px`,
         color: '#aaaaaa',
         fontFamily: "'Rajdhani', sans-serif",
       }
@@ -1423,10 +1427,10 @@ export default class GameScene extends Phaser.Scene {
 
     const hint = this.add.text(
       this.centerX,
-      this.centerY - 255,
+      this.centerY - 255 * PX,
       'Click an inventory item to equip. Click an equipped slot to unequip.',
       {
-        fontSize: '16px',
+        fontSize: `${16 * PX}px`,
         color: '#666666',
         fontFamily: "'Rajdhani', sans-serif",
       }
@@ -1436,8 +1440,8 @@ export default class GameScene extends Phaser.Scene {
 
     // ─── 4 Equip Slots ───
     for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
-      const slotX = this.centerX + (i - 1.5) * 200;
-      const slotY = this.centerY - 150;
+      const slotX = this.centerX + (i - 1.5) * 200 * PX;
+      const slotY = this.centerY - 150 * PX;
       const equipped = this.powerUpManager.getEquippedSlot(i);
 
       const slotGfx = this.add.graphics();
@@ -1448,15 +1452,15 @@ export default class GameScene extends Phaser.Scene {
 
         // Filled slot
         slotGfx.fillStyle(0x444444, 0.9);
-        slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
-        slotGfx.lineStyle(2, rarityColor, 0.8);
-        slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
+        slotGfx.lineStyle(2 * PX, rarityColor, 0.8);
+        slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
 
         this.equipUIElements.push(slotGfx);
 
         // Slot number
-        const slotNum = this.add.text(slotX, slotY - 25, `[${i + 1}]`, {
-          fontSize: '16px',
+        const slotNum = this.add.text(slotX, slotY - 25 * PX, `[${i + 1}]`, {
+          fontSize: `${16 * PX}px`,
           color: '#888888',
           fontFamily: "'Rajdhani', sans-serif",
         });
@@ -1464,8 +1468,8 @@ export default class GameScene extends Phaser.Scene {
         this.equipUIElements.push(slotNum);
 
         // Item name
-        const itemName = this.add.text(slotX, slotY + 5, def?.name ?? equipped, {
-          fontSize: '20px',
+        const itemName = this.add.text(slotX, slotY + 5 * PX, def?.name ?? equipped, {
+          fontSize: `${20 * PX}px`,
           color: '#ffffff',
           fontFamily: "'Rajdhani', sans-serif",
         });
@@ -1473,7 +1477,7 @@ export default class GameScene extends Phaser.Scene {
         this.equipUIElements.push(itemName);
 
         // Click to unequip
-        const hitArea = this.add.rectangle(slotX, slotY, 160, 90, 0x000000, 0);
+        const hitArea = this.add.rectangle(slotX, slotY, 160 * PX, 90 * PX, 0x000000, 0);
         hitArea.setInteractive({ useHandCursor: true });
         hitArea.on('pointerdown', () => {
           this.powerUpManager.unequipSlot(i);
@@ -1482,37 +1486,37 @@ export default class GameScene extends Phaser.Scene {
         hitArea.on('pointerover', () => {
           slotGfx.clear();
           slotGfx.fillStyle(0x555555, 0.95);
-          slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
-          slotGfx.lineStyle(3, rarityColor, 1);
-          slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+          slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
+          slotGfx.lineStyle(3 * PX, rarityColor, 1);
+          slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
         });
         hitArea.on('pointerout', () => {
           slotGfx.clear();
           slotGfx.fillStyle(0x444444, 0.9);
-          slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
-          slotGfx.lineStyle(2, rarityColor, 0.8);
-          slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+          slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
+          slotGfx.lineStyle(2 * PX, rarityColor, 0.8);
+          slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
         });
         this.equipUIElements.push(hitArea);
       } else {
         // Empty slot
         slotGfx.fillStyle(0x222222, 0.7);
-        slotGfx.fillRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
-        slotGfx.lineStyle(2, 0x666666, 0.4);
-        slotGfx.strokeRoundedRect(slotX - 80, slotY - 45, 160, 90, 12);
+        slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
+        slotGfx.lineStyle(2 * PX, 0x666666, 0.4);
+        slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
 
         this.equipUIElements.push(slotGfx);
 
-        const slotNum = this.add.text(slotX, slotY - 10, `[${i + 1}]`, {
-          fontSize: '16px',
+        const slotNum = this.add.text(slotX, slotY - 10 * PX, `[${i + 1}]`, {
+          fontSize: `${16 * PX}px`,
           color: '#666666',
           fontFamily: "'Rajdhani', sans-serif",
         });
         slotNum.setOrigin(0.5);
         this.equipUIElements.push(slotNum);
 
-        const emptyText = this.add.text(slotX, slotY + 15, 'Empty', {
-          fontSize: '16px',
+        const emptyText = this.add.text(slotX, slotY + 15 * PX, 'Empty', {
+          fontSize: `${16 * PX}px`,
           color: '#555555',
           fontFamily: "'Rajdhani', sans-serif",
         });
@@ -1525,8 +1529,8 @@ export default class GameScene extends Phaser.Scene {
     const invEntries = this.powerUpManager.getInventoryEntries();
 
     if (invEntries.length > 0) {
-      const invTitle = this.add.text(this.centerX, this.centerY + 20, 'INVENTORY', {
-        fontSize: '22px',
+      const invTitle = this.add.text(this.centerX, this.centerY + 20 * PX, 'INVENTORY', {
+        fontSize: `${22 * PX}px`,
         color: '#aaaaaa',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -1534,7 +1538,7 @@ export default class GameScene extends Phaser.Scene {
       this.equipUIElements.push(invTitle);
 
       invEntries.forEach((entry, idx) => {
-        const itemY = this.centerY + 80 + idx * 60;
+        const itemY = this.centerY + (80 + idx * 60) * PX;
         const def = getConsumableDefinition(entry.type);
         const name = def?.name ?? entry.type;
         const rarityColor = def ? RARITY_COLORS[def.rarity] : 0xaaaaaa;
@@ -1542,14 +1546,26 @@ export default class GameScene extends Phaser.Scene {
         // Item background
         const itemGfx = this.add.graphics();
         itemGfx.fillStyle(0x333333, 0.8);
-        itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
-        itemGfx.lineStyle(2, rarityColor, 0.5);
-        itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+        itemGfx.fillRoundedRect(
+          this.centerX - 200 * PX,
+          itemY - 22 * PX,
+          400 * PX,
+          44 * PX,
+          8 * PX
+        );
+        itemGfx.lineStyle(2 * PX, rarityColor, 0.5);
+        itemGfx.strokeRoundedRect(
+          this.centerX - 200 * PX,
+          itemY - 22 * PX,
+          400 * PX,
+          44 * PX,
+          8 * PX
+        );
         this.equipUIElements.push(itemGfx);
 
         // Item text
         const itemText = this.add.text(this.centerX, itemY, `${name}  x${entry.count}`, {
-          fontSize: '22px',
+          fontSize: `${22 * PX}px`,
           color: '#ffffff',
           fontFamily: "'Rajdhani', sans-serif",
         });
@@ -1557,7 +1573,7 @@ export default class GameScene extends Phaser.Scene {
         this.equipUIElements.push(itemText);
 
         // Click to equip to first empty slot
-        const hitArea = this.add.rectangle(this.centerX, itemY, 400, 44, 0x000000, 0);
+        const hitArea = this.add.rectangle(this.centerX, itemY, 400 * PX, 44 * PX, 0x000000, 0);
         hitArea.setInteractive({ useHandCursor: true });
         hitArea.on('pointerdown', () => {
           // Find first empty slot
@@ -1572,26 +1588,50 @@ export default class GameScene extends Phaser.Scene {
         hitArea.on('pointerover', () => {
           itemGfx.clear();
           itemGfx.fillStyle(0x444444, 0.9);
-          itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
-          itemGfx.lineStyle(3, rarityColor, 0.8);
-          itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+          itemGfx.fillRoundedRect(
+            this.centerX - 200 * PX,
+            itemY - 22 * PX,
+            400 * PX,
+            44 * PX,
+            8 * PX
+          );
+          itemGfx.lineStyle(3 * PX, rarityColor, 0.8);
+          itemGfx.strokeRoundedRect(
+            this.centerX - 200 * PX,
+            itemY - 22 * PX,
+            400 * PX,
+            44 * PX,
+            8 * PX
+          );
         });
         hitArea.on('pointerout', () => {
           itemGfx.clear();
           itemGfx.fillStyle(0x333333, 0.8);
-          itemGfx.fillRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
-          itemGfx.lineStyle(2, rarityColor, 0.5);
-          itemGfx.strokeRoundedRect(this.centerX - 200, itemY - 22, 400, 44, 8);
+          itemGfx.fillRoundedRect(
+            this.centerX - 200 * PX,
+            itemY - 22 * PX,
+            400 * PX,
+            44 * PX,
+            8 * PX
+          );
+          itemGfx.lineStyle(2 * PX, rarityColor, 0.5);
+          itemGfx.strokeRoundedRect(
+            this.centerX - 200 * PX,
+            itemY - 22 * PX,
+            400 * PX,
+            44 * PX,
+            8 * PX
+          );
         });
         this.equipUIElements.push(hitArea);
       });
     } else {
       const emptyInv = this.add.text(
         this.centerX,
-        this.centerY + 60,
+        this.centerY + 60 * PX,
         'All consumables are equipped',
         {
-          fontSize: '20px',
+          fontSize: `${20 * PX}px`,
           color: '#666666',
           fontFamily: "'Rajdhani', sans-serif",
         }
@@ -1601,17 +1641,23 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ─── READY Button ───
-    const readyY = this.centerY + 320;
+    const readyY = this.centerY + 320 * PX;
 
     const readyGfx = this.add.graphics();
     readyGfx.fillStyle(0x228833, 0.9);
-    readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
-    readyGfx.lineStyle(2, 0x44cc55, 0.8);
-    readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+    readyGfx.fillRoundedRect(this.centerX - 100 * PX, readyY - 30 * PX, 200 * PX, 60 * PX, 12 * PX);
+    readyGfx.lineStyle(2 * PX, 0x44cc55, 0.8);
+    readyGfx.strokeRoundedRect(
+      this.centerX - 100 * PX,
+      readyY - 30 * PX,
+      200 * PX,
+      60 * PX,
+      12 * PX
+    );
     this.equipUIElements.push(readyGfx);
 
     const readyText = this.add.text(this.centerX, readyY, 'READY', {
-      fontSize: '28px',
+      fontSize: `${28 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
       fontStyle: 'bold',
@@ -1619,7 +1665,7 @@ export default class GameScene extends Phaser.Scene {
     readyText.setOrigin(0.5);
     this.equipUIElements.push(readyText);
 
-    const readyHit = this.add.rectangle(this.centerX, readyY, 200, 60, 0x000000, 0);
+    const readyHit = this.add.rectangle(this.centerX, readyY, 200 * PX, 60 * PX, 0x000000, 0);
     readyHit.setInteractive({ useHandCursor: true });
     readyHit.on('pointerdown', () => {
       this.confirmEquipment();
@@ -1627,16 +1673,40 @@ export default class GameScene extends Phaser.Scene {
     readyHit.on('pointerover', () => {
       readyGfx.clear();
       readyGfx.fillStyle(0x33aa44, 0.95);
-      readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
-      readyGfx.lineStyle(3, 0x66ee77, 1);
-      readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+      readyGfx.fillRoundedRect(
+        this.centerX - 100 * PX,
+        readyY - 30 * PX,
+        200 * PX,
+        60 * PX,
+        12 * PX
+      );
+      readyGfx.lineStyle(3 * PX, 0x66ee77, 1);
+      readyGfx.strokeRoundedRect(
+        this.centerX - 100 * PX,
+        readyY - 30 * PX,
+        200 * PX,
+        60 * PX,
+        12 * PX
+      );
     });
     readyHit.on('pointerout', () => {
       readyGfx.clear();
       readyGfx.fillStyle(0x228833, 0.9);
-      readyGfx.fillRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
-      readyGfx.lineStyle(2, 0x44cc55, 0.8);
-      readyGfx.strokeRoundedRect(this.centerX - 100, readyY - 30, 200, 60, 12);
+      readyGfx.fillRoundedRect(
+        this.centerX - 100 * PX,
+        readyY - 30 * PX,
+        200 * PX,
+        60 * PX,
+        12 * PX
+      );
+      readyGfx.lineStyle(2 * PX, 0x44cc55, 0.8);
+      readyGfx.strokeRoundedRect(
+        this.centerX - 100 * PX,
+        readyY - 30 * PX,
+        200 * PX,
+        60 * PX,
+        12 * PX
+      );
     });
     this.equipUIElements.push(readyHit);
   }
