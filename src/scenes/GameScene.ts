@@ -42,6 +42,30 @@ import {
   parseBenchmarkPowerUps,
 } from '../utils/BenchmarkConfig';
 
+/** Remove inactive entities from an array in-place (single O(n) pass). */
+function compactActive<T extends { active: boolean }>(arr: T[]): void {
+  let w = 0;
+  for (let r = 0; r < arr.length; r++) {
+    if (arr[r].active) {
+      if (w !== r) arr[w] = arr[r];
+      w++;
+    }
+  }
+  arr.length = w;
+}
+
+/** Remove elements that don't satisfy predicate, in-place. */
+function compactBy<T>(arr: T[], keep: (item: T) => boolean): void {
+  let w = 0;
+  for (let r = 0; r < arr.length; r++) {
+    if (keep(arr[r])) {
+      if (w !== r) arr[w] = arr[r];
+      w++;
+    }
+  }
+  arr.length = w;
+}
+
 export default class GameScene extends Phaser.Scene {
   private player!: Player;
   private enemies: Enemy[] = [];
@@ -490,7 +514,6 @@ export default class GameScene extends Phaser.Scene {
         this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
-        this.enemies.splice(i, 1);
       }
     }
   }
@@ -517,15 +540,12 @@ export default class GameScene extends Phaser.Scene {
         s.vx -= 2 * dot * nx;
         s.vy -= 2 * dot * ny;
       }
-
-      if (s.life <= 0) {
-        this.laserSparks.splice(i, 1);
-      }
     }
   }
 
   private drawLaserSparks() {
     for (const s of this.laserSparks) {
+      if (s.life <= 0) continue;
       const alpha = s.life / 1.2;
       const angle = Math.atan2(s.vy, s.vx);
       this.laserGraphics.fillStyle(0xffffff, alpha);
@@ -563,7 +583,7 @@ export default class GameScene extends Phaser.Scene {
       const p = this.dustParticles[i];
       p.r -= ENEMY_SPEED * PLAYFIELD_RADIUS * deltaSec * 0.7;
       if (p.r <= this.terminalRadius) {
-        this.dustParticles.splice(i, 1);
+        p.r = -1; // mark for removal
       }
     }
   }
@@ -687,10 +707,7 @@ export default class GameScene extends Phaser.Scene {
       gravityStacks > 0 ? this.terminalRadius + 0.25 * (PLAYFIELD_RADIUS - this.terminalRadius) : 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
-      if (!enemy.active) {
-        this.enemies.splice(i, 1);
-        continue;
-      }
+      if (!enemy.active) continue;
 
       const speedMult = gravityStacks > 0 && enemy.getRadius() <= slowZoneRadius ? 0.7 : 1;
       enemy.update(delta, speedMult);
@@ -713,7 +730,6 @@ export default class GameScene extends Phaser.Scene {
         );
 
         this.onEnemyReachedPlayer(enemy);
-        this.enemies.splice(i, 1);
       }
     }
 
@@ -722,6 +738,7 @@ export default class GameScene extends Phaser.Scene {
     this.drawPlayfield();
     this.dustGraphics.clear();
     for (const p of this.dustParticles) {
+      if (p.r < 0) continue;
       const px = this.centerX + Math.cos(p.theta) * p.r;
       const py = this.centerY + Math.sin(p.theta) * p.r;
       this.dustGraphics.fillStyle(0x939393, 1);
@@ -731,15 +748,7 @@ export default class GameScene extends Phaser.Scene {
     // Update bullets
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const bullet = this.bullets[i];
-      if (!bullet.active) {
-        // Manual bullet exited playfield without hitting — reset streak
-        if (bullet.isManual && !bullet.hasHitEnemy) {
-          this.scoreManager.resetHitStreak();
-        }
-        this.bullets.splice(i, 1);
-        continue;
-      }
-
+      if (!bullet.active) continue;
       bullet.update(delta);
     }
 
@@ -810,6 +819,27 @@ export default class GameScene extends Phaser.Scene {
         });
       }
     }
+
+    // Compact arrays: remove inactive entities in a single pass (mark-and-sweep)
+    compactActive(this.enemies);
+    compactActive(this.shields);
+    // Bullets: also handle streak reset for missed manual bullets
+    {
+      let w = 0;
+      for (let r = 0; r < this.bullets.length; r++) {
+        const b = this.bullets[r];
+        if (b.active) {
+          if (w !== r) this.bullets[w] = b;
+          w++;
+        } else if (b.isManual && !b.hasHitEnemy) {
+          this.scoreManager.resetHitStreak();
+        }
+      }
+      this.bullets.length = w;
+    }
+    // Compact non-entity arrays
+    compactBy(this.laserSparks, (s) => s.life > 0);
+    compactBy(this.dustParticles, (p) => p.r >= 0);
 
     // Check game over
     if (this.terminalRadius >= PLAYFIELD_RADIUS) {
@@ -921,12 +951,10 @@ export default class GameScene extends Phaser.Scene {
 
           if (!bulletSurvives) {
             bullet.destroy();
-            this.bullets.splice(i, 1);
           }
 
           const killed = enemy.hit();
           if (killed) {
-            this.enemies.splice(j, 1);
             this.scoreManager.addKill(enemy.tier);
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           } else {
@@ -1002,9 +1030,6 @@ export default class GameScene extends Phaser.Scene {
 
       chainsRemaining--;
     }
-
-    // Clean up destroyed enemies
-    this.enemies = this.enemies.filter((e) => e.active);
   }
 
   private getSlotAngle(slot: number): number {
@@ -1061,7 +1086,6 @@ export default class GameScene extends Phaser.Scene {
           const hitY = enemyBounds.y;
 
           enemy.destroy();
-          this.enemies.splice(j, 1);
           this.scoreManager.addKill(enemy.tier);
           this.audioManager.playSound('hit');
 
@@ -1098,9 +1122,6 @@ export default class GameScene extends Phaser.Scene {
         }
       }
     }
-
-    // Remove destroyed shields
-    this.shields = this.shields.filter((s) => s.active);
   }
 
   private onEnemyReachedPlayer(enemy: Enemy) {
@@ -1176,11 +1197,6 @@ export default class GameScene extends Phaser.Scene {
               e.destroy();
             }
           }
-
-          // Clear enemy array after wave completes
-          this.time.delayedCall(waveDuration, () => {
-            this.enemies = this.enemies.filter((e) => e.active);
-          });
 
           // Smoothly transition back to full vision
           this.tweens.add({
