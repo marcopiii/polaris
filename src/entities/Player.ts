@@ -11,6 +11,7 @@ export default class Player {
   private shootCooldown: number = 0;
   private isShooting: boolean = false;
   private scale: number = 1.0;
+  private lastDrawnScale: number = -1;
   private benchmarkMode: boolean;
   private onPointerMove: (pointer: Phaser.Input.Pointer) => void;
   private onPointerDown: () => void;
@@ -47,9 +48,10 @@ export default class Player {
   }
 
   private draw() {
-    this.graphics.clear();
+    if (this.scale === this.lastDrawnScale) return;
+    this.lastDrawnScale = this.scale;
 
-    // Draw player circle with scale
+    this.graphics.clear();
     this.graphics.fillStyle(COLORS.player, 1);
     this.graphics.fillCircle(this.x, this.y, PLAYER_SIZE * this.scale);
   }
