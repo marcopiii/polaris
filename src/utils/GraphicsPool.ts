@@ -10,24 +10,30 @@ export function initGraphicsPool(scene: Phaser.Scene) {
 }
 
 /** Get a Graphics object from the pool, or create a new one. */
-export function acquireGraphics(): Phaser.GameObjects.Graphics {
-  if (pool.length > 0) {
+export function acquireGraphics(fallbackScene?: Phaser.Scene): Phaser.GameObjects.Graphics {
+  if (activeScene && pool.length > 0) {
     const g = pool.pop()!;
     g.setVisible(true);
     g.setActive(true);
     return g;
   }
-  return activeScene!.add.graphics();
+  const scene = activeScene ?? fallbackScene;
+  return scene!.add.graphics();
 }
 
 /** Return a Graphics object to the pool instead of destroying it. */
 export function releaseGraphics(g: Phaser.GameObjects.Graphics) {
-  g.clear();
-  g.setVisible(false);
-  g.setActive(false);
-  g.setPosition(0, 0);
-  g.setRotation(0);
-  g.setScale(1, 1);
-  g.setAlpha(1);
-  pool.push(g);
+  // Only pool if the pool is initialized (i.e. we're in GameScene)
+  if (activeScene && g.scene === activeScene) {
+    g.clear();
+    g.setVisible(false);
+    g.setActive(false);
+    g.setPosition(0, 0);
+    g.setRotation(0);
+    g.setScale(1, 1);
+    g.setAlpha(1);
+    pool.push(g);
+  } else {
+    g.destroy();
+  }
 }
