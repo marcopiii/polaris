@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants';
 import logoHtml from './logo.html?raw';
 
-const LOGO_FONT_FAMILY = "'Rajdhani', sans-serif";
-
 export default class MainMenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -24,27 +22,32 @@ export default class MainMenuScene extends Phaser.Scene {
     this.add.dom(x, y, el);
   }
 
-  private createStartButton(centerX: number, centerY: number) {
-    const startButton = this.add.text(centerX, centerY, 'START GAME', {
+  private createStartButton(x: number, y: number) {
+    const button = document.createElement('button');
+    button.textContent = 'START GAME';
+    Object.assign(button.style, {
+      fontFamily: "'Rajdhani', sans-serif",
+      fontWeight: '300',
       fontSize: '32px',
       color: '#ffffff',
-      fontFamily: LOGO_FONT_FAMILY,
-      backgroundColor: '#444444',
-      padding: { x: 20, y: 10 },
-    });
-    startButton.setOrigin(0.5);
-    startButton.setInteractive({ useHandCursor: true });
-
-    startButton.on('pointerover', () => {
-      startButton.setStyle({ backgroundColor: '#666666' });
+      background: '#444444',
+      border: 'none',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
     });
 
-    startButton.on('pointerout', () => {
-      startButton.setStyle({ backgroundColor: '#444444' });
+    button.addEventListener('mouseenter', () => {
+      button.style.background = '#666666';
     });
-
-    startButton.on('pointerdown', () => {
+    button.addEventListener('mouseleave', () => {
+      button.style.background = '#444444';
+    });
+    button.addEventListener('click', () => {
       this.scene.start('GameScene');
     });
+
+    this.add.dom(x, y, button);
   }
 }
