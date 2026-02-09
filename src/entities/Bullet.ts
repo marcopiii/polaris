@@ -9,6 +9,7 @@ import {
 } from '../constants';
 import { distance } from '../utils/MathUtils';
 import { gameRandom } from '../utils/BenchmarkConfig';
+import { acquireGraphics, releaseGraphics } from '../utils/GraphicsPool';
 
 export default class Bullet {
   private graphics: Phaser.GameObjects.Graphics;
@@ -25,7 +26,7 @@ export default class Bullet {
   private _bounds = { x: 0, y: 0, radius: Math.max(BULLET_WIDTH, BULLET_HEIGHT) / 2 };
 
   constructor(
-    scene: Phaser.Scene,
+    _scene: Phaser.Scene,
     startX: number,
     startY: number,
     targetX: number,
@@ -53,8 +54,8 @@ export default class Bullet {
     this.velocityX = normalizedX * pixelsPerSecond;
     this.velocityY = normalizedY * pixelsPerSecond;
 
-    // Create graphics: draw once at origin with rotation, then position via setPosition
-    this.graphics = scene.add.graphics();
+    // Acquire pooled graphics: draw once at origin with rotation, then position via setPosition
+    this.graphics = acquireGraphics();
     const angle = Math.atan2(this.velocityY, this.velocityX);
     this.graphics.setRotation(angle);
 
@@ -98,7 +99,7 @@ export default class Bullet {
 
   destroy() {
     this.active = false;
-    this.graphics.destroy();
+    releaseGraphics(this.graphics);
   }
 
   getBounds(): { x: number; y: number; radius: number } {

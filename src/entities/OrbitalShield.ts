@@ -6,6 +6,7 @@ import {
   SHIELD_ARC_MIN,
   SHIELD_THICKNESS,
 } from '../constants';
+import { acquireGraphics, releaseGraphics } from '../utils/GraphicsPool';
 
 export default class OrbitalShield {
   private graphics: Phaser.GameObjects.Graphics;
@@ -25,7 +26,7 @@ export default class OrbitalShield {
   private lastArcAngle: number = -1;
 
   constructor(
-    scene: Phaser.Scene,
+    _scene: Phaser.Scene,
     centerX: number,
     centerY: number,
     slot: number,
@@ -36,7 +37,7 @@ export default class OrbitalShield {
     this.slot = slot;
     this.slotAngle = slotAngle;
 
-    this.graphics = scene.add.graphics();
+    this.graphics = acquireGraphics();
     this.graphics.setPosition(centerX, centerY);
   }
 
@@ -132,6 +133,6 @@ export default class OrbitalShield {
 
   destroy() {
     this.active = false;
-    this.graphics.destroy();
+    releaseGraphics(this.graphics);
   }
 }

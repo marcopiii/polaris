@@ -40,6 +40,7 @@ import {
   BENCHMARK_START_LEVEL,
   parseBenchmarkPowerUps,
 } from '../utils/BenchmarkConfig';
+import { initGraphicsPool } from '../utils/GraphicsPool';
 
 /** Remove inactive entities from an array in-place (single O(n) pass). */
 function compactActive<T extends { active: boolean }>(arr: T[]): void {
@@ -128,6 +129,9 @@ export default class GameScene extends Phaser.Scene {
     this.centerY = GAME_HEIGHT / 2;
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
     this.visionRadius = VISION_RADIUS_INITIAL;
+
+    // Initialize Graphics pool for this scene
+    initGraphicsPool(this);
 
     // Initialize managers
     this.scoreManager = new ScoreManager();

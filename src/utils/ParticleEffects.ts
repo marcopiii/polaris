@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ENEMY_SIZE, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
+import { acquireGraphics, releaseGraphics } from './GraphicsPool';
 
 interface Particle {
   x: number;
@@ -56,7 +57,7 @@ function updateAndDrawCircleParticles(
   }
 
   if (!alive) {
-    graphics.destroy();
+    releaseGraphics(graphics);
   } else {
     scene.time.delayedCall(16, () =>
       updateAndDrawCircleParticles(scene, graphics, particles, color)
@@ -84,7 +85,7 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawCircleParticles(scene, graphics, particles, COLORS.enemy);
   }
 
@@ -114,7 +115,7 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawCircleParticles(scene, graphics, particles, COLORS.enemy);
   }
 
@@ -137,7 +138,7 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
   }
 
@@ -147,7 +148,7 @@ export class ParticleEffects {
     centerY: number,
     terminalRadius: number
   ) {
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     const tweenTarget = { radius: terminalRadius, alpha: 1 };
 
     scene.tweens.add({
@@ -161,13 +162,13 @@ export class ParticleEffects {
         graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
       },
       onComplete: () => {
-        graphics.destroy();
+        releaseGraphics(graphics);
       },
     });
   }
 
   static createLevelCompleteWave(scene: Phaser.Scene, centerX: number, centerY: number) {
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     const tweenTarget = { radius: 0, alpha: 1 };
 
     scene.tweens.add({
@@ -182,7 +183,7 @@ export class ParticleEffects {
         graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
       },
       onComplete: () => {
-        graphics.destroy();
+        releaseGraphics(graphics);
       },
     });
   }
@@ -192,7 +193,7 @@ export class ParticleEffects {
       { color: 0xffaa00, width: 6 * PX, delay: 0 },
       { color: 0xff4400, width: 3 * PX, delay: 80 },
     ]) {
-      const graphics = scene.add.graphics();
+      const graphics = acquireGraphics();
       const tweenTarget = { radius: 0, alpha: 1 };
 
       scene.tweens.add({
@@ -208,7 +209,7 @@ export class ParticleEffects {
           graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
         },
         onComplete: () => {
-          graphics.destroy();
+          releaseGraphics(graphics);
         },
       });
     }
@@ -221,7 +222,7 @@ export class ParticleEffects {
     toX: number,
     toY: number
   ) {
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     const tweenTarget = { alpha: 1 };
 
     const dx = toX - fromX;
@@ -263,7 +264,7 @@ export class ParticleEffects {
         graphics.strokePath();
       },
       onComplete: () => {
-        graphics.destroy();
+        releaseGraphics(graphics);
       },
     });
   }
@@ -299,7 +300,7 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
   }
 
@@ -335,11 +336,11 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
 
     // Flash arc that fades out
-    const flashGraphics = scene.add.graphics();
+    const flashGraphics = acquireGraphics();
     const flash = { alpha: 1 };
     scene.tweens.add({
       targets: flash,
@@ -361,7 +362,7 @@ export class ParticleEffects {
         flashGraphics.strokePath();
       },
       onComplete: () => {
-        flashGraphics.destroy();
+        releaseGraphics(flashGraphics);
       },
     });
   }
@@ -398,7 +399,7 @@ export class ParticleEffects {
       });
     }
 
-    const graphics = scene.add.graphics();
+    const graphics = acquireGraphics();
     updateAndDrawSplinterParticles(scene, graphics, particles);
   }
 }
@@ -450,7 +451,7 @@ function updateAndDrawSplinterParticles(
   }
 
   if (!alive) {
-    graphics.destroy();
+    releaseGraphics(graphics);
   } else {
     scene.time.delayedCall(16, () => updateAndDrawSplinterParticles(scene, graphics, particles));
   }

@@ -9,6 +9,7 @@ import {
 } from '../constants';
 import type { PolarCoordinates } from '../types';
 import { polarToCartesian } from '../utils/PolarCoordinates';
+import { acquireGraphics, releaseGraphics } from '../utils/GraphicsPool';
 
 export default class Enemy {
   private scene: Phaser.Scene;
@@ -44,8 +45,8 @@ export default class Enemy {
       theta,
     };
 
-    // Create graphics and draw once at origin; position via setPosition
-    this.graphics = scene.add.graphics();
+    // Acquire pooled graphics and draw once at origin; position via setPosition
+    this.graphics = acquireGraphics();
     this.updatePosition();
     this.drawShape();
   }
@@ -128,7 +129,7 @@ export default class Enemy {
 
   destroy() {
     this.active = false;
-    this.graphics.destroy();
+    releaseGraphics(this.graphics);
   }
 
   getBounds(): { x: number; y: number; radius: number } {
