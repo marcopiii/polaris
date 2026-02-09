@@ -85,6 +85,11 @@ export default class GameScene extends Phaser.Scene {
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
+
+  // Tracked tweens to prevent accumulation
+  private visionTween: Phaser.Tweens.Tween | null = null;
+  private terminalTween: Phaser.Tweens.Tween | null = null;
+  private trembleTween: Phaser.Tweens.Tween | null = null;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
 
@@ -775,7 +780,8 @@ export default class GameScene extends Phaser.Scene {
       }
 
       // Reset vision radius with smooth transition
-      this.tweens.add({
+      this.visionTween?.stop();
+      this.visionTween = this.tweens.add({
         targets: this,
         visionRadius: VISION_RADIUS_INITIAL,
         duration: 300,
@@ -793,7 +799,8 @@ export default class GameScene extends Phaser.Scene {
 
       // Playfield edge tremble
       this.playfieldTremble = 20 * PX;
-      this.tweens.add({
+      this.trembleTween?.stop();
+      this.trembleTween = this.tweens.add({
         targets: this,
         playfieldTremble: 0,
         duration: 400,
@@ -1134,7 +1141,8 @@ export default class GameScene extends Phaser.Scene {
 
     if (newVisionRadius <= 0) {
       // Smoothly transition vision radius to 0, then reset
-      this.tweens.add({
+      this.visionTween?.stop();
+      this.visionTween = this.tweens.add({
         targets: this,
         visionRadius: 0,
         duration: 200,
@@ -1153,7 +1161,8 @@ export default class GameScene extends Phaser.Scene {
           this.cameras.main.shake(300, 0.01);
 
           // Smoothly increase terminal radius
-          this.tweens.add({
+          this.terminalTween?.stop();
+          this.terminalTween = this.tweens.add({
             targets: this,
             terminalRadius: newTerminalRadius,
             duration: 300,
@@ -1199,7 +1208,8 @@ export default class GameScene extends Phaser.Scene {
           }
 
           // Smoothly transition back to full vision
-          this.tweens.add({
+          this.visionTween?.stop();
+          this.visionTween = this.tweens.add({
             targets: this,
             visionRadius: VISION_RADIUS_INITIAL,
             duration: 200,
@@ -1212,7 +1222,8 @@ export default class GameScene extends Phaser.Scene {
       });
     } else {
       // Smoothly decrease vision radius
-      this.tweens.add({
+      this.visionTween?.stop();
+      this.visionTween = this.tweens.add({
         targets: this,
         visionRadius: newVisionRadius,
         duration: 200,
@@ -1460,7 +1471,8 @@ export default class GameScene extends Phaser.Scene {
     if (powerUp.type === PowerUpType.TERMINAL_SHRINK) {
       const shrinkAmount = 0.04 * PLAYFIELD_RADIUS; // 36px
       const newTerminal = Math.max(this.terminalRadius - shrinkAmount, TERMINAL_RADIUS_INITIAL);
-      this.tweens.add({
+      this.terminalTween?.stop();
+      this.terminalTween = this.tweens.add({
         targets: this,
         terminalRadius: newTerminal,
         duration: 300,
