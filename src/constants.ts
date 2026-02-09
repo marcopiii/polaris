@@ -12,6 +12,19 @@ export const FIRE_COOLDOWN = 500; // milliseconds
 export const ENEMY_SIZE = 16;
 export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
 
+// Enemy Health System
+export enum HealthModel {
+  CIRCLE = 'CIRCLE', // health ∝ area: size = ENEMY_SIZE × √hits
+  SPHERE = 'SPHERE', // health ∝ volume: size = ENEMY_SIZE × ∛hits
+}
+export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
+
+// Spawn tiers: checked in order, first match wins. Remaining probability → 1-hit enemy.
+export const ENEMY_HEALTH_TIERS: { hits: number; chance: number }[] = [
+  { hits: 3, chance: 0.05 }, // 5% chance of 3-hit enemy
+  { hits: 2, chance: 0.1 }, // 10% chance of 2-hit enemy
+];
+
 // Bullet
 export const BULLET_WIDTH = 24;
 export const BULLET_HEIGHT = 6;
