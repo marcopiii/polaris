@@ -403,6 +403,14 @@ export class ParticleEffects {
   }
 }
 
+// Reusable Point objects for splinter quad drawing (avoids per-frame allocations)
+const _quadPoints = [
+  new Phaser.Geom.Point(0, 0),
+  new Phaser.Geom.Point(0, 0),
+  new Phaser.Geom.Point(0, 0),
+  new Phaser.Geom.Point(0, 0),
+];
+
 function updateAndDrawSplinterParticles(
   scene: Phaser.Scene,
   graphics: Phaser.GameObjects.Graphics,
@@ -432,28 +440,13 @@ function updateAndDrawSplinterParticles(
     const cos = Math.cos(p.rotation);
     const sin = Math.sin(p.rotation);
 
+    _quadPoints[0].setTo(p.x - halfLen * cos + halfWid * sin, p.y - halfLen * sin - halfWid * cos);
+    _quadPoints[1].setTo(p.x + halfLen * cos + halfWid * sin, p.y + halfLen * sin - halfWid * cos);
+    _quadPoints[2].setTo(p.x + halfLen * cos - halfWid * sin, p.y + halfLen * sin + halfWid * cos);
+    _quadPoints[3].setTo(p.x - halfLen * cos - halfWid * sin, p.y - halfLen * sin + halfWid * cos);
+
     graphics.fillStyle(COLORS.terminalRadiusHint, 1.0);
-    graphics.fillPoints(
-      [
-        new Phaser.Geom.Point(
-          p.x - halfLen * cos + halfWid * sin,
-          p.y - halfLen * sin - halfWid * cos
-        ),
-        new Phaser.Geom.Point(
-          p.x + halfLen * cos + halfWid * sin,
-          p.y + halfLen * sin - halfWid * cos
-        ),
-        new Phaser.Geom.Point(
-          p.x + halfLen * cos - halfWid * sin,
-          p.y + halfLen * sin + halfWid * cos
-        ),
-        new Phaser.Geom.Point(
-          p.x - halfLen * cos - halfWid * sin,
-          p.y - halfLen * sin + halfWid * cos
-        ),
-      ],
-      true
-    );
+    graphics.fillPoints(_quadPoints, true);
   }
 
   if (!alive) {
