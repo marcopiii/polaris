@@ -72,6 +72,10 @@ export default class GameScene extends Phaser.Scene {
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
   private nextLevelForEquipScreen: number = 0;
 
+  // Streak HUD
+  private streakLabel!: Phaser.GameObjects.Text;
+  private streakValue!: Phaser.GameObjects.Text;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -107,6 +111,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Create consumable HUD
     this.createConsumableHud();
+
+    // Create streak HUD
+    this.createStreakHud();
 
     // Start first level
     this.levelManager.startLevel(1);
@@ -155,6 +162,31 @@ export default class GameScene extends Phaser.Scene {
         text.setColor('#444444');
       }
     }
+  }
+
+  private createStreakHud() {
+    const angle = (-15 * Math.PI) / 180;
+    const hudDist = PLAYFIELD_RADIUS + 50;
+    const hudX = this.centerX + Math.cos(angle) * hudDist;
+    const hudY = this.centerY + Math.sin(angle) * hudDist;
+
+    this.streakLabel = this.add.text(hudX, hudY, 'STREAK', {
+      fontSize: '18px',
+      color: '#888888',
+      fontFamily: 'Arial, sans-serif',
+    });
+    this.streakLabel.setOrigin(0, 0);
+
+    this.streakValue = this.add.text(hudX, hudY + 22, '0', {
+      fontSize: '32px',
+      color: '#ffffff',
+      fontFamily: 'Arial, sans-serif',
+    });
+    this.streakValue.setOrigin(0, 0);
+  }
+
+  private updateStreakHud() {
+    this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
   }
 
   // ─── Consumable Activation ────────────────────────────────────────────
@@ -505,8 +537,9 @@ export default class GameScene extends Phaser.Scene {
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
 
-    // Update consumable HUD
+    // Update HUD
     this.updateConsumableHud();
+    this.updateStreakHud();
 
     // Update player — suppress normal shooting while laser is active
     const shootInfo = this.player.update(time, delta, this.powerUpManager.getFireCooldown());
