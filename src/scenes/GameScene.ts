@@ -107,16 +107,6 @@ export default class GameScene extends Phaser.Scene {
     // Create consumable HUD
     this.createConsumableHud();
 
-    // DEBUG: start with a shield
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
-
     // Start first level
     this.levelManager.startLevel(1);
   }
@@ -652,7 +642,7 @@ export default class GameScene extends Phaser.Scene {
   private shoot(targetX: number, targetY: number) {
     const bulletCount = this.powerUpManager.getBulletCount();
     const baseAngle = Math.atan2(targetY - this.player.y, targetX - this.player.x);
-    const spreadAngle = (3 * Math.PI) / 180; // 3 degrees in radians
+    const spreadAngle = (2 * Math.PI) / 180; // 2 degrees in radians
     const pierceChance = this.powerUpManager.getPierceChance();
 
     if (bulletCount === 1) {
