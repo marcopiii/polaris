@@ -40,6 +40,7 @@ export default class MainMenuScene extends Phaser.Scene {
     el.innerHTML = logoHtml;
 
     this.logoDom = this.add.dom(x, y, el);
+    this.logoDom.setScale(PX * 1.4);
   }
 
   private createStartButton(x: number, y: number) {
@@ -74,6 +75,7 @@ export default class MainMenuScene extends Phaser.Scene {
     });
 
     this.buttonDom = this.add.dom(x, y, button);
+    this.buttonDom.setScale(PX * 1.4);
   }
 
   private getOPositionInGameWorld(): { x: number; y: number } {

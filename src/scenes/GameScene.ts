@@ -146,7 +146,7 @@ export default class GameScene extends Phaser.Scene {
       const hudX = this.centerX + (i - 1.5) * 200 * PX;
       const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
       const text = this.add.text(hudX, hudY, '', {
-        fontSize: `${20 * PX}px`,
+        fontSize: `${36 * PX}px`,
         color,
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
@@ -184,18 +184,18 @@ export default class GameScene extends Phaser.Scene {
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
     const labelText = this.add.text(hudX, hudY, label, {
-      fontSize: `${18 * PX}px`,
+      fontSize: `${32 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
     labelText.setOrigin(0, 0);
     labelText.setRotation(angle);
 
-    const lineOffset = 22 * PX;
+    const lineOffset = 40 * PX;
     const valueX = hudX + Math.sin(-angle) * lineOffset;
     const valueY = hudY + Math.cos(-angle) * lineOffset;
     const valueText = this.add.text(valueX, valueY, '0', {
-      fontSize: `${32 * PX}px`,
+      fontSize: `${58 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
