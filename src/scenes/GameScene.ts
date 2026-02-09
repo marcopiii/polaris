@@ -688,7 +688,7 @@ export default class GameScene extends Phaser.Scene {
   private spawnEnemy() {
     const randomAngle = Math.random() * Math.PI * 2;
     const health = this.rollEnemyHealth();
-    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health);
+    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health, health);
     this.enemies.push(enemy);
   }
 
@@ -875,7 +875,7 @@ export default class GameScene extends Phaser.Scene {
 
           enemy.destroy();
           this.enemies.splice(j, 1);
-          this.scoreManager.addKill();
+          this.scoreManager.addKill(enemy.tier);
           this.audioManager.playSound('hit');
 
           const arc = shield.getArcInfo();

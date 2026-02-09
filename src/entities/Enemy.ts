@@ -21,15 +21,18 @@ export default class Enemy {
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
+  public readonly tier: number;
 
   constructor(
     scene: Phaser.Scene,
     theta: number,
     centerX: number,
     centerY: number,
-    health: number = 1
+    health: number = 1,
+    tier: number = 1
   ) {
     this.scene = scene;
+    this.tier = tier;
     this.centerX = centerX;
     this.centerY = centerY;
     this.health = health;

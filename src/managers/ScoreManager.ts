@@ -4,9 +4,9 @@ export default class ScoreManager {
   private score: number = 0;
   private kills: number = 0;
 
-  addKill() {
+  addKill(tier: number = 1) {
     this.kills++;
-    this.score += POINTS_PER_KILL;
+    this.score += POINTS_PER_KILL * tier;
   }
 
   getScore(): number {
