@@ -731,6 +731,8 @@ export default class GameScene extends Phaser.Scene {
           // Hit!
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
+          const bx = bulletBounds.x;
+          const by = bulletBounds.y;
 
           // Check piercing: bullet survives if it has pierce remaining
           const bulletSurvives = bullet.onHitEnemy();
@@ -745,6 +747,8 @@ export default class GameScene extends Phaser.Scene {
             this.enemies.splice(j, 1);
             this.scoreManager.addKill();
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+          } else {
+            ParticleEffects.createEnemyHitParticles(this, hitX, hitY, bx, by);
           }
 
           this.audioManager.playSound('hit');
