@@ -12,8 +12,8 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Wait for Rajdhani font to be available before showing menu
-    document.fonts.ready.then(() => {
+    // Explicitly trigger Rajdhani font download and wait for it
+    document.fonts.load("300 16px 'Rajdhani'").then(() => {
       this.scene.start('MainMenuScene');
     });
   }
