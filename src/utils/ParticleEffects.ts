@@ -1,47 +1,91 @@
 import Phaser from 'phaser';
 import { ENEMY_SIZE, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  damping: number;
+  duration: number;
+  elapsed: number;
+}
+
+interface SplinterParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  length: number;
+  width: number;
+  rotation: number;
+  damping: number;
+  duration: number;
+  elapsed: number;
+}
+
+function updateAndDrawCircleParticles(
+  scene: Phaser.Scene,
+  graphics: Phaser.GameObjects.Graphics,
+  particles: Particle[],
+  color: number
+) {
+  let alive = false;
+  graphics.clear();
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.elapsed += 16;
+    if (p.elapsed >= p.duration) {
+      particles.splice(i, 1);
+      continue;
+    }
+    alive = true;
+
+    p.x += (p.vx * 16) / 1000;
+    p.y += (p.vy * 16) / 1000;
+    p.vx *= p.damping;
+    p.vy *= p.damping;
+
+    const t = p.elapsed / p.duration;
+    const currentSize = p.size * (1 - t * t * t); // cubic ease in
+
+    graphics.fillStyle(color, 1.0);
+    graphics.fillCircle(p.x, p.y, currentSize);
+  }
+
+  if (!alive) {
+    graphics.destroy();
+  } else {
+    scene.time.delayedCall(16, () =>
+      updateAndDrawCircleParticles(scene, graphics, particles, color)
+    );
+  }
+}
+
 export class ParticleEffects {
   static createEnemyDeathParticles(scene: Phaser.Scene, x: number, y: number) {
-    const particleCount = 3 + Math.floor(Math.random() * 6); // Random 3-8 particles
+    const particles: Particle[] = [];
+    const particleCount = 3 + Math.floor(Math.random() * 6);
 
     for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2; // Completely random angle
+      const angle = Math.random() * Math.PI * 2;
       const speed = (100 + Math.random() * 50) * PX;
-      const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed;
-
-      const particle = {
+      particles.push({
         x,
         y,
-        vx,
-        vy,
-        size: Math.random() * (ENEMY_SIZE * 0.5), // Random size up to 50% of enemy size
-      };
-
-      // Create separate graphics for each particle
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        size: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: Math.random() * (ENEMY_SIZE * 0.5),
+        damping: 0.95,
         duration: 600 + Math.random() * 400,
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.95;
-          particle.vy *= 0.95;
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(COLORS.enemy, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawCircleParticles(scene, graphics, particles, COLORS.enemy);
   }
 
   static createEnemyHitParticles(
@@ -51,89 +95,50 @@ export class ParticleEffects {
     bulletX: number,
     bulletY: number
   ) {
-    const particleCount = 2 + Math.floor(Math.random() * 3); // 2-4 particles
-    // Direction from bullet to enemy (away from impact)
+    const particles: Particle[] = [];
+    const particleCount = 2 + Math.floor(Math.random() * 3);
     const impactAngle = Math.atan2(y - bulletY, x - bulletX);
 
     for (let i = 0; i < particleCount; i++) {
-      // Spray in a cone (±45°) away from bullet
       const angle = impactAngle + (Math.random() - 0.5) * (Math.PI / 2);
       const speed = (60 + Math.random() * 40) * PX;
-      const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed;
-
-      const particle = {
+      particles.push({
         x,
         y,
-        vx,
-        vy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         size: Math.random() * (ENEMY_SIZE * 0.3),
-      };
-
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        size: 0,
+        damping: 0.92,
         duration: 300 + Math.random() * 200,
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.92;
-          particle.vy *= 0.92;
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(COLORS.enemy, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawCircleParticles(scene, graphics, particles, COLORS.enemy);
   }
 
   static createBulletHitParticles(scene: Phaser.Scene, x: number, y: number) {
+    const particles: Particle[] = [];
     const particleCount = 6;
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
       const speed = (80 + Math.random() * 40) * PX;
-      const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed;
-
-      const particle = {
+      particles.push({
         x,
         y,
-        vx,
-        vy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         size: 2 * PX,
-      };
-
-      // Create separate graphics for each particle
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        size: 0,
+        damping: 0.9,
         duration: 200 + Math.random() * 100,
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.9;
-          particle.vy *= 0.9;
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(0xffffff, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
   }
 
   static createTerminalGrowEffect(
@@ -183,7 +188,6 @@ export class ParticleEffects {
   }
 
   static createShockwaveEffect(scene: Phaser.Scene, centerX: number, centerY: number) {
-    // Two expanding rings: bright inner + faint outer
     for (const ring of [
       { color: 0xffaa00, width: 6 * PX, delay: 0 },
       { color: 0xff4400, width: 3 * PX, delay: 80 },
@@ -220,7 +224,6 @@ export class ParticleEffects {
     const graphics = scene.add.graphics();
     const tweenTarget = { alpha: 1 };
 
-    // Draw a jagged lightning bolt between two points
     const dx = toX - fromX;
     const dy = toY - fromY;
     const segments = 6;
@@ -273,48 +276,31 @@ export class ParticleEffects {
     arcAngle: number,
     radius: number
   ) {
+    const particles: Particle[] = [];
     const particleCount = 6;
     const halfArc = arcAngle / 2;
 
     for (let i = 0; i < particleCount; i++) {
-      // Scatter particles along the arc
       const a = shieldAngle + (Math.random() - 0.5) * halfArc;
       const px = centerX + Math.cos(a) * radius;
       const py = centerY + Math.sin(a) * radius;
-      // Fly outward from center
       const outAngle = a + (Math.random() - 0.5) * 0.5;
       const speed = (80 + Math.random() * 60) * PX;
 
-      const particle = {
+      particles.push({
         x: px,
         y: py,
         vx: Math.cos(outAngle) * speed,
         vy: Math.sin(outAngle) * speed,
         size: (2 + Math.random() * 2) * PX,
-      };
-
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        size: 0,
+        damping: 0.92,
         duration: 250 + Math.random() * 150,
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.92;
-          particle.vy *= 0.92;
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(0xffffff, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
   }
 
   static createShieldDestroyParticles(
@@ -325,49 +311,32 @@ export class ParticleEffects {
     arcAngle: number,
     radius: number
   ) {
+    const particles: Particle[] = [];
     const particleCount = 18;
     const halfArc = arcAngle / 2;
 
     for (let i = 0; i < particleCount; i++) {
-      // Distribute evenly along the full arc
       const t = i / (particleCount - 1);
       const a = shieldAngle - halfArc + t * arcAngle;
       const px = centerX + Math.cos(a) * radius;
       const py = centerY + Math.sin(a) * radius;
-      // Fly outward with some spread
       const outAngle = a + (Math.random() - 0.5) * 0.8;
       const speed = (100 + Math.random() * 80) * PX;
 
-      const particle = {
+      particles.push({
         x: px,
         y: py,
         vx: Math.cos(outAngle) * speed,
         vy: Math.sin(outAngle) * speed,
         size: (3 + Math.random() * 3) * PX,
-      };
-
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        size: 0,
+        damping: 0.94,
         duration: 400 + Math.random() * 300,
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.94;
-          particle.vy *= 0.94;
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(0xffffff, 1.0);
-          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawCircleParticles(scene, graphics, particles, 0xffffff);
 
     // Flash arc that fades out
     const flashGraphics = scene.add.graphics();
@@ -404,80 +373,92 @@ export class ParticleEffects {
     centerX: number,
     centerY: number
   ) {
-    const particleCount = 5 + Math.floor(Math.random() * 4); // Random 5-8 particles
-
-    // Calculate outward direction from center
+    const particles: SplinterParticle[] = [];
+    const particleCount = 5 + Math.floor(Math.random() * 4);
     const baseAngle = Math.atan2(y - centerY, x - centerX);
 
     for (let i = 0; i < particleCount; i++) {
-      // Spray particles outward in a wide cone (±60 degrees)
       const spread = (Math.random() - 0.5) * (Math.PI / 1.5);
       const angle = baseAngle + spread;
       const speed = (80 + Math.random() * 40) * PX;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
-      const length = (6 + Math.random() * 10) * PX; // Splinter length
-      const width = (1 + Math.random() * 2) * PX; // Splinter width
-      const rotation = Math.atan2(vy, vx); // Orient along movement direction
-
-      const particle = {
+      particles.push({
         x,
         y,
         vx,
         vy,
-        length,
-        width,
-        scale: 1,
-      };
-
-      // Create separate graphics for each particle
-      const particleGraphics = scene.add.graphics();
-
-      scene.tweens.add({
-        targets: particle,
-        scale: 0,
-        duration: 500 + Math.random() * 300, // Longer duration (500-800ms)
-        ease: 'Cubic.easeIn',
-        onUpdate: () => {
-          particle.x += (particle.vx * 16) / 1000;
-          particle.y += (particle.vy * 16) / 1000;
-          particle.vx *= 0.96; // Less deceleration for longer travel
-          particle.vy *= 0.96;
-
-          const halfLen = (particle.length * particle.scale) / 2;
-          const halfWid = (particle.width * particle.scale) / 2;
-          const cos = Math.cos(rotation);
-          const sin = Math.sin(rotation);
-
-          particleGraphics.clear();
-          particleGraphics.fillStyle(COLORS.terminalRadiusHint, 1.0);
-          particleGraphics.fillPoints(
-            [
-              new Phaser.Geom.Point(
-                particle.x - halfLen * cos + halfWid * sin,
-                particle.y - halfLen * sin - halfWid * cos
-              ),
-              new Phaser.Geom.Point(
-                particle.x + halfLen * cos + halfWid * sin,
-                particle.y + halfLen * sin - halfWid * cos
-              ),
-              new Phaser.Geom.Point(
-                particle.x + halfLen * cos - halfWid * sin,
-                particle.y + halfLen * sin + halfWid * cos
-              ),
-              new Phaser.Geom.Point(
-                particle.x - halfLen * cos - halfWid * sin,
-                particle.y - halfLen * sin + halfWid * cos
-              ),
-            ],
-            true
-          );
-        },
-        onComplete: () => {
-          particleGraphics.destroy();
-        },
+        length: (6 + Math.random() * 10) * PX,
+        width: (1 + Math.random() * 2) * PX,
+        rotation: Math.atan2(vy, vx),
+        damping: 0.96,
+        duration: 500 + Math.random() * 300,
+        elapsed: 0,
       });
     }
+
+    const graphics = scene.add.graphics();
+    updateAndDrawSplinterParticles(scene, graphics, particles);
+  }
+}
+
+function updateAndDrawSplinterParticles(
+  scene: Phaser.Scene,
+  graphics: Phaser.GameObjects.Graphics,
+  particles: SplinterParticle[]
+) {
+  let alive = false;
+  graphics.clear();
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.elapsed += 16;
+    if (p.elapsed >= p.duration) {
+      particles.splice(i, 1);
+      continue;
+    }
+    alive = true;
+
+    p.x += (p.vx * 16) / 1000;
+    p.y += (p.vy * 16) / 1000;
+    p.vx *= p.damping;
+    p.vy *= p.damping;
+
+    const t = p.elapsed / p.duration;
+    const scale = 1 - t * t * t;
+    const halfLen = (p.length * scale) / 2;
+    const halfWid = (p.width * scale) / 2;
+    const cos = Math.cos(p.rotation);
+    const sin = Math.sin(p.rotation);
+
+    graphics.fillStyle(COLORS.terminalRadiusHint, 1.0);
+    graphics.fillPoints(
+      [
+        new Phaser.Geom.Point(
+          p.x - halfLen * cos + halfWid * sin,
+          p.y - halfLen * sin - halfWid * cos
+        ),
+        new Phaser.Geom.Point(
+          p.x + halfLen * cos + halfWid * sin,
+          p.y + halfLen * sin - halfWid * cos
+        ),
+        new Phaser.Geom.Point(
+          p.x + halfLen * cos - halfWid * sin,
+          p.y + halfLen * sin + halfWid * cos
+        ),
+        new Phaser.Geom.Point(
+          p.x - halfLen * cos - halfWid * sin,
+          p.y - halfLen * sin + halfWid * cos
+        ),
+      ],
+      true
+    );
+  }
+
+  if (!alive) {
+    graphics.destroy();
+  } else {
+    scene.time.delayedCall(16, () => updateAndDrawSplinterParticles(scene, graphics, particles));
   }
 }
