@@ -72,6 +72,14 @@ export default class GameScene extends Phaser.Scene {
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
   private nextLevelForEquipScreen: number = 0;
 
+  // Streak HUD
+  private streakLabel!: Phaser.GameObjects.Text;
+  private streakValue!: Phaser.GameObjects.Text;
+  private levelLabel!: Phaser.GameObjects.Text;
+  private levelValue!: Phaser.GameObjects.Text;
+  private scoreLabel!: Phaser.GameObjects.Text;
+  private scoreValue2!: Phaser.GameObjects.Text;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -107,6 +115,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Create consumable HUD
     this.createConsumableHud();
+
+    // Create streak HUD
+    this.createStreakHud();
 
     // Start first level
     this.levelManager.startLevel(1);
@@ -157,6 +168,58 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private createRadialHud(
+    angleDeg: number,
+    label: string
+  ): { label: Phaser.GameObjects.Text; value: Phaser.GameObjects.Text } {
+    const angle = (angleDeg * Math.PI) / 180;
+    const hudDist = PLAYFIELD_RADIUS + 15;
+    const hudX = this.centerX + Math.cos(angle) * hudDist;
+    const hudY = this.centerY + Math.sin(angle) * hudDist;
+    const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+
+    const labelText = this.add.text(hudX, hudY, label, {
+      fontSize: '18px',
+      color,
+      fontFamily: 'Arial, sans-serif',
+    });
+    labelText.setOrigin(0, 0);
+    labelText.setRotation(angle);
+
+    const lineOffset = 22;
+    const valueX = hudX + Math.sin(-angle) * lineOffset;
+    const valueY = hudY + Math.cos(-angle) * lineOffset;
+    const valueText = this.add.text(valueX, valueY, '0', {
+      fontSize: '32px',
+      color,
+      fontFamily: 'Arial, sans-serif',
+    });
+    valueText.setOrigin(0, 0);
+    valueText.setRotation(angle);
+
+    return { label: labelText, value: valueText };
+  }
+
+  private createStreakHud() {
+    const streak = this.createRadialHud(-12, 'STREAK');
+    this.streakLabel = streak.label;
+    this.streakValue = streak.value;
+
+    const score = this.createRadialHud(-20, 'SCORE');
+    this.scoreLabel = score.label;
+    this.scoreValue2 = score.value;
+
+    const level = this.createRadialHud(-28, 'LEVEL');
+    this.levelLabel = level.label;
+    this.levelValue = level.value;
+  }
+
+  private updateStreakHud() {
+    this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
+    this.levelValue.setText(`${this.levelManager.getCurrentLevel()}`);
+    this.scoreValue2.setText(`${this.scoreManager.getScore()}`);
+  }
+
   // ─── Consumable Activation ────────────────────────────────────────────
 
   private activateSlot(slot: number) {
@@ -190,7 +253,7 @@ export default class GameScene extends Phaser.Scene {
       if (enemy.active) {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
-        this.scoreManager.addKill();
+        this.scoreManager.addKill(enemy.tier);
         enemy.destroy();
       }
     }
@@ -355,7 +418,7 @@ export default class GameScene extends Phaser.Scene {
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
         this.processChainLightning(bounds.x, bounds.y);
-        this.scoreManager.addKill();
+        this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
         this.enemies.splice(i, 1);
@@ -505,8 +568,9 @@ export default class GameScene extends Phaser.Scene {
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
 
-    // Update consumable HUD
+    // Update HUD
     this.updateConsumableHud();
+    this.updateStreakHud();
 
     // Update player — suppress normal shooting while laser is active
     const shootInfo = this.player.update(time, delta, this.powerUpManager.getFireCooldown());
@@ -570,6 +634,10 @@ export default class GameScene extends Phaser.Scene {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const bullet = this.bullets[i];
       if (!bullet.active) {
+        // Manual bullet exited playfield without hitting — reset streak
+        if (bullet.isManual && !bullet.hasHitEnemy) {
+          this.scoreManager.resetHitStreak();
+        }
         this.bullets.splice(i, 1);
         continue;
       }
@@ -658,6 +726,7 @@ export default class GameScene extends Phaser.Scene {
         1,
         pierceChance
       );
+      bullet.isManual = true;
       this.bullets.push(bullet);
     } else {
       // Center the spread around the aim direction
@@ -678,6 +747,7 @@ export default class GameScene extends Phaser.Scene {
           1,
           pierceChance
         );
+        bullet.isManual = true;
         this.bullets.push(bullet);
       }
     }
@@ -733,6 +803,10 @@ export default class GameScene extends Phaser.Scene {
           const bx = bulletBounds.x;
           const by = bulletBounds.y;
 
+          // Increment streak on first hit, after scoring so bonus uses pre-hit value
+          const isFirstHit = bullet.isManual && !bullet.hasHitEnemy;
+          bullet.hasHitEnemy = true;
+
           // Check piercing: bullet survives if it has pierce remaining
           const bulletSurvives = bullet.onHitEnemy();
 
@@ -744,7 +818,7 @@ export default class GameScene extends Phaser.Scene {
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
-            this.scoreManager.addKill();
+            this.scoreManager.addKill(enemy.tier);
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           } else {
             ParticleEffects.createEnemyHitParticles(this, hitX, hitY, bx, by);
@@ -755,6 +829,10 @@ export default class GameScene extends Phaser.Scene {
 
           // Chain lightning
           this.processChainLightning(hitX, hitY);
+
+          if (isFirstHit) {
+            this.scoreManager.incrementHitStreak();
+          }
 
           if (!bulletSurvives) break;
         }
@@ -811,7 +889,7 @@ export default class GameScene extends Phaser.Scene {
       currentX = targetBounds.x;
       currentY = targetBounds.y;
       closestEnemy.destroy();
-      this.scoreManager.addKill();
+      this.scoreManager.addKill(closestEnemy.tier);
 
       chainsRemaining--;
     }
@@ -875,7 +953,7 @@ export default class GameScene extends Phaser.Scene {
 
           enemy.destroy();
           this.enemies.splice(j, 1);
-          this.scoreManager.addKill();
+          this.scoreManager.addKill(enemy.tier);
           this.audioManager.playSound('hit');
 
           const arc = shield.getArcInfo();

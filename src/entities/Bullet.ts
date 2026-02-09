@@ -12,6 +12,8 @@ export default class Bullet {
   private centerY: number;
   public active: boolean = true;
   public pierceChance: number;
+  public isManual: boolean = false;
+  public hasHitEnemy: boolean = false;
 
   constructor(
     scene: Phaser.Scene,

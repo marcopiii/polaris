@@ -21,6 +21,7 @@ export default class Enemy {
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
+  public readonly tier: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -30,6 +31,7 @@ export default class Enemy {
     health: number = 1
   ) {
     this.scene = scene;
+    this.tier = health;
     this.centerX = centerX;
     this.centerY = centerY;
     this.health = health;
