@@ -34,7 +34,7 @@ export class ParticleEffects {
           particle.vy *= 0.95;
 
           particleGraphics.clear();
-          particleGraphics.fillStyle(0x000000, 1.0);
+          particleGraphics.fillStyle(COLORS.enemy, 1.0);
           particleGraphics.fillCircle(particle.x, particle.y, particle.size);
         },
         onComplete: () => {
@@ -84,7 +84,7 @@ export class ParticleEffects {
           particle.vy *= 0.92;
 
           particleGraphics.clear();
-          particleGraphics.fillStyle(0x000000, 1.0);
+          particleGraphics.fillStyle(COLORS.enemy, 1.0);
           particleGraphics.fillCircle(particle.x, particle.y, particle.size);
         },
         onComplete: () => {
