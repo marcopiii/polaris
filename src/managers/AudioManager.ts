@@ -35,6 +35,12 @@ export default class AudioManager {
         case 'laser':
           this.audioGenerator.playLaser();
           break;
+        case 'shieldHit':
+          this.audioGenerator.playShieldHit();
+          break;
+        case 'shieldDestroy':
+          this.audioGenerator.playShieldDestroy();
+          break;
       }
     } catch (error) {
       console.warn('Audio playback failed:', error);

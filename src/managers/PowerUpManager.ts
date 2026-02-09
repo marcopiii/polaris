@@ -161,6 +161,13 @@ export default class PowerUpManager {
     return this.stacks.get(type) ?? 0;
   }
 
+  removeStack(type: PowerUpType): void {
+    const current = this.getStacks(type);
+    if (current > 0) {
+      this.stacks.set(type, current - 1);
+    }
+  }
+
   /** Count of a consumable type in inventory only (not equipped) */
   getInventoryCount(type: PowerUpType): number {
     return this.inventory.get(type) ?? 0;

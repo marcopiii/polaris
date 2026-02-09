@@ -37,10 +37,13 @@ export const LASER_BEAM_DURATION = 3000; // milliseconds
 export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side = 6 deg total
 
 // Orbital Shield
-export const SHIELD_ORBIT_RADIUS = 120; // pixels from center
-export const SHIELD_ORBIT_SPEED = 2.5; // radians per second
-export const SHIELD_SIZE = 14; // radius of shield circle
-export const SHIELD_MAX_HITS = 3; // hits before shield is destroyed
+export const SHIELD_ORBIT_OFFSET = 60; // pixels outside the terminal radius
+export const SHIELD_MAX_SLOTS = 8; // max shields around the player
+export const SHIELD_ORBIT_SPEED = 1.5; // radians per second
+export const SHIELD_ARC_ANGLE = (43 * Math.PI) / 180; // initial arc width in radians
+export const SHIELD_ARC_SHRINK = (3 * Math.PI) / 180; // shrink per hit in radians
+export const SHIELD_ARC_MIN = (19 * Math.PI) / 180; // destroyed when below this
+export const SHIELD_THICKNESS = 15; // arc thickness in pixels
 
 // Colors
 export const COLORS = {

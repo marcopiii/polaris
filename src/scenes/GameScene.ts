@@ -11,6 +11,8 @@ import {
   ENEMY_SPEED,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
+  SHIELD_MAX_SLOTS,
+  SHIELD_ORBIT_SPEED,
 } from '../constants';
 import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
@@ -36,6 +38,7 @@ export default class GameScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private bullets: Bullet[] = [];
   private shields: OrbitalShield[] = [];
+  private shieldRotation: number = 0;
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
   private audioManager!: AudioManager;
@@ -103,6 +106,16 @@ export default class GameScene extends Phaser.Scene {
 
     // Create consumable HUD
     this.createConsumableHud();
+
+    // DEBUG: start with a shield
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
+    this.powerUpManager.addPowerUp(PowerUpType.ORBITAL_SHIELD);
 
     // Start first level
     this.levelManager.startLevel(1);
@@ -317,12 +330,12 @@ export default class GameScene extends Phaser.Scene {
       const spawnX = this.centerX + Math.cos(spawnAngle) * PLAYFIELD_RADIUS;
       const spawnY = this.centerY + Math.sin(spawnAngle) * PLAYFIELD_RADIUS;
       // Sideways: tangent to the edge with some inward component
-      const tangent = spawnAngle + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1);
+      const tangent = spawnAngle + (Math.PI / 2) * (Math.random() < 0.5 ? 1 : -1);
       const inward = spawnAngle + Math.PI;
       const mix = 0.2 + Math.random() * 0.3; // 20-50% inward, rest tangential
       const bounceAngle = Math.atan2(
         Math.sin(tangent) * (1 - mix) + Math.sin(inward) * mix,
-        Math.cos(tangent) * (1 - mix) + Math.cos(inward) * mix,
+        Math.cos(tangent) * (1 - mix) + Math.cos(inward) * mix
       );
       const speed = 200 + Math.random() * 300;
       this.laserSparks.push({
@@ -789,19 +802,42 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = this.enemies.filter((e) => e.active);
   }
 
+  private getSlotAngle(slot: number): number {
+    return (slot * Math.PI * 2) / SHIELD_MAX_SLOTS;
+  }
+
+  private spawnShieldAtRandomSlot() {
+    const occupied = new Set(this.shields.filter((s) => s.active).map((s) => s.slot));
+    const free: number[] = [];
+    for (let i = 0; i < SHIELD_MAX_SLOTS; i++) {
+      if (!occupied.has(i)) free.push(i);
+    }
+    if (free.length === 0) return;
+    const slot = free[Math.floor(Math.random() * free.length)];
+    const shield = new OrbitalShield(
+      this,
+      this.centerX,
+      this.centerY,
+      slot,
+      this.getSlotAngle(slot)
+    );
+    this.shields.push(shield);
+  }
+
   private updateShields(delta: number) {
     const targetCount = this.powerUpManager.getShieldCount();
 
-    // Spawn new shields if needed
-    while (this.shields.length < targetCount) {
-      const angleOffset = (Math.PI * 2 * this.shields.length) / targetCount;
-      const shield = new OrbitalShield(this, this.centerX, this.centerY, angleOffset);
-      this.shields.push(shield);
+    // Spawn new shields at random free slots
+    while (this.shields.filter((s) => s.active).length < targetCount) {
+      this.spawnShieldAtRandomSlot();
     }
+
+    // Rotate all shields together
+    this.shieldRotation += SHIELD_ORBIT_SPEED * (delta / 1000);
 
     // Update existing shields
     for (const shield of this.shields) {
-      shield.update(delta);
+      shield.update(this.terminalRadius, this.shieldRotation);
     }
   }
 
@@ -809,16 +845,13 @@ export default class GameScene extends Phaser.Scene {
     for (const shield of this.shields) {
       if (!shield.active) continue;
 
-      const shieldBounds = shield.getBounds();
-
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
         if (!enemy.active) continue;
 
         const enemyBounds = enemy.getBounds();
-        const dist = distance(shieldBounds.x, shieldBounds.y, enemyBounds.x, enemyBounds.y);
 
-        if (dist < shieldBounds.radius + enemyBounds.radius) {
+        if (shield.checkCollision(enemyBounds.x, enemyBounds.y, enemyBounds.radius)) {
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
 
@@ -827,14 +860,36 @@ export default class GameScene extends Phaser.Scene {
           this.scoreManager.addKill();
           this.audioManager.playSound('hit');
 
-          ParticleEffects.createShieldHitParticles(this, hitX, hitY);
+          const arc = shield.getArcInfo();
+          ParticleEffects.createShieldHitParticles(
+            this,
+            arc.centerX,
+            arc.centerY,
+            arc.angle,
+            arc.arcAngle,
+            arc.radius
+          );
           ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
 
           // Chain lightning from shield kills too
           this.processChainLightning(hitX, hitY);
 
           // Shield takes damage
-          if (shield.onHit()) break; // shield destroyed, stop checking enemies for it
+          if (shield.onHit()) {
+            this.powerUpManager.removeStack(PowerUpType.ORBITAL_SHIELD);
+            this.audioManager.playSound('shieldDestroy');
+            ParticleEffects.createShieldDestroyParticles(
+              this,
+              arc.centerX,
+              arc.centerY,
+              arc.angle,
+              arc.arcAngle,
+              arc.radius
+            );
+            break; // shield destroyed, stop checking enemies for it
+          } else {
+            this.audioManager.playSound('shieldHit');
+          }
         }
       }
     }
@@ -1481,6 +1536,7 @@ export default class GameScene extends Phaser.Scene {
       shield.destroy();
     }
     this.shields = [];
+    this.shieldRotation = 0;
 
     // Clean up laser beam
     this.laserBeamTimer = 0;

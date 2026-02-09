@@ -136,7 +136,10 @@ export class AudioGenerator {
     gainNode.connect(this.audioContext.destination);
 
     oscillator.frequency.setValueAtTime(2000, this.audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + duration);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      400,
+      this.audioContext.currentTime + duration
+    );
 
     gainNode.gain.setValueAtTime(0.26, this.audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
@@ -210,6 +213,55 @@ export class AudioGenerator {
       this.laserLfo = null;
     }
     this.laserGain = null;
+  }
+
+  playShieldHit() {
+    const duration = 0.12;
+    const t = this.audioContext.currentTime;
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'triangle';
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + duration);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+
+    osc.start(t);
+    osc.stop(t + duration);
+  }
+
+  playShieldDestroy() {
+    const duration = 0.35;
+    const t = this.audioContext.currentTime;
+
+    // Metallic shatter: noise + descending tone
+    const noiseSource = this.audioContext.createBufferSource();
+    noiseSource.buffer = this.createNoiseBuffer(duration);
+    const noiseGain = this.audioContext.createGain();
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(this.audioContext.destination);
+    noiseGain.gain.setValueAtTime(0.3, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+
+    const osc = this.audioContext.createOscillator();
+    const oscGain = this.audioContext.createGain();
+    osc.type = 'square';
+    osc.connect(oscGain);
+    oscGain.connect(this.audioContext.destination);
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + duration);
+    oscGain.gain.setValueAtTime(0.2, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+
+    noiseSource.start(t);
+    noiseSource.stop(t + duration);
+    osc.start(t);
+    osc.stop(t + duration);
   }
 
   private createNoiseBuffer(duration: number): AudioBuffer {

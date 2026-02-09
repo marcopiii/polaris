@@ -1,72 +1,117 @@
 import Phaser from 'phaser';
-import { SHIELD_ORBIT_RADIUS, SHIELD_ORBIT_SPEED, SHIELD_SIZE, SHIELD_MAX_HITS } from '../constants';
+import {
+  SHIELD_ORBIT_OFFSET,
+  SHIELD_ARC_ANGLE,
+  SHIELD_ARC_SHRINK,
+  SHIELD_ARC_MIN,
+  SHIELD_THICKNESS,
+} from '../constants';
 
 export default class OrbitalShield {
   private graphics: Phaser.GameObjects.Graphics;
   private centerX: number;
   private centerY: number;
-  private angle: number;
+  private slotAngle: number;
+  private angle: number = 0;
+  private orbitRadius: number = 0;
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
-  private hitsRemaining: number = SHIELD_MAX_HITS;
+  public readonly slot: number;
+  private arcAngle: number = SHIELD_ARC_ANGLE;
+  private _innerR: number = 0;
+  private _outerR: number = 0;
 
-  constructor(scene: Phaser.Scene, centerX: number, centerY: number, startAngle: number) {
+  constructor(
+    scene: Phaser.Scene,
+    centerX: number,
+    centerY: number,
+    slot: number,
+    slotAngle: number
+  ) {
     this.centerX = centerX;
     this.centerY = centerY;
-    this.angle = startAngle;
+    this.slot = slot;
+    this.slotAngle = slotAngle;
 
     this.graphics = scene.add.graphics();
-    this.updatePosition();
-    this.draw();
-  }
-
-  private updatePosition() {
-    this.x = this.centerX + Math.cos(this.angle) * SHIELD_ORBIT_RADIUS;
-    this.y = this.centerY + Math.sin(this.angle) * SHIELD_ORBIT_RADIUS;
   }
 
   private draw() {
     this.graphics.clear();
 
-    // Outer glow
-    this.graphics.fillStyle(0xcccccc, 0.15);
-    this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE + 6);
+    const halfArc = this.arcAngle / 2;
+    const startAngle = this.angle - halfArc;
+    const endAngle = this.angle + halfArc;
 
-    // Mid glow
-    this.graphics.fillStyle(0xdddddd, 0.3);
-    this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE + 3);
+    this._innerR = this.orbitRadius - SHIELD_THICKNESS / 2;
+    this._outerR = this.orbitRadius + SHIELD_THICKNESS / 2;
 
-    // Core
-    this.graphics.fillStyle(0xffffff, 0.8);
-    this.graphics.fillCircle(this.x, this.y, SHIELD_SIZE);
+    this.graphics.lineStyle(SHIELD_THICKNESS, 0xffffff, 1);
+    this.graphics.beginPath();
+    this.graphics.arc(this.centerX, this.centerY, this.orbitRadius, startAngle, endAngle, false);
+    this.graphics.strokePath();
   }
 
-  update(delta: number) {
+  update(terminalRadius: number, rotation: number) {
     if (!this.active) return;
 
-    const deltaSec = delta / 1000;
-    this.angle += SHIELD_ORBIT_SPEED * deltaSec;
+    this.orbitRadius = terminalRadius + SHIELD_ORBIT_OFFSET;
+    this.angle = this.slotAngle + rotation;
 
-    this.updatePosition();
+    this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
+    this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;
+
     this.draw();
   }
 
   /** Register a hit. Returns true if shield is destroyed. */
   onHit(): boolean {
-    this.hitsRemaining--;
-    if (this.hitsRemaining <= 0) {
+    this.arcAngle -= SHIELD_ARC_SHRINK;
+    if (this.arcAngle < SHIELD_ARC_MIN) {
       this.destroy();
       return true;
     }
     return false;
   }
 
-  getBounds(): { x: number; y: number; radius: number } {
+  /** Check if a point (enemy center) collides with this arc shield */
+  checkCollision(ex: number, ey: number, enemyRadius: number): boolean {
+    const dx = ex - this.centerX;
+    const dy = ey - this.centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Check radial overlap: enemy circle vs arc band
+    if (dist + enemyRadius < this._innerR || dist - enemyRadius > this._outerR) {
+      return false;
+    }
+
+    // Check angular overlap
+    const enemyAngle = Math.atan2(dy, dx);
+    let diff = enemyAngle - this.angle;
+    // Normalize to [-PI, PI]
+    diff = ((diff + Math.PI) % (2 * Math.PI)) - Math.PI;
+    if (diff < -Math.PI) diff += 2 * Math.PI;
+
+    const halfArc = this.arcAngle / 2;
+    const angularExtent = dist > 0 ? enemyRadius / dist : Math.PI;
+
+    return Math.abs(diff) < halfArc + angularExtent;
+  }
+
+  getArcInfo(): {
+    centerX: number;
+    centerY: number;
+    angle: number;
+    arcAngle: number;
+    radius: number;
+  } {
     return {
-      x: this.x,
-      y: this.y,
-      radius: SHIELD_SIZE,
+      centerX: this.centerX,
+      centerY: this.centerY,
+      angle: this.angle,
+      arcAngle: this.arcAngle,
+      radius: this.orbitRadius,
     };
   }
 
