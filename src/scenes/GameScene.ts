@@ -31,7 +31,6 @@ import PowerUpManager, {
   getConsumableDefinition,
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
-import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
 import {
@@ -934,20 +933,25 @@ export default class GameScene extends Phaser.Scene {
       const bullet = this.bullets[i];
       if (!bullet.active) continue;
 
+      // Hoist bullet bounds outside inner loop
+      const bulletBounds = bullet.getBounds();
+      const bx = bulletBounds.x;
+      const by = bulletBounds.y;
+      const br = bulletBounds.radius;
+
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const enemy = this.enemies[j];
         if (!enemy.active) continue;
 
-        const bulletBounds = bullet.getBounds();
         const enemyBounds = enemy.getBounds();
-        const dist = distance(bulletBounds.x, bulletBounds.y, enemyBounds.x, enemyBounds.y);
+        const dx = bx - enemyBounds.x;
+        const dy = by - enemyBounds.y;
+        const combinedR = br + enemyBounds.radius;
 
-        if (dist < bulletBounds.radius + enemyBounds.radius) {
+        if (dx * dx + dy * dy < combinedR * combinedR) {
           // Hit!
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
-          const bx = bulletBounds.x;
-          const by = bulletBounds.y;
 
           // Increment streak on first hit, after scoring so bonus uses pre-hit value
           const isFirstHit = bullet.isManual && !bullet.hasHitEnemy;
