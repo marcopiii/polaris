@@ -75,6 +75,10 @@ export default class GameScene extends Phaser.Scene {
   // Streak HUD
   private streakLabel!: Phaser.GameObjects.Text;
   private streakValue!: Phaser.GameObjects.Text;
+  private levelLabel!: Phaser.GameObjects.Text;
+  private levelValue!: Phaser.GameObjects.Text;
+  private scoreLabel!: Phaser.GameObjects.Text;
+  private scoreValue2!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -164,35 +168,56 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private createStreakHud() {
-    const angle = (-15 * Math.PI) / 180;
-    const hudDist = PLAYFIELD_RADIUS + 50;
+  private createRadialHud(
+    angleDeg: number,
+    label: string
+  ): { label: Phaser.GameObjects.Text; value: Phaser.GameObjects.Text } {
+    const angle = (angleDeg * Math.PI) / 180;
+    const hudDist = PLAYFIELD_RADIUS + 15;
     const hudX = this.centerX + Math.cos(angle) * hudDist;
     const hudY = this.centerY + Math.sin(angle) * hudDist;
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
-    this.streakLabel = this.add.text(hudX, hudY, 'STREAK', {
+    const labelText = this.add.text(hudX, hudY, label, {
       fontSize: '18px',
       color,
       fontFamily: 'Arial, sans-serif',
     });
-    this.streakLabel.setOrigin(0, 0);
-    this.streakLabel.setRotation(angle);
+    labelText.setOrigin(0, 0);
+    labelText.setRotation(angle);
 
     const lineOffset = 22;
     const valueX = hudX + Math.sin(-angle) * lineOffset;
     const valueY = hudY + Math.cos(-angle) * lineOffset;
-    this.streakValue = this.add.text(valueX, valueY, '0', {
+    const valueText = this.add.text(valueX, valueY, '0', {
       fontSize: '32px',
       color,
       fontFamily: 'Arial, sans-serif',
     });
-    this.streakValue.setOrigin(0, 0);
-    this.streakValue.setRotation(angle);
+    valueText.setOrigin(0, 0);
+    valueText.setRotation(angle);
+
+    return { label: labelText, value: valueText };
+  }
+
+  private createStreakHud() {
+    const streak = this.createRadialHud(-12, 'STREAK');
+    this.streakLabel = streak.label;
+    this.streakValue = streak.value;
+
+    const score = this.createRadialHud(-20, 'SCORE');
+    this.scoreLabel = score.label;
+    this.scoreValue2 = score.value;
+
+    const level = this.createRadialHud(-28, 'LEVEL');
+    this.levelLabel = level.label;
+    this.levelValue = level.value;
   }
 
   private updateStreakHud() {
     this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
+    this.levelValue.setText(`${this.levelManager.getCurrentLevel()}`);
+    this.scoreValue2.setText(`${this.scoreManager.getScore()}`);
   }
 
   // ─── Consumable Activation ────────────────────────────────────────────
