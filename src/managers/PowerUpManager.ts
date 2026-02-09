@@ -1,4 +1,5 @@
 import { PLAYFIELD_RADIUS } from '../constants';
+import { gameRandom } from '../utils/BenchmarkConfig';
 
 export enum PowerUpType {
   // Passives (stackable)
@@ -309,7 +310,7 @@ export default class PowerUpManager {
 
     for (let i = 0; i < 3 && pool.length > 0; i++) {
       const totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
-      let roll = Math.random() * totalWeight;
+      let roll = gameRandom() * totalWeight;
 
       for (let j = 0; j < pool.length; j++) {
         roll -= pool[j].weight;

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
 import LeaderboardManager from '../managers/LeaderboardManager';
 import type { LeaderboardEntry } from '../types';
+import { BENCHMARK_MODE, BENCHMARK_SEED } from '../utils/BenchmarkConfig';
 
 export default class GameOverScene extends Phaser.Scene {
   private finalScore: number = 0;
@@ -19,6 +20,10 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   create() {
+    if (BENCHMARK_MODE) {
+      console.log(`[BENCHMARK] seed=${BENCHMARK_SEED} finalScore=${this.finalScore}`);
+    }
+
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
 

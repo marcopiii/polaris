@@ -11,18 +11,24 @@ export default class Player {
   private shootCooldown: number = 0;
   private isShooting: boolean = false;
   private scale: number = 1.0;
+  private benchmarkMode: boolean;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, benchmarkMode: boolean = false) {
     this.scene = scene;
     this.x = x;
     this.y = y;
+    this.benchmarkMode = benchmarkMode;
 
     // Create graphics
     this.graphics = scene.add.graphics();
     this.draw();
 
     // Set up input
-    this.setupInput();
+    if (benchmarkMode) {
+      this.isShooting = true;
+    } else {
+      this.setupInput();
+    }
   }
 
   private setupInput() {
@@ -50,7 +56,8 @@ export default class Player {
   update(
     _time: number,
     delta: number,
-    fireCooldown: number = FIRE_COOLDOWN
+    fireCooldown: number = FIRE_COOLDOWN,
+    aimTarget?: { x: number; y: number }
   ): { shouldShoot: boolean; targetX: number; targetY: number } {
     // Update cooldown
     if (this.shootCooldown > 0) {
@@ -66,9 +73,15 @@ export default class Player {
       shouldShoot = true;
       this.shootCooldown = fireCooldown;
 
-      const pointer = this.scene.input.activePointer;
-      targetX = pointer.x;
-      targetY = pointer.y;
+      if (this.benchmarkMode && aimTarget) {
+        targetX = aimTarget.x;
+        targetY = aimTarget.y;
+        this.rotation = angleBetween(this.x, this.y, targetX, targetY);
+      } else {
+        const pointer = this.scene.input.activePointer;
+        targetX = pointer.x;
+        targetY = pointer.y;
+      }
 
       // Pulse effect when shooting
       this.scene.tweens.add({

@@ -8,6 +8,7 @@ import {
   PX,
 } from '../constants';
 import { distance } from '../utils/MathUtils';
+import { gameRandom } from '../utils/BenchmarkConfig';
 
 export default class Bullet {
   private graphics: Phaser.GameObjects.Graphics;
@@ -105,7 +106,7 @@ export default class Bullet {
 
   /** Returns true if the bullet should survive the hit (probabilistic piercing) */
   onHitEnemy(): boolean {
-    return Math.random() < this.pierceChance;
+    return gameRandom() < this.pierceChance;
   }
 
   destroy() {

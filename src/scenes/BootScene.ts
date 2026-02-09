@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { BENCHMARK_MODE } from '../utils/BenchmarkConfig';
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +18,11 @@ export default class BootScene extends Phaser.Scene {
       document.fonts.load("300 16px 'Rajdhani'"),
       document.fonts.load("400 16px 'Rajdhani'"),
     ]).then(() => {
+      if (BENCHMARK_MODE) {
+        this.scene.start('GameScene');
+        return;
+      }
+
       // Debug: ?scene=gameover&score=1234&level=5 jumps straight to GameOverScene
       const params = new URLSearchParams(window.location.search);
       const debugScene = params.get('scene');
