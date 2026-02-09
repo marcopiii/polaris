@@ -12,6 +12,9 @@ export default class Player {
   private isShooting: boolean = false;
   private scale: number = 1.0;
   private benchmarkMode: boolean;
+  private onPointerMove: (pointer: Phaser.Input.Pointer) => void;
+  private onPointerDown: () => void;
+  private onPointerUp: () => void;
 
   constructor(scene: Phaser.Scene, x: number, y: number, benchmarkMode: boolean = false) {
     this.scene = scene;
@@ -23,26 +26,24 @@ export default class Player {
     this.graphics = scene.add.graphics();
     this.draw();
 
-    // Set up input
+    // Set up input with stored references for cleanup
+    this.onPointerMove = (pointer: Phaser.Input.Pointer) => {
+      this.rotation = angleBetween(this.x, this.y, pointer.x, pointer.y);
+    };
+    this.onPointerDown = () => {
+      this.isShooting = true;
+    };
+    this.onPointerUp = () => {
+      this.isShooting = false;
+    };
+
     if (benchmarkMode) {
       this.isShooting = true;
     } else {
-      this.setupInput();
+      this.scene.input.on('pointermove', this.onPointerMove);
+      this.scene.input.on('pointerdown', this.onPointerDown);
+      this.scene.input.on('pointerup', this.onPointerUp);
     }
-  }
-
-  private setupInput() {
-    this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.rotation = angleBetween(this.x, this.y, pointer.x, pointer.y);
-    });
-
-    this.scene.input.on('pointerdown', () => {
-      this.isShooting = true;
-    });
-
-    this.scene.input.on('pointerup', () => {
-      this.isShooting = false;
-    });
   }
 
   private draw() {
@@ -111,6 +112,11 @@ export default class Player {
   }
 
   destroy() {
+    if (!this.benchmarkMode) {
+      this.scene.input.off('pointermove', this.onPointerMove);
+      this.scene.input.off('pointerdown', this.onPointerDown);
+      this.scene.input.off('pointerup', this.onPointerUp);
+    }
     this.graphics.destroy();
   }
 }
