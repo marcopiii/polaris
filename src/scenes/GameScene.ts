@@ -570,17 +570,9 @@ export default class GameScene extends Phaser.Scene {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const bullet = this.bullets[i];
       if (!bullet.active) {
-        if (bullet.isManual) {
-          if (bullet.hasHitEnemy) {
-            // Piercing bullet that hit — increment streak (non-piercing bullets
-            // already incremented in checkCollisions, so skip those)
-            if (bullet.pierceChance > 0) {
-              this.scoreManager.incrementHitStreak();
-            }
-          } else {
-            // Bullet exited playfield without hitting — reset streak
-            this.scoreManager.resetHitStreak();
-          }
+        // Manual bullet exited playfield without hitting — reset streak
+        if (bullet.isManual && !bullet.hasHitEnemy) {
+          this.scoreManager.resetHitStreak();
         }
         this.bullets.splice(i, 1);
         continue;
@@ -747,6 +739,8 @@ export default class GameScene extends Phaser.Scene {
           const bx = bulletBounds.x;
           const by = bulletBounds.y;
 
+          // Increment streak on first hit, after scoring so bonus uses pre-hit value
+          const isFirstHit = bullet.isManual && !bullet.hasHitEnemy;
           bullet.hasHitEnemy = true;
 
           // Check piercing: bullet survives if it has pierce remaining
@@ -772,13 +766,11 @@ export default class GameScene extends Phaser.Scene {
           // Chain lightning
           this.processChainLightning(hitX, hitY);
 
-          // Increment streak after scoring kills so bonus uses pre-hit value
-          if (!bulletSurvives) {
-            if (bullet.isManual) {
-              this.scoreManager.incrementHitStreak();
-            }
-            break;
+          if (isFirstHit) {
+            this.scoreManager.incrementHitStreak();
           }
+
+          if (!bulletSurvives) break;
         }
       }
     }
