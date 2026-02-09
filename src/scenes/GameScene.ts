@@ -85,6 +85,7 @@ export default class GameScene extends Phaser.Scene {
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
+  private playfieldDirty: boolean = true;
 
   // Tracked tweens to prevent accumulation
   private visionTween: Phaser.Tweens.Tween | null = null;
@@ -743,7 +744,10 @@ export default class GameScene extends Phaser.Scene {
 
     // Update and draw background dust particles
     this.updateDustParticles(delta, slowZoneRadius, gravityStacks);
-    this.drawPlayfield();
+    if (this.playfieldDirty || this.playfieldTremble > 0) {
+      this.drawPlayfield();
+      this.playfieldDirty = false;
+    }
     this.dustGraphics.clear();
     for (const p of this.dustParticles) {
       if (p.r < 0) continue;
@@ -790,7 +794,7 @@ export default class GameScene extends Phaser.Scene {
         duration: 300,
         ease: 'Quad.easeOut',
         onUpdate: () => {
-          this.drawPlayfield();
+          this.playfieldDirty = true;
         },
       });
 
@@ -809,7 +813,7 @@ export default class GameScene extends Phaser.Scene {
         duration: 400,
         ease: 'Quad.easeOut',
         onUpdate: () => {
-          this.drawPlayfield();
+          this.playfieldDirty = true;
         },
       });
 
@@ -1159,7 +1163,7 @@ export default class GameScene extends Phaser.Scene {
         duration: 200,
         ease: 'Quad.easeOut',
         onUpdate: () => {
-          this.drawPlayfield();
+          this.playfieldDirty = true;
         },
         onComplete: () => {
           // Save old terminal radius before increasing
@@ -1179,7 +1183,7 @@ export default class GameScene extends Phaser.Scene {
             duration: 300,
             ease: 'Quad.easeOut',
             onUpdate: () => {
-              this.drawPlayfield();
+              this.playfieldDirty = true;
             },
           });
 
@@ -1226,7 +1230,7 @@ export default class GameScene extends Phaser.Scene {
             duration: 200,
             ease: 'Quad.easeOut',
             onUpdate: () => {
-              this.drawPlayfield();
+              this.playfieldDirty = true;
             },
           });
         },
@@ -1240,7 +1244,7 @@ export default class GameScene extends Phaser.Scene {
         duration: 200,
         ease: 'Quad.easeOut',
         onUpdate: () => {
-          this.drawPlayfield();
+          this.playfieldDirty = true;
         },
       });
     }
@@ -1489,7 +1493,7 @@ export default class GameScene extends Phaser.Scene {
         duration: 300,
         ease: 'Quad.easeOut',
         onUpdate: () => {
-          this.drawPlayfield();
+          this.playfieldDirty = true;
         },
       });
     }
