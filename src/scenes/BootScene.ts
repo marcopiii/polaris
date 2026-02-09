@@ -12,7 +12,9 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // For now, go straight to main menu
-    this.scene.start('MainMenuScene');
+    // Wait for Rajdhani font to be available before showing menu
+    document.fonts.ready.then(() => {
+      this.scene.start('MainMenuScene');
+    });
   }
 }
