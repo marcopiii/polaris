@@ -34,6 +34,13 @@ import PowerUpManager, {
 import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
+import {
+  gameRandom,
+  BENCHMARK_MODE,
+  BENCHMARK_SEED,
+  BENCHMARK_START_LEVEL,
+  parseBenchmarkPowerUps,
+} from '../utils/BenchmarkConfig';
 
 export default class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -80,6 +87,9 @@ export default class GameScene extends Phaser.Scene {
   private levelValue!: Phaser.GameObjects.Text;
   private scoreLabel!: Phaser.GameObjects.Text;
   private scoreValue2!: Phaser.GameObjects.Text;
+  private fpsText!: Phaser.GameObjects.Text;
+  private benchmarkText!: Phaser.GameObjects.Text;
+  private benchmarkDone: boolean = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -109,7 +119,7 @@ export default class GameScene extends Phaser.Scene {
     this.laserGraphics = this.add.graphics();
 
     // Create player
-    this.player = new Player(this, this.centerX, this.centerY);
+    this.player = new Player(this, this.centerX, this.centerY, BENCHMARK_MODE);
 
     // Set up consumable keybindings
     this.setupConsumableKeys();
@@ -123,8 +133,39 @@ export default class GameScene extends Phaser.Scene {
     // Animate UI elements in with overshoot
     this.animateHudEntrance();
 
+    // FPS counter (top-left corner)
+    this.fpsText = this.add.text(16 * PX, 16 * PX, '', {
+      fontSize: `${24 * PX}px`,
+      color: '#00ff00',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    this.fpsText.setDepth(1000);
+
+    // Benchmark HUD label
+    this.benchmarkText = this.add.text(16 * PX, 48 * PX, '', {
+      fontSize: `${24 * PX}px`,
+      color: '#ffaa00',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    this.benchmarkText.setDepth(1000);
+    if (BENCHMARK_MODE) {
+      this.benchmarkText.setText(`BENCHMARK seed=${BENCHMARK_SEED}`);
+    }
+
+    // Apply benchmark power-ups from query params
+    if (BENCHMARK_MODE) {
+      for (const { type, count } of parseBenchmarkPowerUps()) {
+        const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
+        if (powerUpType) {
+          for (let i = 0; i < count; i++) {
+            this.powerUpManager.addPowerUp(powerUpType);
+          }
+        }
+      }
+    }
+
     // Start first level
-    this.levelManager.startLevel(1);
+    this.levelManager.startLevel(BENCHMARK_MODE ? BENCHMARK_START_LEVEL : 1);
   }
 
   private setupConsumableKeys() {
@@ -587,11 +628,19 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
+    // Lock delta in benchmark mode for frame-perfect determinism
+    if (BENCHMARK_MODE) {
+      delta = 16.667;
+    }
+
+    // FPS display
+    this.fpsText.setText(`${Math.round(this.game.loop.actualFps)} FPS`);
+
     // Update blur effect every frame
     this.updateBlurEffect();
 
-    // Pause game while power-up selection or equip screen is active
-    if (this.isPowerUpSelectionActive) return;
+    // Pause game while power-up selection, equip screen, or benchmark end is active
+    if (this.isPowerUpSelectionActive || this.benchmarkDone) return;
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
@@ -600,8 +649,29 @@ export default class GameScene extends Phaser.Scene {
     this.updateConsumableHud();
     this.updateStreakHud();
 
+    // Auto-aim: find nearest enemy for benchmark bot
+    let aimTarget: { x: number; y: number } | undefined;
+    if (BENCHMARK_MODE && this.enemies.length > 0) {
+      let closestDistSq = Infinity;
+      for (const enemy of this.enemies) {
+        if (!enemy.active) continue;
+        const dx = enemy.x - this.player.x;
+        const dy = enemy.y - this.player.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < closestDistSq) {
+          closestDistSq = distSq;
+          aimTarget = { x: enemy.x, y: enemy.y };
+        }
+      }
+    }
+
     // Update player — suppress normal shooting while laser is active
-    const shootInfo = this.player.update(time, delta, this.powerUpManager.getFireCooldown());
+    const shootInfo = this.player.update(
+      time,
+      delta,
+      this.powerUpManager.getFireCooldown(),
+      aimTarget
+    );
     if (shootInfo.shouldShoot && this.laserBeamTimer <= 0) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
@@ -724,10 +794,21 @@ export default class GameScene extends Phaser.Scene {
         },
       });
 
-      // Show power-up selection after a short delay
-      this.time.delayedCall(500, () => {
-        this.showPowerUpSelection(completedLevel);
-      });
+      // In benchmark mode, freeze at end of level and log results
+      if (BENCHMARK_MODE) {
+        this.benchmarkDone = true;
+        console.log(
+          `[BENCHMARK] level=${completedLevel} seed=${BENCHMARK_SEED} score=${this.scoreManager.getScore()}`
+        );
+        this.benchmarkText.setText(
+          `BENCHMARK DONE  seed=${BENCHMARK_SEED}  level=${completedLevel}  score=${this.scoreManager.getScore()}`
+        );
+      } else {
+        // Show power-up selection after a short delay
+        this.time.delayedCall(500, () => {
+          this.showPowerUpSelection(completedLevel);
+        });
+      }
     }
 
     // Check game over
@@ -784,7 +865,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemy() {
-    const randomAngle = Math.random() * Math.PI * 2;
+    const randomAngle = gameRandom() * Math.PI * 2;
     const health = this.rollEnemyHealth();
     const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health);
     this.enemies.push(enemy);
@@ -802,7 +883,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const total = weights.reduce((s, w) => s + w.weight, 0);
-    const roll = Math.random() * total;
+    const roll = gameRandom() * total;
     let cumulative = 0;
     for (const w of weights) {
       cumulative += w.weight;
@@ -937,7 +1018,7 @@ export default class GameScene extends Phaser.Scene {
       if (!occupied.has(i)) free.push(i);
     }
     if (free.length === 0) return;
-    const slot = free[Math.floor(Math.random() * free.length)];
+    const slot = free[Math.floor(gameRandom() * free.length)];
     const shield = new OrbitalShield(
       this,
       this.centerX,
@@ -1132,6 +1213,15 @@ export default class GameScene extends Phaser.Scene {
   private showPowerUpSelection(completedLevel: number) {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
+
+    // In benchmark mode, auto-select the first power-up
+    if (BENCHMARK_MODE) {
+      const selection = this.powerUpManager.getRandomSelection();
+      if (selection.length > 0) {
+        this.selectPowerUp(selection[0], nextLevel);
+      }
+      return;
+    }
 
     // Semi-transparent backdrop
     const backdrop = this.add.graphics();
@@ -1385,6 +1475,13 @@ export default class GameScene extends Phaser.Scene {
   // ─── Equip Consumables Screen ─────────────────────────────────────────
 
   private showEquipScreen(nextLevel: number) {
+    // In benchmark mode, skip equip screen entirely
+    if (BENCHMARK_MODE) {
+      this.isPowerUpSelectionActive = false;
+      this.levelManager.startLevel(nextLevel);
+      return;
+    }
+
     this.nextLevelForEquipScreen = nextLevel;
     // isPowerUpSelectionActive stays true to keep game paused
     this.renderEquipScreen();
