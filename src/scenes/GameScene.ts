@@ -989,6 +989,7 @@ export default class GameScene extends Phaser.Scene {
     if (chainCount <= 0) return;
 
     const chainRange = this.powerUpManager.getChainRange();
+    const chainRangeSq = chainRange * chainRange;
     let chainsRemaining = chainCount;
     let currentX = originX;
     let currentY = originY;
@@ -996,15 +997,17 @@ export default class GameScene extends Phaser.Scene {
     let playedSound = false;
 
     while (chainsRemaining > 0) {
-      // Find closest enemy within range that hasn't been hit yet
+      // Find closest enemy within range that hasn't been hit yet (squared distance)
       let closestEnemy: Enemy | null = null;
-      let closestDist = Infinity;
+      let closestDistSq = chainRangeSq;
 
       for (const enemy of this.enemies) {
         if (!enemy.active || hitSet.has(enemy)) continue;
-        const dist = distance(currentX, currentY, enemy.x, enemy.y);
-        if (dist < chainRange && dist < closestDist) {
-          closestDist = dist;
+        const dx = currentX - enemy.x;
+        const dy = currentY - enemy.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < closestDistSq) {
+          closestDistSq = distSq;
           closestEnemy = enemy;
         }
       }
