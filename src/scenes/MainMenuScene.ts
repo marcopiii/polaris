@@ -1,14 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants';
 
-const LOGO_FONT_SIZE = 128;
 const LOGO_FONT_FAMILY = "'Rajdhani', sans-serif";
-const LOGO_LETTER_SPACING_EM = 0.22;
-
-// O-symbol dimensions (matching the HTML reference)
-const O_RING_DIAMETER = 88;
-const O_DOT_DIAMETER = 34;
-const O_SYMBOL_MARGIN = 20;
 
 export default class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -23,87 +16,82 @@ export default class MainMenuScene extends Phaser.Scene {
     this.createStartButton(centerX, centerY + 80);
   }
 
-  private createLogo(centerX: number, centerY: number) {
-    const letterSpacingPx = LOGO_FONT_SIZE * LOGO_LETTER_SPACING_EM;
+  private createLogo(x: number, y: number) {
+    const logoHtml = `
+      <div style="
+        display: flex;
+        align-items: center;
+        user-select: none;
+      ">
+        <span style="
+          font-family: 'Rajdhani', sans-serif;
+          font-weight: 300;
+          font-size: 128px;
+          color: #ffffff;
+          letter-spacing: 0;
+          line-height: 1;
+          text-transform: uppercase;
+          text-shadow:
+            0 0 8px rgba(255, 255, 255, 0.6),
+            0 0 25px rgba(255, 255, 255, 0.35),
+            0 0 60px rgba(255, 255, 255, 0.2),
+            0 0 120px rgba(255, 255, 255, 0.1);
+        ">P</span>
+        <div style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 90px;
+          height: 90px;
+          position: relative;
+          margin: 0 20px;
+          margin-bottom: 6px;
+        ">
+          <div style="
+            position: absolute;
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            border: 2px solid #ba0000;
+            box-shadow:
+              0 0 12px rgba(186, 0, 0, 0.5),
+              0 0 35px rgba(186, 0, 0, 0.3),
+              0 0 70px rgba(186, 0, 0, 0.15);
+          "></div>
+          <div style="
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #ba0000;
+            position: relative;
+            z-index: 1;
+            box-shadow:
+              0 0 10px rgba(186, 0, 0, 0.7),
+              0 0 30px rgba(186, 0, 0, 0.4),
+              0 0 60px rgba(186, 0, 0, 0.2);
+          "></div>
+        </div>
+        <span style="
+          font-family: 'Rajdhani', sans-serif;
+          font-weight: 300;
+          font-size: 128px;
+          color: #ffffff;
+          letter-spacing: 0.22em;
+          line-height: 1;
+          text-transform: uppercase;
+          text-shadow:
+            0 0 8px rgba(255, 255, 255, 0.6),
+            0 0 25px rgba(255, 255, 255, 0.35),
+            0 0 60px rgba(255, 255, 255, 0.2),
+            0 0 120px rgba(255, 255, 255, 0.1);
+        ">LARIS</span>
+      </div>
+    `;
 
-    const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: `${LOGO_FONT_SIZE}px`,
-      color: '#ffffff',
-      fontFamily: LOGO_FONT_FAMILY,
-      fontStyle: '300',
-    };
+    const el = document.createElement('div');
+    el.innerHTML = logoHtml;
 
-    // Create text objects offscreen to measure, then reposition
-    const pText = this.add.text(0, -9999, 'P', textStyle).setOrigin(0, 0.5);
-    const larisText = this.add.text(0, -9999, 'LARIS', textStyle).setOrigin(0, 0.5);
-
-    // Apply letter spacing before measuring LARIS
-    larisText.setLetterSpacing(letterSpacingPx);
-
-    const pWidth = pText.width;
-    const larisWidth = larisText.width;
-
-    // O symbol total width = margin + ring + margin
-    const oTotalWidth = O_SYMBOL_MARGIN + O_RING_DIAMETER + O_SYMBOL_MARGIN;
-
-    // Total logo width
-    const totalWidth = pWidth + oTotalWidth + larisWidth;
-    const startX = centerX - totalWidth / 2;
-
-    // Position all elements
-    pText.setPosition(startX, centerY);
-    larisText.setPosition(startX + pWidth + oTotalWidth, centerY);
-
-    const oX = startX + pWidth + O_SYMBOL_MARGIN + O_RING_DIAMETER / 2;
-    // Slight upward offset to visually align with text baseline (like margin-bottom: 6px in HTML)
-    const oY = centerY - 6;
-
-    // Apply text glow
-    this.applyTextGlow(pText);
-    this.applyTextGlow(larisText);
-
-    // Draw O-symbol (red ring + red dot with glow)
-    this.drawOSymbol(oX, oY);
-  }
-
-  private applyTextGlow(text: Phaser.GameObjects.Text) {
-    text.setShadow(0, 0, '#ffffff', 16, true, true);
-  }
-
-  private drawOSymbol(cx: number, cy: number) {
-    const gfx = this.add.graphics();
-
-    // Outer glow layers for the ring
-    const glowLayers = [
-      { radius: O_RING_DIAMETER / 2 + 35, alpha: 0.05, width: 70 },
-      { radius: O_RING_DIAMETER / 2 + 17, alpha: 0.1, width: 35 },
-      { radius: O_RING_DIAMETER / 2 + 6, alpha: 0.2, width: 12 },
-    ];
-
-    for (const layer of glowLayers) {
-      gfx.lineStyle(layer.width, 0xba0000, layer.alpha);
-      gfx.strokeCircle(cx, cy, layer.radius);
-    }
-
-    // Main ring
-    gfx.lineStyle(2, 0xba0000, 1);
-    gfx.strokeCircle(cx, cy, O_RING_DIAMETER / 2);
-
-    // Dot glow layers
-    const dotGlowLayers = [
-      { radius: 30, alpha: 0.08 },
-      { radius: 22, alpha: 0.15 },
-      { radius: 15, alpha: 0.25 },
-    ];
-
-    for (const layer of dotGlowLayers) {
-      gfx.fillStyle(0xba0000, layer.alpha);
-      gfx.fillCircle(cx, cy, layer.radius);
-    }
-
-    // Main dot
-    gfx.fillStyle(0xba0000, 1);
-    gfx.fillCircle(cx, cy, O_DOT_DIAMETER / 2);
+    this.add.dom(x, y, el);
   }
 
   private createStartButton(centerX: number, centerY: number) {
