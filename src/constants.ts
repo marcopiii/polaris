@@ -19,11 +19,11 @@ export enum HealthModel {
 }
 export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
 
-// Spawn tiers: checked in order, first match wins. Remaining probability → 1-hit enemy.
-export const ENEMY_HEALTH_TIERS: { hits: number; chance: number }[] = [
-  { hits: 3, chance: 0.05 }, // 5% chance of 3-hit enemy
-  { hits: 2, chance: 0.1 }, // 10% chance of 2-hit enemy
-];
+// Enemy Level Distribution — Power Weights
+// weight(L) = (playerLvl - threshold(L) + 1) ^ ENEMY_LEVEL_EXP
+// threshold(L) = ENEMY_LEVEL_GAP * (L - 1) - 1  (for L >= 2)
+export const ENEMY_LEVEL_EXP = 3.6;
+export const ENEMY_LEVEL_GAP = 3;
 
 // Bullet
 export const BULLET_WIDTH = 24;

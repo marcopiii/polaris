@@ -9,7 +9,8 @@ import {
   COLORS,
   ENEMY_SIZE,
   ENEMY_SPEED,
-  ENEMY_HEALTH_TIERS,
+  ENEMY_LEVEL_EXP,
+  ENEMY_LEVEL_GAP,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
   SHIELD_MAX_SLOTS,
@@ -693,11 +694,22 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private rollEnemyHealth(): number {
-    const roll = Math.random();
+    const playerLevel = this.levelManager.getCurrentLevel();
+    const weights: { level: number; weight: number }[] = [];
+
+    for (let L = 1; ; L++) {
+      const threshold = L === 1 ? 0 : ENEMY_LEVEL_GAP * (L - 1) - 1;
+      if (playerLevel < threshold) break;
+      const raw = playerLevel - threshold + 1;
+      weights.push({ level: L, weight: Math.pow(raw, ENEMY_LEVEL_EXP) });
+    }
+
+    const total = weights.reduce((s, w) => s + w.weight, 0);
+    const roll = Math.random() * total;
     let cumulative = 0;
-    for (const tier of ENEMY_HEALTH_TIERS) {
-      cumulative += tier.chance;
-      if (roll < cumulative) return tier.hits;
+    for (const w of weights) {
+      cumulative += w.weight;
+      if (roll < cumulative) return w.level;
     }
     return 1;
   }
