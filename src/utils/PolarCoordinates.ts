@@ -1,10 +1,12 @@
 import type { PolarCoordinates, CartesianCoordinates } from '../types';
 
+const _cartesianOut: CartesianCoordinates = { x: 0, y: 0 };
+
+/** Convert polar to cartesian. Returns a shared object — copy values if you need to store them. */
 export function polarToCartesian(polar: PolarCoordinates): CartesianCoordinates {
-  return {
-    x: polar.r * Math.cos(polar.theta),
-    y: polar.r * Math.sin(polar.theta),
-  };
+  _cartesianOut.x = polar.r * Math.cos(polar.theta);
+  _cartesianOut.y = polar.r * Math.sin(polar.theta);
+  return _cartesianOut;
 }
 
 export function cartesianToPolar(coords: CartesianCoordinates): PolarCoordinates {

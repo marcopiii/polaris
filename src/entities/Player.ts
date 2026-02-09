@@ -13,6 +13,7 @@ export default class Player {
   private scale: number = 1.0;
   private lastDrawnScale: number = -1;
   private benchmarkMode: boolean;
+  private _shootResult = { shouldShoot: false, targetX: 0, targetY: 0 };
   private onPointerMove: (pointer: Phaser.Input.Pointer) => void;
   private onPointerDown: () => void;
   private onPointerUp: () => void;
@@ -98,7 +99,10 @@ export default class Player {
 
     this.draw();
 
-    return { shouldShoot, targetX, targetY };
+    this._shootResult.shouldShoot = shouldShoot;
+    this._shootResult.targetX = targetX;
+    this._shootResult.targetY = targetY;
+    return this._shootResult;
   }
 
   setScale(scale: number) {

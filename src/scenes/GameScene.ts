@@ -230,7 +230,13 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private consumableHudDirty: boolean = true;
+  private static readonly HUD_COLOR = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+
   private updateConsumableHud() {
+    if (!this.consumableHudDirty) return;
+    this.consumableHudDirty = false;
+
     for (let i = 0; i < this.slotHudElements.length; i++) {
       const text = this.slotHudElements[i];
       const type = this.powerUpManager.getEquippedSlot(i);
@@ -239,11 +245,10 @@ export default class GameScene extends Phaser.Scene {
         const def = getConsumableDefinition(type);
         const name = def ? def.name : type;
         text.setText(`[${i + 1}] ${name}`);
-        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
       } else {
         text.setText(`[${i + 1}] ---`);
-        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
       }
+      text.setColor(GameScene.HUD_COLOR);
     }
   }
 
@@ -316,10 +321,26 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  private lastStreak: number = -1;
+  private lastLevel: number = -1;
+  private lastScore: number = -1;
+
   private updateStreakHud() {
-    this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
-    this.levelValue.setText(`${this.levelManager.getCurrentLevel()}`);
-    this.scoreValue2.setText(`${this.scoreManager.getScore()}`);
+    const streak = this.scoreManager.getHitStreak();
+    const level = this.levelManager.getCurrentLevel();
+    const score = this.scoreManager.getScore();
+    if (streak !== this.lastStreak) {
+      this.lastStreak = streak;
+      this.streakValue.setText(`${streak}`);
+    }
+    if (level !== this.lastLevel) {
+      this.lastLevel = level;
+      this.levelValue.setText(`${level}`);
+    }
+    if (score !== this.lastScore) {
+      this.lastScore = score;
+      this.scoreValue2.setText(`${score}`);
+    }
   }
 
   // ─── Consumable Activation ────────────────────────────────────────────
@@ -330,6 +351,7 @@ export default class GameScene extends Phaser.Scene {
 
     const type = this.powerUpManager.useEquippedSlot(slot);
     if (!type) return;
+    this.consumableHudDirty = true;
 
     switch (type) {
       case PowerUpType.SHOCKWAVE:
@@ -918,21 +940,25 @@ export default class GameScene extends Phaser.Scene {
 
   private rollEnemyHealth(): number {
     const playerLevel = this.levelManager.getCurrentLevel();
-    const weights: { level: number; weight: number }[] = [];
 
+    // First pass: compute total weight without allocations
+    let total = 0;
     for (let L = 1; ; L++) {
       const threshold = L === 1 ? 0 : ENEMY_LEVEL_GAP * (L - 1) - 1;
       if (playerLevel < threshold) break;
       const raw = playerLevel - threshold + 1;
-      weights.push({ level: L, weight: Math.pow(raw, ENEMY_LEVEL_EXP) });
+      total += Math.pow(raw, ENEMY_LEVEL_EXP);
     }
 
-    const total = weights.reduce((s, w) => s + w.weight, 0);
+    // Second pass: pick the level using the roll
     const roll = gameRandom() * total;
     let cumulative = 0;
-    for (const w of weights) {
-      cumulative += w.weight;
-      if (roll < cumulative) return w.level;
+    for (let L = 1; ; L++) {
+      const threshold = L === 1 ? 0 : ENEMY_LEVEL_GAP * (L - 1) - 1;
+      if (playerLevel < threshold) break;
+      const raw = playerLevel - threshold + 1;
+      cumulative += Math.pow(raw, ENEMY_LEVEL_EXP);
+      if (roll < cumulative) return L;
     }
     return 1;
   }
@@ -1482,6 +1508,7 @@ export default class GameScene extends Phaser.Scene {
 
   private selectPowerUp(powerUp: PowerUpDefinition, nextLevel: number) {
     this.powerUpManager.addPowerUp(powerUp.type);
+    this.consumableHudDirty = true;
 
     // Terminal Shrink: tween terminal radius down
     if (powerUp.type === PowerUpType.TERMINAL_SHRINK) {
