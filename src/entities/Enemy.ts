@@ -22,6 +22,7 @@ export default class Enemy {
   public x: number = 0;
   public y: number = 0;
   public readonly tier: number;
+  private _bounds = { x: 0, y: 0, radius: 0 };
 
   constructor(
     scene: Phaser.Scene,
@@ -128,10 +129,9 @@ export default class Enemy {
   }
 
   getBounds(): { x: number; y: number; radius: number } {
-    return {
-      x: this.x,
-      y: this.y,
-      radius: this.displaySize,
-    };
+    this._bounds.x = this.x;
+    this._bounds.y = this.y;
+    this._bounds.radius = this.displaySize;
+    return this._bounds;
   }
 }

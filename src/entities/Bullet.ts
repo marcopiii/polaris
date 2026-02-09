@@ -22,6 +22,7 @@ export default class Bullet {
   public pierceChance: number;
   public isManual: boolean = false;
   public hasHitEnemy: boolean = false;
+  private _bounds = { x: 0, y: 0, radius: Math.max(BULLET_WIDTH, BULLET_HEIGHT) / 2 };
 
   constructor(
     scene: Phaser.Scene,
@@ -115,10 +116,8 @@ export default class Bullet {
   }
 
   getBounds(): { x: number; y: number; radius: number } {
-    return {
-      x: this.x,
-      y: this.y,
-      radius: Math.max(BULLET_WIDTH, BULLET_HEIGHT) / 2,
-    };
+    this._bounds.x = this.x;
+    this._bounds.y = this.y;
+    return this._bounds;
   }
 }
