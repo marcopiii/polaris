@@ -8,6 +8,7 @@ import {
   PLAYFIELD_RADIUS,
   PLAYER_SIZE,
   TERMINAL_RADIUS_INITIAL,
+  PX,
 } from '../constants';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import { AudioGenerator } from '../utils/AudioGenerator';
@@ -31,7 +32,7 @@ export default class MainMenuScene extends Phaser.Scene {
     const centerY = GAME_HEIGHT / 2;
 
     this.createLogo(centerX, centerY);
-    this.createStartButton(centerX, centerY + 300);
+    this.createStartButton(centerX, centerY + 300 * PX);
   }
 
   private createLogo(x: number, y: number) {
@@ -197,10 +198,10 @@ export default class MainMenuScene extends Phaser.Scene {
     this.enemyPos = { x: this.buttonDom.x, y: this.buttonDom.y };
     const startW = buttonRect.width * canvasScale;
     const startH = buttonRect.height * canvasScale;
-    const endSize = 32;
+    const endSize = 32 * PX;
 
     this.enemyCircle = this.add.graphics();
-    const morph = { w: startW, h: startH, cornerR: 4 };
+    const morph = { w: startW, h: startH, cornerR: 4 * PX };
 
     // Draw initial rect immediately (matches the button appearance without text)
     this.enemyCircle.fillStyle(0x444444, 1);
@@ -209,14 +210,14 @@ export default class MainMenuScene extends Phaser.Scene {
       this.enemyPos.y - startH / 2,
       startW,
       startH,
-      4
+      4 * PX
     );
 
     // Move enemy circle toward center
     this.tweens.add({
       targets: this.enemyPos,
       x: centerX,
-      y: centerY + 150,
+      y: centerY + 150 * PX,
       duration: 900,
       ease: 'Quad.easeInOut',
     });
@@ -342,13 +343,13 @@ export default class MainMenuScene extends Phaser.Scene {
     }
 
     const squeezeGfx = this.add.graphics();
-    const squeeze = { ringR: startRingR, coreR: startCoreR, lineW: 4 };
+    const squeeze = { ringR: startRingR, coreR: startCoreR, lineW: 4 * PX };
 
     this.tweens.add({
       targets: squeeze,
       ringR: TERMINAL_RADIUS_INITIAL,
       coreR: PLAYER_SIZE,
-      lineW: 2,
+      lineW: 2 * PX,
       duration: 400,
       ease: 'Quad.easeInOut',
       onUpdate: () => {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMY_SIZE, PLAYFIELD_RADIUS, COLORS } from '../constants';
+import { ENEMY_SIZE, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
 
 export class ParticleEffects {
   static createEnemyDeathParticles(scene: Phaser.Scene, x: number, y: number) {
@@ -7,7 +7,7 @@ export class ParticleEffects {
 
     for (let i = 0; i < particleCount; i++) {
       const angle = Math.random() * Math.PI * 2; // Completely random angle
-      const speed = 100 + Math.random() * 50;
+      const speed = (100 + Math.random() * 50) * PX;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
@@ -58,7 +58,7 @@ export class ParticleEffects {
     for (let i = 0; i < particleCount; i++) {
       // Spray in a cone (±45°) away from bullet
       const angle = impactAngle + (Math.random() - 0.5) * (Math.PI / 2);
-      const speed = 60 + Math.random() * 40;
+      const speed = (60 + Math.random() * 40) * PX;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
@@ -99,7 +99,7 @@ export class ParticleEffects {
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 80 + Math.random() * 40;
+      const speed = (80 + Math.random() * 40) * PX;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
@@ -108,7 +108,7 @@ export class ParticleEffects {
         y,
         vx,
         vy,
-        size: 2,
+        size: 2 * PX,
       };
 
       // Create separate graphics for each particle
@@ -152,7 +152,7 @@ export class ParticleEffects {
       duration: 500,
       onUpdate: () => {
         graphics.clear();
-        graphics.lineStyle(3, 0xff4444, tweenTarget.alpha);
+        graphics.lineStyle(3 * PX, 0xff4444, tweenTarget.alpha);
         graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
       },
       onComplete: () => {
@@ -173,7 +173,7 @@ export class ParticleEffects {
       ease: 'Quad.easeOut',
       onUpdate: () => {
         graphics.clear();
-        graphics.lineStyle(4, 0xffffff, tweenTarget.alpha);
+        graphics.lineStyle(4 * PX, 0xffffff, tweenTarget.alpha);
         graphics.strokeCircle(centerX, centerY, tweenTarget.radius);
       },
       onComplete: () => {
@@ -185,8 +185,8 @@ export class ParticleEffects {
   static createShockwaveEffect(scene: Phaser.Scene, centerX: number, centerY: number) {
     // Two expanding rings: bright inner + faint outer
     for (const ring of [
-      { color: 0xffaa00, width: 6, delay: 0 },
-      { color: 0xff4400, width: 3, delay: 80 },
+      { color: 0xffaa00, width: 6 * PX, delay: 0 },
+      { color: 0xff4400, width: 3 * PX, delay: 80 },
     ]) {
       const graphics = scene.add.graphics();
       const tweenTarget = { radius: 0, alpha: 1 };
@@ -232,14 +232,14 @@ export class ParticleEffects {
       ease: 'Quad.easeIn',
       onUpdate: () => {
         graphics.clear();
-        graphics.lineStyle(3, 0xffffff, tweenTarget.alpha);
+        graphics.lineStyle(3 * PX, 0xffffff, tweenTarget.alpha);
         graphics.beginPath();
         graphics.moveTo(fromX, fromY);
 
         for (let i = 1; i < segments; i++) {
           const t = i / segments;
-          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
-          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20 * PX;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20 * PX;
           graphics.lineTo(px, py);
         }
 
@@ -247,13 +247,13 @@ export class ParticleEffects {
         graphics.strokePath();
 
         // Glow layer
-        graphics.lineStyle(6, 0xcccccc, tweenTarget.alpha * 0.3);
+        graphics.lineStyle(6 * PX, 0xcccccc, tweenTarget.alpha * 0.3);
         graphics.beginPath();
         graphics.moveTo(fromX, fromY);
         for (let i = 1; i < segments; i++) {
           const t = i / segments;
-          const px = fromX + dx * t + (Math.random() - 0.5) * 20;
-          const py = fromY + dy * t + (Math.random() - 0.5) * 20;
+          const px = fromX + dx * t + (Math.random() - 0.5) * 20 * PX;
+          const py = fromY + dy * t + (Math.random() - 0.5) * 20 * PX;
           graphics.lineTo(px, py);
         }
         graphics.lineTo(toX, toY);
@@ -283,14 +283,14 @@ export class ParticleEffects {
       const py = centerY + Math.sin(a) * radius;
       // Fly outward from center
       const outAngle = a + (Math.random() - 0.5) * 0.5;
-      const speed = 80 + Math.random() * 60;
+      const speed = (80 + Math.random() * 60) * PX;
 
       const particle = {
         x: px,
         y: py,
         vx: Math.cos(outAngle) * speed,
         vy: Math.sin(outAngle) * speed,
-        size: 2 + Math.random() * 2,
+        size: (2 + Math.random() * 2) * PX,
       };
 
       const particleGraphics = scene.add.graphics();
@@ -336,14 +336,14 @@ export class ParticleEffects {
       const py = centerY + Math.sin(a) * radius;
       // Fly outward with some spread
       const outAngle = a + (Math.random() - 0.5) * 0.8;
-      const speed = 100 + Math.random() * 80;
+      const speed = (100 + Math.random() * 80) * PX;
 
       const particle = {
         x: px,
         y: py,
         vx: Math.cos(outAngle) * speed,
         vy: Math.sin(outAngle) * speed,
-        size: 3 + Math.random() * 3,
+        size: (3 + Math.random() * 3) * PX,
       };
 
       const particleGraphics = scene.add.graphics();
@@ -379,7 +379,7 @@ export class ParticleEffects {
       ease: 'Quad.easeOut',
       onUpdate: () => {
         flashGraphics.clear();
-        flashGraphics.lineStyle(20, 0xffffff, flash.alpha * 0.5);
+        flashGraphics.lineStyle(20 * PX, 0xffffff, flash.alpha * 0.5);
         flashGraphics.beginPath();
         flashGraphics.arc(
           centerX,
@@ -413,12 +413,12 @@ export class ParticleEffects {
       // Spray particles outward in a wide cone (±60 degrees)
       const spread = (Math.random() - 0.5) * (Math.PI / 1.5);
       const angle = baseAngle + spread;
-      const speed = 80 + Math.random() * 40;
+      const speed = (80 + Math.random() * 40) * PX;
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
 
-      const length = 6 + Math.random() * 10; // Splinter length (6-16px)
-      const width = 1 + Math.random() * 2; // Splinter width (1-3px)
+      const length = (6 + Math.random() * 10) * PX; // Splinter length
+      const width = (1 + Math.random() * 2) * PX; // Splinter width
       const rotation = Math.atan2(vy, vx); // Orient along movement direction
 
       const particle = {

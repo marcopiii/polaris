@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../constants';
+import { GAME_WIDTH, GAME_HEIGHT, PX } from '../constants';
 import LeaderboardManager from '../managers/LeaderboardManager';
 
 export default class GameOverScene extends Phaser.Scene {
@@ -20,31 +20,31 @@ export default class GameOverScene extends Phaser.Scene {
     const centerY = GAME_HEIGHT / 2;
 
     // Game Over title
-    const title = this.add.text(centerX, centerY - 300, 'GAME OVER', {
-      fontSize: '64px',
+    const title = this.add.text(centerX, centerY - 300 * PX, 'GAME OVER', {
+      fontSize: `${64 * PX}px`,
       color: '#ff4444',
       fontFamily: "'Rajdhani', sans-serif",
     });
     title.setOrigin(0.5);
 
     // Final score
-    const scoreText = this.add.text(centerX, centerY - 200, `Score: ${this.finalScore}`, {
-      fontSize: '32px',
+    const scoreText = this.add.text(centerX, centerY - 200 * PX, `Score: ${this.finalScore}`, {
+      fontSize: `${32 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
     scoreText.setOrigin(0.5);
 
     // Leaderboard
-    this.displayLeaderboard(centerX, centerY - 100);
+    this.displayLeaderboard(centerX, centerY - 100 * PX);
 
     // Restart button
-    const restartButton = this.add.text(centerX - 100, centerY + 200, 'RESTART', {
-      fontSize: '24px',
+    const restartButton = this.add.text(centerX - 100 * PX, centerY + 200 * PX, 'RESTART', {
+      fontSize: `${24 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
       backgroundColor: '#444444',
-      padding: { x: 20, y: 10 },
+      padding: { x: 20 * PX, y: 10 * PX },
     });
     restartButton.setOrigin(0.5);
     restartButton.setInteractive({ useHandCursor: true });
@@ -62,12 +62,12 @@ export default class GameOverScene extends Phaser.Scene {
     });
 
     // Main Menu button
-    const menuButton = this.add.text(centerX + 100, centerY + 200, 'MAIN MENU', {
-      fontSize: '24px',
+    const menuButton = this.add.text(centerX + 100 * PX, centerY + 200 * PX, 'MAIN MENU', {
+      fontSize: `${24 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
       backgroundColor: '#444444',
-      padding: { x: 20, y: 10 },
+      padding: { x: 20 * PX, y: 10 * PX },
     });
     menuButton.setOrigin(0.5);
     menuButton.setInteractive({ useHandCursor: true });
@@ -86,13 +86,13 @@ export default class GameOverScene extends Phaser.Scene {
 
     // Add score to leaderboard if it's a high score
     if (this.leaderboardManager.isHighScore(this.finalScore)) {
-      this.promptForName(centerX, centerY - 150);
+      this.promptForName(centerX, centerY - 150 * PX);
     }
   }
 
   private displayLeaderboard(x: number, y: number) {
     const leaderboardTitle = this.add.text(x, y, 'LEADERBOARD', {
-      fontSize: '24px',
+      fontSize: `${24 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -102,10 +102,10 @@ export default class GameOverScene extends Phaser.Scene {
     topScores.forEach((entry, index) => {
       const entryText = this.add.text(
         x,
-        y + 40 + index * 30,
+        y + (40 + index * 30) * PX,
         `${index + 1}. ${entry.name.padEnd(15)} ${entry.score}`,
         {
-          fontSize: '18px',
+          fontSize: `${18 * PX}px`,
           color: '#cccccc',
           fontFamily: 'Courier, monospace',
         }
@@ -116,7 +116,7 @@ export default class GameOverScene extends Phaser.Scene {
 
   private promptForName(x: number, y: number) {
     const promptText = this.add.text(x, y, 'New High Score! Enter your name:', {
-      fontSize: '18px',
+      fontSize: `${18 * PX}px`,
       color: '#ffff00',
       fontFamily: "'Rajdhani', sans-serif",
     });
