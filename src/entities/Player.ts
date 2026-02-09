@@ -45,21 +45,6 @@ export default class Player {
     // Draw player circle with scale
     this.graphics.fillStyle(COLORS.player, 1);
     this.graphics.fillCircle(this.x, this.y, PLAYER_SIZE * this.scale);
-
-    // Draw directional indicator (small triangle) with scale
-    this.graphics.fillStyle(COLORS.player, 1);
-    const indicatorLength = PLAYER_SIZE * 1.5 * this.scale;
-    const tipX = this.x + Math.cos(this.rotation) * indicatorLength;
-    const tipY = this.y + Math.sin(this.rotation) * indicatorLength;
-
-    const angle1 = this.rotation + Math.PI - Math.PI / 6;
-    const angle2 = this.rotation + Math.PI + Math.PI / 6;
-    const baseX1 = this.x + Math.cos(angle1) * (PLAYER_SIZE * 0.7 * this.scale);
-    const baseY1 = this.y + Math.sin(angle1) * (PLAYER_SIZE * 0.7 * this.scale);
-    const baseX2 = this.x + Math.cos(angle2) * (PLAYER_SIZE * 0.7 * this.scale);
-    const baseY2 = this.y + Math.sin(angle2) * (PLAYER_SIZE * 0.7 * this.scale);
-
-    this.graphics.fillTriangle(tipX, tipY, baseX1, baseY1, baseX2, baseY2);
   }
 
   update(

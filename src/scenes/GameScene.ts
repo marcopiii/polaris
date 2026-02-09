@@ -516,7 +516,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Draw terminal radius hint (danger zone)
     if (this.terminalRadius > 0) {
-      this.playfieldGraphics.lineStyle(2, COLORS.terminalRadiusHint, 0.3);
+      this.playfieldGraphics.lineStyle(2, COLORS.terminalRadiusHint, 1);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.terminalRadius);
     }
   }
