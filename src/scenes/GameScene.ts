@@ -9,6 +9,8 @@ import {
   COLORS,
   ENEMY_SIZE,
   ENEMY_SPEED,
+  ENEMY_LEVEL_EXP,
+  ENEMY_LEVEL_GAP,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
   SHIELD_MAX_SLOTS,
@@ -533,7 +535,7 @@ export default class GameScene extends Phaser.Scene {
       enemy.update(delta, speedMult);
 
       // Check if enemy edge touched terminal radius
-      if (enemy.getRadius() - ENEMY_SIZE < this.terminalRadius) {
+      if (enemy.getRadius() - enemy.getSize() < this.terminalRadius) {
         // Calculate contact point on terminal radius
         const enemyBounds = enemy.getBounds();
         const angle = Math.atan2(enemyBounds.y - this.centerY, enemyBounds.x - this.centerX);
@@ -686,8 +688,30 @@ export default class GameScene extends Phaser.Scene {
 
   private spawnEnemy() {
     const randomAngle = Math.random() * Math.PI * 2;
-    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY);
+    const health = this.rollEnemyHealth();
+    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health);
     this.enemies.push(enemy);
+  }
+
+  private rollEnemyHealth(): number {
+    const playerLevel = this.levelManager.getCurrentLevel();
+    const weights: { level: number; weight: number }[] = [];
+
+    for (let L = 1; ; L++) {
+      const threshold = L === 1 ? 0 : ENEMY_LEVEL_GAP * (L - 1) - 1;
+      if (playerLevel < threshold) break;
+      const raw = playerLevel - threshold + 1;
+      weights.push({ level: L, weight: Math.pow(raw, ENEMY_LEVEL_EXP) });
+    }
+
+    const total = weights.reduce((s, w) => s + w.weight, 0);
+    const roll = Math.random() * total;
+    let cumulative = 0;
+    for (const w of weights) {
+      cumulative += w.weight;
+      if (roll < cumulative) return w.level;
+    }
+    return 1;
   }
 
   private checkCollisions() {
@@ -707,6 +731,8 @@ export default class GameScene extends Phaser.Scene {
           // Hit!
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
+          const bx = bulletBounds.x;
+          const by = bulletBounds.y;
 
           // Check piercing: bullet survives if it has pierce remaining
           const bulletSurvives = bullet.onHitEnemy();
@@ -716,13 +742,16 @@ export default class GameScene extends Phaser.Scene {
             this.bullets.splice(i, 1);
           }
 
-          enemy.destroy();
-          this.enemies.splice(j, 1);
-          this.scoreManager.addKill();
-          this.audioManager.playSound('hit');
+          const killed = enemy.hit();
+          if (killed) {
+            this.enemies.splice(j, 1);
+            this.scoreManager.addKill();
+            ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+          } else {
+            ParticleEffects.createEnemyHitParticles(this, hitX, hitY, bx, by);
+          }
 
-          // Particle effects
-          ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+          this.audioManager.playSound('hit');
           ParticleEffects.createBulletHitParticles(this, hitX, hitY);
 
           // Chain lightning

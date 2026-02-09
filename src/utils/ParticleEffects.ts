@@ -44,6 +44,56 @@ export class ParticleEffects {
     }
   }
 
+  static createEnemyHitParticles(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    bulletX: number,
+    bulletY: number
+  ) {
+    const particleCount = 2 + Math.floor(Math.random() * 3); // 2-4 particles
+    // Direction from bullet to enemy (away from impact)
+    const impactAngle = Math.atan2(y - bulletY, x - bulletX);
+
+    for (let i = 0; i < particleCount; i++) {
+      // Spray in a cone (±45°) away from bullet
+      const angle = impactAngle + (Math.random() - 0.5) * (Math.PI / 2);
+      const speed = 60 + Math.random() * 40;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+
+      const particle = {
+        x,
+        y,
+        vx,
+        vy,
+        size: Math.random() * (ENEMY_SIZE * 0.3),
+      };
+
+      const particleGraphics = scene.add.graphics();
+
+      scene.tweens.add({
+        targets: particle,
+        size: 0,
+        duration: 300 + Math.random() * 200,
+        ease: 'Cubic.easeIn',
+        onUpdate: () => {
+          particle.x += (particle.vx * 16) / 1000;
+          particle.y += (particle.vy * 16) / 1000;
+          particle.vx *= 0.92;
+          particle.vy *= 0.92;
+
+          particleGraphics.clear();
+          particleGraphics.fillStyle(0x000000, 1.0);
+          particleGraphics.fillCircle(particle.x, particle.y, particle.size);
+        },
+        onComplete: () => {
+          particleGraphics.destroy();
+        },
+      });
+    }
+  }
+
   static createBulletHitParticles(scene: Phaser.Scene, x: number, y: number) {
     const particleCount = 6;
 

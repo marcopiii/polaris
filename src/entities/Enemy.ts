@@ -1,20 +1,39 @@
 import Phaser from 'phaser';
-import { ENEMY_SIZE, ENEMY_SPEED, COLORS, PLAYFIELD_RADIUS } from '../constants';
+import {
+  ENEMY_SIZE,
+  ENEMY_SPEED,
+  COLORS,
+  PLAYFIELD_RADIUS,
+  ENEMY_HEALTH_MODEL,
+  HealthModel,
+} from '../constants';
 import type { PolarCoordinates } from '../types';
 import { polarToCartesian } from '../utils/PolarCoordinates';
 
 export default class Enemy {
+  private scene: Phaser.Scene;
   private graphics: Phaser.GameObjects.Graphics;
   private polar: PolarCoordinates;
   private centerX: number;
   private centerY: number;
+  private health: number;
+  private displaySize: number;
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
 
-  constructor(scene: Phaser.Scene, theta: number, centerX: number, centerY: number) {
+  constructor(
+    scene: Phaser.Scene,
+    theta: number,
+    centerX: number,
+    centerY: number,
+    health: number = 1
+  ) {
+    this.scene = scene;
     this.centerX = centerX;
     this.centerY = centerY;
+    this.health = health;
+    this.displaySize = Enemy.sizeForHealth(health);
 
     // Spawn at playfield edge
     this.polar = {
@@ -28,6 +47,15 @@ export default class Enemy {
     this.draw();
   }
 
+  /** Compute the visual/collision size for a given health value. */
+  static sizeForHealth(health: number): number {
+    if (ENEMY_HEALTH_MODEL === HealthModel.CIRCLE) {
+      return ENEMY_SIZE * Math.sqrt(health);
+    } else {
+      return ENEMY_SIZE * Math.cbrt(health);
+    }
+  }
+
   private updatePosition() {
     const cartesian = polarToCartesian(this.polar);
     this.x = this.centerX + cartesian.x;
@@ -37,7 +65,7 @@ export default class Enemy {
   private draw() {
     this.graphics.clear();
     this.graphics.fillStyle(COLORS.enemy, 1);
-    this.graphics.fillCircle(this.x, this.y, ENEMY_SIZE);
+    this.graphics.fillCircle(this.x, this.y, this.displaySize);
   }
 
   update(delta: number, speedMultiplier: number = 1) {
@@ -52,8 +80,44 @@ export default class Enemy {
     this.draw();
   }
 
+  /**
+   * Apply one hit of damage. Returns true if the enemy died.
+   * If the enemy survives, it shrinks to reflect its new health and flashes white.
+   */
+  hit(): boolean {
+    this.health--;
+    if (this.health <= 0) {
+      this.destroy();
+      return true;
+    }
+    // Shrink to new health-based size
+    this.displaySize = Enemy.sizeForHealth(this.health);
+    this.draw();
+
+    // Brief white flash to indicate a non-lethal hit
+    this.flashWhite();
+    return false;
+  }
+
+  private flashWhite() {
+    // Overdraw a white circle, then restore normal color after a short delay
+    this.graphics.clear();
+    this.graphics.fillStyle(0xffffff, 1);
+    this.graphics.fillCircle(this.x, this.y, this.displaySize);
+
+    this.scene.time.delayedCall(60, () => {
+      if (this.active) {
+        this.draw();
+      }
+    });
+  }
+
   getRadius(): number {
     return this.polar.r;
+  }
+
+  getSize(): number {
+    return this.displaySize;
   }
 
   destroy() {
@@ -65,7 +129,7 @@ export default class Enemy {
     return {
       x: this.x,
       y: this.y,
-      radius: ENEMY_SIZE,
+      radius: this.displaySize,
     };
   }
 }

@@ -12,6 +12,19 @@ export const FIRE_COOLDOWN = 500; // milliseconds
 export const ENEMY_SIZE = 16;
 export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
 
+// Enemy Health System
+export enum HealthModel {
+  CIRCLE = 'CIRCLE', // health ∝ area: size = ENEMY_SIZE × √hits
+  SPHERE = 'SPHERE', // health ∝ volume: size = ENEMY_SIZE × ∛hits
+}
+export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
+
+// Enemy Level Distribution — Power Weights
+// weight(L) = (playerLvl - threshold(L) + 1) ^ ENEMY_LEVEL_EXP
+// threshold(L) = ENEMY_LEVEL_GAP * (L - 1) - 1  (for L >= 2)
+export const ENEMY_LEVEL_EXP = 3.6;
+export const ENEMY_LEVEL_GAP = 3;
+
 // Bullet
 export const BULLET_WIDTH = 24;
 export const BULLET_HEIGHT = 6;
