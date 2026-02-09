@@ -119,6 +119,9 @@ export default class GameScene extends Phaser.Scene {
     // Create streak HUD
     this.createStreakHud();
 
+    // Animate UI elements in with overshoot
+    this.animateHudEntrance();
+
     // Start first level
     this.levelManager.startLevel(1);
   }
@@ -140,9 +143,10 @@ export default class GameScene extends Phaser.Scene {
 
     for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
       const hudX = this.centerX + (i - 1.5) * 200;
+      const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
       const text = this.add.text(hudX, hudY, '', {
         fontSize: '20px',
-        color: '#888888',
+        color,
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
       });
@@ -160,10 +164,10 @@ export default class GameScene extends Phaser.Scene {
         const def = getConsumableDefinition(type);
         const name = def ? def.name : type;
         text.setText(`[${i + 1}] ${name}`);
-        text.setColor('#ffffff');
+        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
       } else {
         text.setText(`[${i + 1}] ---`);
-        text.setColor('#444444');
+        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
       }
     }
   }
@@ -212,6 +216,29 @@ export default class GameScene extends Phaser.Scene {
     const level = this.createRadialHud(-28, 'LEVEL');
     this.levelLabel = level.label;
     this.levelValue = level.value;
+  }
+
+  private animateHudEntrance() {
+    const hudElements: Phaser.GameObjects.Text[] = [
+      this.streakLabel,
+      this.streakValue,
+      this.scoreLabel,
+      this.scoreValue2,
+      this.levelLabel,
+      this.levelValue,
+      ...this.slotHudElements,
+    ];
+
+    hudElements.forEach((el, i) => {
+      el.setScale(0);
+      this.tweens.add({
+        targets: el,
+        scale: 1,
+        duration: 400,
+        delay: i * 30,
+        ease: 'Back.easeOut',
+      });
+    });
   }
 
   private updateStreakHud() {
