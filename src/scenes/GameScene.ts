@@ -100,6 +100,9 @@ export default class GameScene extends Phaser.Scene {
   // Streak HUD
   private streakLabel!: Phaser.GameObjects.Text;
   private streakValue!: Phaser.GameObjects.Text;
+
+  // Power-up stack HUD (bottom-left)
+  private powerUpHudElements: Phaser.GameObjects.Text[] = [];
   private levelLabel!: Phaser.GameObjects.Text;
   private levelValue!: Phaser.GameObjects.Text;
   private scoreLabel!: Phaser.GameObjects.Text;
@@ -211,6 +214,7 @@ export default class GameScene extends Phaser.Scene {
         }
       }
     }
+    this.updatePowerUpHud();
 
     // Debug: ?scene=powerup lands directly in the power-up menu
     const data = this.scene.settings.data as Record<string, unknown>;
@@ -345,6 +349,72 @@ export default class GameScene extends Phaser.Scene {
     this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
     this.levelValue.setText(`${this.levelManager.getCurrentLevel()}`);
     this.scoreValue2.setText(`${this.scoreManager.getScore()}`);
+  }
+
+  // ─── Power-Up Stack HUD (bottom-left) ─────────────────────────────────
+
+  private updatePowerUpHud() {
+    // Destroy old elements
+    for (const el of this.powerUpHudElements) {
+      el.destroy();
+    }
+    this.powerUpHudElements = [];
+
+    const passives = this.powerUpManager.getActivePassives();
+    if (passives.length === 0) return;
+
+    const startDeg = 170;
+    const stepDeg = 8;
+    const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+    const hudDist = this.playfieldVisualRadius + 15 * PX;
+
+    // "UPGRADES" label above the list
+    const labelDeg = startDeg - stepDeg;
+    const labelAngle = (labelDeg * Math.PI) / 180;
+    const lx = this.centerX + Math.cos(labelAngle) * hudDist;
+    const ly = this.centerY + Math.sin(labelAngle) * hudDist;
+    const label = this.add.text(lx, ly, 'UPGRADES', {
+      fontSize: `${34 * PX}px`,
+      color,
+      fontFamily: "'Rajdhani', sans-serif",
+      fontStyle: '400',
+    });
+    label.setOrigin(1, 0);
+    label.setRotation(labelAngle + Math.PI);
+    this.powerUpHudElements.push(label);
+
+    passives.forEach((p, i) => {
+      const angleDeg = startDeg + i * stepDeg;
+      const angle = (angleDeg * Math.PI) / 180;
+      const hx = this.centerX + Math.cos(angle) * hudDist;
+      const hy = this.centerY + Math.sin(angle) * hudDist;
+
+      const text = this.add.text(hx, hy, `${p.name} [x${p.stacks}]`, {
+        fontSize: `${28 * PX}px`,
+        color,
+        fontFamily: "'Rajdhani', sans-serif",
+      });
+      text.setOrigin(1, 0);
+      text.setRotation(angle + Math.PI);
+      this.powerUpHudElements.push(text);
+    });
+  }
+
+  private repositionPowerUpHud(radius: number) {
+    const passives = this.powerUpManager.getActivePassives();
+    const startDeg = 170;
+    const stepDeg = 8;
+    const hudDist = radius + 15 * PX;
+
+    this.powerUpHudElements.forEach((text, i) => {
+      if (i >= passives.length) return;
+      const angleDeg = startDeg + i * stepDeg;
+      const angle = (angleDeg * Math.PI) / 180;
+      text.setPosition(
+        this.centerX + Math.cos(angle) * hudDist,
+        this.centerY + Math.sin(angle) * hudDist
+      );
+    });
   }
 
   // ─── Consumable Activation ────────────────────────────────────────────
@@ -1477,6 +1547,7 @@ export default class GameScene extends Phaser.Scene {
       const lineOffset = 40 * PX;
       value.setPosition(hx + Math.sin(-angle) * lineOffset, hy + Math.cos(-angle) * lineOffset);
     }
+    this.repositionPowerUpHud(radius);
   }
 
   private buildPieMenu(nextLevel: number) {
@@ -1499,6 +1570,7 @@ export default class GameScene extends Phaser.Scene {
       this.levelLabel,
       this.levelValue,
       ...this.slotHudElements,
+      ...this.powerUpHudElements,
     ];
     for (const el of hudElements) {
       this.children.bringToTop(el);
@@ -1623,6 +1695,7 @@ export default class GameScene extends Phaser.Scene {
 
   private selectPowerUp(powerUp: PowerUpDefinition, nextLevel: number) {
     this.powerUpManager.addPowerUp(powerUp.type);
+    this.updatePowerUpHud();
 
     // Restore the real terminal radius from before the visual collapse
     let restoredTerminal = this.savedTerminalRadius;
