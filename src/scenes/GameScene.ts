@@ -14,6 +14,8 @@ import {
   LASER_BEAM_HALF_ANGLE,
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
+  HUD_FONT_PRIMARY,
+  HUD_FONT_SECONDARY,
   PX,
   DIFFICULTY_STORAGE_KEY,
   DEFAULT_DIFFICULTY,
@@ -309,7 +311,7 @@ export default class GameScene extends Phaser.Scene {
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
     const labelText = this.add.text(layout.x, layout.y, label, {
-      fontSize: `${32 * PX}px`,
+      fontSize: `${HUD_FONT_SECONDARY}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -321,7 +323,7 @@ export default class GameScene extends Phaser.Scene {
     const valueX = layout.x + Math.sin(-angle) * lineOffset;
     const valueY = layout.y + Math.cos(-angle) * lineOffset;
     const valueText = this.add.text(valueX, valueY, '0', {
-      fontSize: `${58 * PX}px`,
+      fontSize: `${HUD_FONT_PRIMARY}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -1609,7 +1611,7 @@ export default class GameScene extends Phaser.Scene {
     const titleAngleDeg = angles[2] + angStep;
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const title = this.add.text(titleLayout.x, titleLayout.y, 'POWER UPS', {
-      fontSize: `${32 * PX}px`,
+      fontSize: `${HUD_FONT_SECONDARY}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });

@@ -112,6 +112,10 @@ export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 // Gamepad
 export const GAMEPAD_DEADZONE = 0.2;
 
+// HUD font sizes
+export const HUD_FONT_PRIMARY = 58 * PX;
+export const HUD_FONT_SECONDARY = 32 * PX;
+
 // Colors
 export const COLORS = {
   player: 0xba0000,
