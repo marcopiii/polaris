@@ -861,6 +861,49 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    // Tail gun: fire bullets in the opposite direction
+    const tailGunCount = this.powerUpManager.getTailGunBulletCount();
+    if (tailGunCount > 0) {
+      const reverseAngle = baseAngle + Math.PI;
+      if (tailGunCount === 1) {
+        const dist = 100;
+        const tx = this.player.x + Math.cos(reverseAngle) * dist;
+        const ty = this.player.y + Math.sin(reverseAngle) * dist;
+        const bullet = new Bullet(
+          this,
+          this.player.x,
+          this.player.y,
+          tx,
+          ty,
+          this.centerX,
+          this.centerY,
+          1,
+          pierceChance
+        );
+        this.bullets.push(bullet);
+      } else {
+        const startOffset = -((tailGunCount - 1) / 2) * spreadAngle;
+        for (let i = 0; i < tailGunCount; i++) {
+          const angle = reverseAngle + startOffset + i * spreadAngle;
+          const dist = 100;
+          const tx = this.player.x + Math.cos(angle) * dist;
+          const ty = this.player.y + Math.sin(angle) * dist;
+          const bullet = new Bullet(
+            this,
+            this.player.x,
+            this.player.y,
+            tx,
+            ty,
+            this.centerX,
+            this.centerY,
+            1,
+            pierceChance
+          );
+          this.bullets.push(bullet);
+        }
+      }
+    }
+
     this.audioManager.playSound('shoot');
   }
 
