@@ -4,11 +4,12 @@ const LEADERBOARD_KEY = 'noxPolaris_leaderboard';
 const MAX_ENTRIES = 10;
 
 export default class LeaderboardManager {
-  addScore(name: string, score: number) {
+  addScore(name: string, score: number, level: number = 1) {
     const entries = this.getTopScores(MAX_ENTRIES);
     const newEntry: LeaderboardEntry = {
       name,
       score,
+      level,
       date: Date.now(),
     };
 

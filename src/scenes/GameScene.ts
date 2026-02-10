@@ -1748,6 +1748,9 @@ export default class GameScene extends Phaser.Scene {
     this.equipUIElements = [];
 
     this.audioManager.playSound('gameOver');
-    this.scene.start('GameOverScene', { score: this.scoreManager.getScore() });
+    this.scene.start('GameOverScene', {
+      score: this.scoreManager.getScore(),
+      level: this.levelManager.getCurrentLevel(),
+    });
   }
 }

@@ -11,5 +11,6 @@ export interface CartesianCoordinates {
 export interface LeaderboardEntry {
   name: string;
   score: number;
+  level: number;
   date: number;
 }
