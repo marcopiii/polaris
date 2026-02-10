@@ -12,9 +12,23 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Explicitly trigger Rajdhani font download and wait for it
-    document.fonts.load("300 16px 'Rajdhani'").then(() => {
-      this.scene.start('MainMenuScene');
+    // Explicitly trigger download of both Rajdhani weights and wait for them
+    Promise.all([
+      document.fonts.load("300 16px 'Rajdhani'"),
+      document.fonts.load("400 16px 'Rajdhani'"),
+    ]).then(() => {
+      // Debug: ?scene=gameover&score=1234&level=5 jumps straight to GameOverScene
+      const params = new URLSearchParams(window.location.search);
+      const debugScene = params.get('scene');
+      if (debugScene === 'gameover') {
+        const score = parseInt(params.get('score') ?? '0', 10);
+        const level = parseInt(params.get('level') ?? '1', 10);
+        this.scene.start('GameOverScene', { score, level });
+      } else if (debugScene === 'leaderboard') {
+        this.scene.start('LeaderboardScene');
+      } else {
+        this.scene.start('MainMenuScene');
+      }
     });
   }
 }

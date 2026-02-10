@@ -17,6 +17,7 @@ import logoHtml from './logo.html?raw';
 export default class MainMenuScene extends Phaser.Scene {
   private logoDom!: Phaser.GameObjects.DOMElement;
   private buttonDom!: Phaser.GameObjects.DOMElement;
+  private leaderboardDom!: Phaser.GameObjects.DOMElement;
   private enemyCircle?: Phaser.GameObjects.Graphics;
   private enemyPos = { x: 0, y: 0 };
   private isAnimating = false;
@@ -32,7 +33,8 @@ export default class MainMenuScene extends Phaser.Scene {
     const centerY = GAME_HEIGHT / 2;
 
     this.createLogo(centerX, centerY);
-    this.createStartButton(centerX, centerY + 300 * PX);
+    this.createStartButton(centerX, centerY + 280 * PX);
+    this.createLeaderboardButton(centerX, centerY + 400 * PX);
   }
 
   private createLogo(x: number, y: number) {
@@ -76,6 +78,43 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.buttonDom = this.add.dom(x, y, button);
     this.buttonDom.setScale(PX * 1.4);
+  }
+
+  private createLeaderboardButton(x: number, y: number) {
+    const button = document.createElement('button');
+    button.textContent = 'LEADERBOARD';
+    Object.assign(button.style, {
+      fontFamily: "'Rajdhani', sans-serif",
+      fontWeight: '300',
+      fontSize: '32px',
+      color: '#ffffff',
+      background: '#444444',
+      border: 'none',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
+      transition: 'none',
+    });
+
+    button.addEventListener('mouseenter', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#666666';
+      }
+    });
+    button.addEventListener('mouseleave', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#444444';
+      }
+    });
+    button.addEventListener('click', () => {
+      if (!this.isAnimating) {
+        this.scene.start('LeaderboardScene');
+      }
+    });
+
+    this.leaderboardDom = this.add.dom(x, y, button);
+    this.leaderboardDom.setScale(PX * 1.4);
   }
 
   private getOPositionInGameWorld(): { x: number; y: number } {
@@ -132,6 +171,11 @@ export default class MainMenuScene extends Phaser.Scene {
     const buttonRect = button.getBoundingClientRect();
     button.style.pointerEvents = 'none';
     button.style.visibility = 'hidden';
+
+    // Hide leaderboard button during animation
+    const lbButton = this.leaderboardDom.node as HTMLElement;
+    lbButton.style.pointerEvents = 'none';
+    lbButton.style.visibility = 'hidden';
 
     const canvasScale = GAME_WIDTH / this.sys.game.canvas.clientWidth;
 
