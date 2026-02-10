@@ -70,6 +70,8 @@ export default class GameScene extends Phaser.Scene {
   private pauseUIElements: Phaser.GameObjects.GameObject[] = [];
   private pauseButton!: Phaser.GameObjects.Text;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private playfieldVisualRadius: number = PLAYFIELD_RADIUS;
+  private savedTerminalRadius: number = 0;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
   private powerUpSelectedIndex: number = 0;
@@ -208,6 +210,16 @@ export default class GameScene extends Phaser.Scene {
           this.powerUpManager.addPowerUp(powerUpType);
         }
       }
+    }
+
+    // Debug: ?scene=powerup lands directly in the power-up menu
+    const data = this.scene.settings.data as Record<string, unknown>;
+    if (data?.debugPowerUp) {
+      this.terminalRadius = PLAYFIELD_RADIUS * 0.3;
+      this.levelManager.startLevel(1);
+      this.levelManager.completeLevel();
+      this.showPowerUpSelection(1);
+      return;
     }
 
     // Start first level
@@ -620,20 +632,22 @@ export default class GameScene extends Phaser.Scene {
   private drawPlayfield() {
     this.playfieldGraphics.clear();
 
+    const radius = this.playfieldVisualRadius;
+
     // Draw playfield circle (with tremble offset)
     const trembleOffset =
       this.playfieldTremble > 0 ? (Math.random() - 0.5) * this.playfieldTremble : 0;
     this.playfieldGraphics.fillStyle(COLORS.playfield, 1);
-    this.playfieldGraphics.fillCircle(this.centerX, this.centerY, PLAYFIELD_RADIUS + trembleOffset);
+    this.playfieldGraphics.fillCircle(this.centerX, this.centerY, radius + trembleOffset);
 
     // Draw vision radius edge (subtle indicator)
-    if (this.visionRadius < PLAYFIELD_RADIUS) {
+    if (this.visionRadius < radius) {
       this.playfieldGraphics.lineStyle(4 * PX, 0xffffff, 0.2);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.visionRadius);
     }
 
     // Draw terminal radius hint (danger zone)
-    if (this.terminalRadius > 0) {
+    if (this.terminalRadius > 0 && this.terminalRadius < radius) {
       this.playfieldGraphics.lineStyle(2 * PX, COLORS.terminalRadiusHint, 1);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.terminalRadius);
     }
@@ -1421,187 +1435,154 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Semi-transparent backdrop
+    // Save real terminal radius and collapse playfield visually
+    this.savedTerminalRadius = this.terminalRadius;
+    const collapsedR = 600 * PX;
+
+    // Tween playfield visual radius down and terminal radius to initial
+    this.tweens.add({
+      targets: this,
+      playfieldVisualRadius: collapsedR,
+      terminalRadius: TERMINAL_RADIUS_INITIAL,
+      duration: 400,
+      ease: 'Quad.easeInOut',
+      onUpdate: () => {
+        this.drawPlayfield();
+        this.repositionHud(this.playfieldVisualRadius);
+      },
+      onComplete: () => {
+        this.buildPieMenu(nextLevel);
+      },
+    });
+  }
+
+  private repositionHud(radius: number) {
+    const hudPairs: {
+      angleDeg: number;
+      label: Phaser.GameObjects.Text;
+      value: Phaser.GameObjects.Text;
+    }[] = [
+      { angleDeg: -12, label: this.streakLabel, value: this.streakValue },
+      { angleDeg: -20, label: this.scoreLabel, value: this.scoreValue2 },
+      { angleDeg: -28, label: this.levelLabel, value: this.levelValue },
+    ];
+
+    const hudDist = radius + 15 * PX;
+    for (const { angleDeg, label, value } of hudPairs) {
+      const angle = (angleDeg * Math.PI) / 180;
+      const hx = this.centerX + Math.cos(angle) * hudDist;
+      const hy = this.centerY + Math.sin(angle) * hudDist;
+      label.setPosition(hx, hy);
+
+      const lineOffset = 40 * PX;
+      value.setPosition(hx + Math.sin(-angle) * lineOffset, hy + Math.cos(-angle) * lineOffset);
+    }
+  }
+
+  private buildPieMenu(nextLevel: number) {
+    // Backdrop matching game background, with hole for collapsed playfield
     const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x000000, 0.7);
-    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    backdrop.fillStyle(COLORS.background, 1);
+    backdrop.beginPath();
+    backdrop.arc(this.centerX, this.centerY, GAME_WIDTH, 0, Math.PI * 2, false);
+    backdrop.arc(this.centerX, this.centerY, this.playfieldVisualRadius, 0, Math.PI * 2, true);
+    backdrop.closePath();
+    backdrop.fillPath();
     this.powerUpUIElements.push(backdrop);
 
-    // Title at top
-    const title = this.add.text(
-      this.centerX,
-      this.centerY - 420 * PX,
-      `LEVEL ${completedLevel} COMPLETE`,
-      {
-        fontSize: `${48 * PX}px`,
-        color: '#ffffff',
-        fontFamily: "'Rajdhani', sans-serif",
-      }
-    );
-    title.setOrigin(0.5);
-    this.powerUpUIElements.push(title);
-
-    const subtitle = this.add.text(this.centerX, this.centerY - 360 * PX, 'Choose a Power-Up', {
-      fontSize: `${28 * PX}px`,
-      color: '#cccccc',
-      fontFamily: "'Rajdhani', sans-serif",
-    });
-    subtitle.setOrigin(0.5);
-    this.powerUpUIElements.push(subtitle);
+    // Bring HUD elements above backdrop
+    const hudElements = [
+      this.streakLabel,
+      this.streakValue,
+      this.scoreLabel,
+      this.scoreValue2,
+      this.levelLabel,
+      this.levelValue,
+      ...this.slotHudElements,
+    ];
+    for (const el of hudElements) {
+      this.children.bringToTop(el);
+    }
 
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
     this.powerUpSelectionData = { selection, nextLevel };
 
-    // Draw central hub circle
-    const hubGraphics = this.add.graphics();
-    hubGraphics.lineStyle(2 * PX, 0xffffff, 0.3);
-    hubGraphics.strokeCircle(this.centerX, this.centerY, 60 * PX);
-    hubGraphics.fillStyle(0x222222, 0.8);
-    hubGraphics.fillCircle(this.centerX, this.centerY, 60 * PX);
+    // Layout: radial text on the left side, tilted to align with circle center
+    const hudDist = this.playfieldVisualRadius + 15 * PX;
+    const angStep = 10; // degrees between items
+    const centerDeg = 192; // center item angle (degrees), left side
+    const angles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
 
-    // Score display in hub
-    const scoreText = this.add.text(this.centerX, this.centerY - 12 * PX, `Score`, {
-      fontSize: `${16 * PX}px`,
-      color: '#888888',
+    // Title above the items (higher on screen = after last item in angle order)
+    const titleAngleDeg = angles[2] + angStep;
+    const titleAngle = (titleAngleDeg * Math.PI) / 180;
+    const titleX = this.centerX + Math.cos(titleAngle) * hudDist;
+    const titleY = this.centerY + Math.sin(titleAngle) * hudDist;
+    const title = this.add.text(titleX, titleY, 'POWER UPS', {
+      fontSize: `${32 * PX}px`,
+      color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
-      align: 'center',
     });
-    scoreText.setOrigin(0.5);
-    this.powerUpUIElements.push(scoreText);
-
-    const scoreValue = this.add.text(
-      this.centerX,
-      this.centerY + 12 * PX,
-      `${this.scoreManager.getScore()}`,
-      {
-        fontSize: `${24 * PX}px`,
-        color: '#ffffff',
-        fontFamily: "'Rajdhani', sans-serif",
-        align: 'center',
-      }
-    );
-    scoreValue.setOrigin(0.5);
-    this.powerUpUIElements.push(scoreValue);
-    this.powerUpUIElements.push(hubGraphics);
-
-    // Render 3 power-up nodes arranged radially
-    const nodeRadius = 260 * PX; // Distance from center to each node
-    const startAngle = -Math.PI / 2; // Start at top
+    title.setOrigin(1, 0.5);
+    title.setRotation(titleAngle + Math.PI);
+    this.powerUpUIElements.push(title);
 
     selection.forEach((powerUp, index) => {
-      const angle = startAngle + (index * (Math.PI * 2)) / 3;
-      const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
-      const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
-      const rarityColor = RARITY_COLORS[powerUp.rarity];
+      const rarityLabel = powerUp.consumable ? 'CONSUMABLE' : powerUp.rarity;
+      const angle = (angles[index] * Math.PI) / 180;
+      const tx = this.centerX + Math.cos(angle) * hudDist;
+      const ty = this.centerY + Math.sin(angle) * hudDist;
 
-      // Connection line from hub to node
-      const lineGraphics = this.add.graphics();
-      lineGraphics.lineStyle(2 * PX, rarityColor, 0.3);
-      lineGraphics.beginPath();
-      lineGraphics.moveTo(
-        this.centerX + Math.cos(angle) * 60 * PX,
-        this.centerY + Math.sin(angle) * 60 * PX
-      );
-      lineGraphics.lineTo(nodeX - Math.cos(angle) * 100 * PX, nodeY - Math.sin(angle) * 100 * PX);
-      lineGraphics.strokePath();
-      this.powerUpUIElements.push(lineGraphics);
-
-      // Node background circle — dashed border for consumables
-      const nodeBg = this.add.graphics();
-      this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, false);
-      this.powerUpUIElements.push(nodeBg);
-
-      // Consumable tag or rarity label
-      if (powerUp.consumable) {
-        const tagText = this.add.text(nodeX, nodeY - 65 * PX, 'CONSUMABLE', {
-          fontSize: `${13 * PX}px`,
-          color: '#ffcc44',
-          fontFamily: "'Rajdhani', sans-serif",
-          align: 'center',
-        });
-        tagText.setOrigin(0.5);
-        this.powerUpUIElements.push(tagText);
-      } else {
-        const rarityText = this.add.text(nodeX, nodeY - 65 * PX, powerUp.rarity, {
-          fontSize: `${13 * PX}px`,
-          color: '#' + rarityColor.toString(16).padStart(6, '0'),
-          fontFamily: "'Rajdhani', sans-serif",
-          align: 'center',
-        });
-        rarityText.setOrigin(0.5);
-        this.powerUpUIElements.push(rarityText);
-      }
-
-      // Gamepad highlight border (drawn on top, only visible for selected card)
-      const highlight = this.add.graphics();
-      this.powerUpCardHighlights.push(highlight);
-      this.powerUpUIElements.push(highlight);
-
-      // Power-up name
-      const nameText = this.add.text(nodeX, nodeY - 35 * PX, powerUp.name, {
-        fontSize: `${22 * PX}px`,
-        color: '#ffffff',
+      // Name (main line)
+      const nameText = this.add.text(tx, ty, powerUp.name, {
+        fontSize: `${52 * PX}px`,
+        color: '#cccccc',
         fontFamily: "'Rajdhani', sans-serif",
-        align: 'center',
       });
-      nameText.setOrigin(0.5);
-      this.powerUpUIElements.push(nameText);
+      nameText.setOrigin(1, 0.5);
+      nameText.setRotation(angle + Math.PI);
 
-      // Description
-      const descText = this.add.text(nodeX, nodeY + 5 * PX, powerUp.description, {
-        fontSize: `${14 * PX}px`,
-        color: '#aaaaaa',
+      // Rarity label (below the name — offset perpendicular to the radial direction)
+      const lineOffset = -40 * PX;
+      const rx = tx + Math.sin(-angle) * lineOffset;
+      const ry = ty + Math.cos(-angle) * lineOffset;
+      const rarityText = this.add.text(rx, ry, rarityLabel, {
+        fontSize: `${28 * PX}px`,
+        color: '#888888',
         fontFamily: "'Rajdhani', sans-serif",
-        align: 'center',
-        wordWrap: { width: 170 * PX },
       });
-      descText.setOrigin(0.5);
-      this.powerUpUIElements.push(descText);
+      rarityText.setOrigin(1, 0.5);
+      rarityText.setRotation(angle + Math.PI);
 
-      // Stack count or consumable quantity
-      if (powerUp.consumable) {
-        const qty = this.powerUpManager.getConsumableCount(powerUp.type);
-        if (qty > 0) {
-          const qtyText = this.add.text(nodeX, nodeY + 40 * PX, `Qty: ${qty}`, {
-            fontSize: `${18 * PX}px`,
-            color: '#ffcc44',
-            fontFamily: "'Rajdhani', sans-serif",
-            align: 'center',
-          });
-          qtyText.setOrigin(0.5);
-          this.powerUpUIElements.push(qtyText);
-        }
-      } else {
-        const stacks = this.powerUpManager.getStacks(powerUp.type);
-        if (stacks > 0) {
-          const stackText = this.add.text(nodeX, nodeY + 40 * PX, `x${stacks}`, {
-            fontSize: `${18 * PX}px`,
-            color: '#ffff00',
-            fontFamily: "'Rajdhani', sans-serif",
-            align: 'center',
-          });
-          stackText.setOrigin(0.5);
-          this.powerUpUIElements.push(stackText);
-        }
-      }
+      // Hit area on the name text
+      nameText.setInteractive({ useHandCursor: true });
 
-      // Interactive hit area (invisible circle covering the node)
-      const hitArea = this.add.circle(nodeX, nodeY, 100 * PX, 0x000000, 0);
-      hitArea.setInteractive({ useHandCursor: true });
-
-      hitArea.on('pointerover', () => {
-        nodeBg.clear();
-        this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, true);
+      nameText.on('pointerover', () => {
+        nameText.setColor('#ffffff');
+        rarityText.setColor('#cccccc');
       });
-      hitArea.on('pointerout', () => {
-        nodeBg.clear();
-        this.drawNodeBg(nodeBg, nodeX, nodeY, rarityColor, powerUp.consumable, false);
+      nameText.on('pointerout', () => {
+        nameText.setColor('#cccccc');
+        rarityText.setColor('#888888');
       });
-      hitArea.on('pointerdown', () => {
+      nameText.on('pointerdown', () => {
         this.selectPowerUp(powerUp, nextLevel);
       });
-      this.powerUpUIElements.push(hitArea);
+
+      // Pop in animation
+      nameText.setScale(0);
+      rarityText.setScale(0);
+      this.tweens.add({
+        targets: [nameText, rarityText],
+        scale: 1,
+        duration: 300,
+        delay: index * 60,
+        ease: 'Back.easeOut',
+      });
+
+      this.powerUpUIElements.push(nameText);
+      this.powerUpUIElements.push(rarityText);
     });
 
     this.drawPowerUpHighlight();
@@ -1640,59 +1621,19 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private drawNodeBg(
-    gfx: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    color: number,
-    isConsumable: boolean,
-    isHover: boolean
-  ) {
-    const radius = (isHover ? 105 : 100) * PX;
-    const fillColor = isHover ? 0x444444 : 0x333333;
-    const fillAlpha = isHover ? 0.95 : 0.9;
-    const lineWidth = (isHover ? 4 : 3) * PX;
-    const lineAlpha = isHover ? 1 : 0.6;
-
-    gfx.fillStyle(fillColor, fillAlpha);
-    gfx.fillCircle(x, y, radius);
-
-    if (isConsumable) {
-      // Dashed-style border: draw small arcs around the circle
-      const segments = 12;
-      const gapRatio = 0.3;
-      const segAngle = (Math.PI * 2) / segments;
-      gfx.lineStyle(lineWidth, color, lineAlpha);
-      for (let i = 0; i < segments; i++) {
-        const start = i * segAngle;
-        const end = start + segAngle * (1 - gapRatio);
-        gfx.beginPath();
-        gfx.arc(x, y, radius, start, end, false);
-        gfx.strokePath();
-      }
-    } else {
-      gfx.lineStyle(lineWidth, color, lineAlpha);
-      gfx.strokeCircle(x, y, radius);
-    }
-  }
-
   private selectPowerUp(powerUp: PowerUpDefinition, nextLevel: number) {
     this.powerUpManager.addPowerUp(powerUp.type);
 
-    // Terminal Shrink: tween terminal radius down
+    // Restore the real terminal radius from before the visual collapse
+    let restoredTerminal = this.savedTerminalRadius;
+
+    // Terminal Shrink: apply shrink to the real saved value
     if (powerUp.type === PowerUpType.TERMINAL_SHRINK) {
       const shrinkAmount = 0.04 * PLAYFIELD_RADIUS; // 36px
-      const newTerminal = Math.max(this.terminalRadius - shrinkAmount, TERMINAL_RADIUS_INITIAL);
-      this.tweens.add({
-        targets: this,
-        terminalRadius: newTerminal,
-        duration: 300,
-        ease: 'Quad.easeOut',
-        onUpdate: () => {
-          this.drawPlayfield();
-        },
-      });
+      restoredTerminal = Math.max(restoredTerminal - shrinkAmount, TERMINAL_RADIUS_INITIAL);
     }
+
+    this.terminalRadius = restoredTerminal;
 
     // Orbital Shield: shields will be spawned in updateShields on next frame
 
@@ -1704,13 +1645,30 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpCardHighlights = [];
     this.powerUpSelectionData = { selection: [], nextLevel: 0 };
 
-    // Show equip screen if player has consumables, otherwise start next level
+    // Show equip screen if player has consumables, otherwise restore and start next level
     if (this.powerUpManager.hasAnyConsumables()) {
       this.showEquipScreen(nextLevel);
     } else {
-      this.isPowerUpSelectionActive = false;
-      this.levelManager.startLevel(nextLevel);
+      this.restorePlayfield(nextLevel);
     }
+  }
+
+  private restorePlayfield(nextLevel: number) {
+    // Expand playfield back to full size and move HUD outward
+    this.tweens.add({
+      targets: this,
+      playfieldVisualRadius: PLAYFIELD_RADIUS,
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        this.drawPlayfield();
+        this.repositionHud(this.playfieldVisualRadius);
+      },
+      onComplete: () => {
+        this.isPowerUpSelectionActive = false;
+        this.levelManager.startLevel(nextLevel);
+      },
+    });
   }
 
   // ─── Equip Consumables Screen ─────────────────────────────────────────
@@ -2055,8 +2013,7 @@ export default class GameScene extends Phaser.Scene {
     }
     this.equipUIElements = [];
 
-    this.isPowerUpSelectionActive = false;
-    this.levelManager.startLevel(this.nextLevelForEquipScreen);
+    this.restorePlayfield(this.nextLevelForEquipScreen);
   }
 
   // ─── Game Over ────────────────────────────────────────────────────────

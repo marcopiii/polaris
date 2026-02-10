@@ -34,6 +34,8 @@ export default class BootScene extends Phaser.Scene {
         this.scene.start('LeaderboardScene');
       } else if (debugScene === 'settings') {
         this.scene.start('SettingsScene');
+      } else if (debugScene === 'powerup') {
+        this.scene.start('GameScene', { debugPowerUp: true });
       } else {
         this.scene.start('MainMenuScene');
       }
