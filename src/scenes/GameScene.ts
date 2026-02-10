@@ -240,6 +240,30 @@ export default class GameScene extends Phaser.Scene {
     keyboard.on('keydown-FOUR', () => this.activateSlot(3));
   }
 
+  // ─── Radial Positioning Helper ───────────────────────────────────────
+
+  /**
+   * Compute position, rotation and origin for text placed radially outside
+   * the playfield. Angles are in degrees (Phaser convention: 0° = right,
+   * 90° = down, 180° = left, 270° = up). Text on the left half (90°-270°)
+   * is automatically flipped so it reads correctly.
+   */
+  private radialTextLayout(
+    angleDeg: number,
+    radius: number
+  ): { x: number; y: number; rotation: number; originX: number } {
+    const angle = (angleDeg * Math.PI) / 180;
+    const x = this.centerX + Math.cos(angle) * radius;
+    const y = this.centerY + Math.sin(angle) * radius;
+    const needsFlip = angleDeg > 90 || angleDeg < -90;
+    return {
+      x,
+      y,
+      rotation: needsFlip ? angle + Math.PI : angle,
+      originX: needsFlip ? 1 : 0,
+    };
+  }
+
   // ─── Consumable HUD ──────────────────────────────────────────────────
 
   private createConsumableHud() {
@@ -280,30 +304,29 @@ export default class GameScene extends Phaser.Scene {
     angleDeg: number,
     label: string
   ): { label: Phaser.GameObjects.Text; value: Phaser.GameObjects.Text } {
-    const angle = (angleDeg * Math.PI) / 180;
     const hudDist = PLAYFIELD_RADIUS + 15 * PX;
-    const hudX = this.centerX + Math.cos(angle) * hudDist;
-    const hudY = this.centerY + Math.sin(angle) * hudDist;
+    const layout = this.radialTextLayout(angleDeg, hudDist);
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
-    const labelText = this.add.text(hudX, hudY, label, {
+    const labelText = this.add.text(layout.x, layout.y, label, {
       fontSize: `${32 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
-    labelText.setOrigin(0, 0);
-    labelText.setRotation(angle);
+    labelText.setOrigin(layout.originX, 0);
+    labelText.setRotation(layout.rotation);
 
+    const angle = (angleDeg * Math.PI) / 180;
     const lineOffset = 40 * PX;
-    const valueX = hudX + Math.sin(-angle) * lineOffset;
-    const valueY = hudY + Math.cos(-angle) * lineOffset;
+    const valueX = layout.x + Math.sin(-angle) * lineOffset;
+    const valueY = layout.y + Math.cos(-angle) * lineOffset;
     const valueText = this.add.text(valueX, valueY, '0', {
       fontSize: `${58 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
     });
-    valueText.setOrigin(0, 0);
-    valueText.setRotation(angle);
+    valueText.setOrigin(layout.originX, 0);
+    valueText.setRotation(layout.rotation);
 
     return { label: labelText, value: valueText };
   }
@@ -363,57 +386,51 @@ export default class GameScene extends Phaser.Scene {
     const passives = this.powerUpManager.getActivePassives();
     if (passives.length === 0) return;
 
-    const startDeg = 170;
-    const stepDeg = 8;
+    const headerDeg = 175;
+    const headerGap = 5; // gap between header and first item
+    const itemStep = 3; // gap between items
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
     const hudDist = this.playfieldVisualRadius + 15 * PX;
 
-    // "UPGRADES" label above the list
-    const labelDeg = startDeg - stepDeg;
-    const labelAngle = (labelDeg * Math.PI) / 180;
-    const lx = this.centerX + Math.cos(labelAngle) * hudDist;
-    const ly = this.centerY + Math.sin(labelAngle) * hudDist;
-    const label = this.add.text(lx, ly, 'UPGRADES', {
-      fontSize: `${34 * PX}px`,
+    // "UPGRADES" header fixed at 170°
+    const headerLayout = this.radialTextLayout(headerDeg, hudDist);
+    const label = this.add.text(headerLayout.x, headerLayout.y, 'UPGRADES', {
+      fontSize: `${52 * PX}px`,
       color,
       fontFamily: "'Rajdhani', sans-serif",
       fontStyle: '400',
     });
-    label.setOrigin(1, 0);
-    label.setRotation(labelAngle + Math.PI);
+    label.setOrigin(headerLayout.originX, 0);
+    label.setRotation(headerLayout.rotation);
     this.powerUpHudElements.push(label);
 
+    // Items grow downward (decreasing angle = lower on screen)
     passives.forEach((p, i) => {
-      const angleDeg = startDeg + i * stepDeg;
-      const angle = (angleDeg * Math.PI) / 180;
-      const hx = this.centerX + Math.cos(angle) * hudDist;
-      const hy = this.centerY + Math.sin(angle) * hudDist;
+      const angleDeg = headerDeg - headerGap - i * itemStep;
+      const layout = this.radialTextLayout(angleDeg, hudDist);
 
-      const text = this.add.text(hx, hy, `${p.name} [x${p.stacks}]`, {
+      const text = this.add.text(layout.x, layout.y, `${p.name} [x${p.stacks}]`, {
         fontSize: `${28 * PX}px`,
         color,
         fontFamily: "'Rajdhani', sans-serif",
       });
-      text.setOrigin(1, 0);
-      text.setRotation(angle + Math.PI);
+      text.setOrigin(layout.originX, 0);
+      text.setRotation(layout.rotation);
       this.powerUpHudElements.push(text);
     });
   }
 
   private repositionPowerUpHud(radius: number) {
-    const passives = this.powerUpManager.getActivePassives();
-    const startDeg = 170;
-    const stepDeg = 8;
+    const headerDeg = 175;
+    const headerGap = 5;
+    const itemStep = 3;
     const hudDist = radius + 15 * PX;
 
     this.powerUpHudElements.forEach((text, i) => {
-      if (i >= passives.length) return;
-      const angleDeg = startDeg + i * stepDeg;
-      const angle = (angleDeg * Math.PI) / 180;
-      text.setPosition(
-        this.centerX + Math.cos(angle) * hudDist,
-        this.centerY + Math.sin(angle) * hudDist
-      );
+      // i=0 is header at headerDeg, i=1+ are items growing downward
+      const angleDeg = i === 0 ? headerDeg : headerDeg - headerGap - (i - 1) * itemStep;
+      const layout = this.radialTextLayout(angleDeg, hudDist);
+      text.setPosition(layout.x, layout.y);
     });
   }
 
@@ -1539,13 +1556,15 @@ export default class GameScene extends Phaser.Scene {
 
     const hudDist = radius + 15 * PX;
     for (const { angleDeg, label, value } of hudPairs) {
-      const angle = (angleDeg * Math.PI) / 180;
-      const hx = this.centerX + Math.cos(angle) * hudDist;
-      const hy = this.centerY + Math.sin(angle) * hudDist;
-      label.setPosition(hx, hy);
+      const layout = this.radialTextLayout(angleDeg, hudDist);
+      label.setPosition(layout.x, layout.y);
 
+      const angle = (angleDeg * Math.PI) / 180;
       const lineOffset = 40 * PX;
-      value.setPosition(hx + Math.sin(-angle) * lineOffset, hy + Math.cos(-angle) * lineOffset);
+      value.setPosition(
+        layout.x + Math.sin(-angle) * lineOffset,
+        layout.y + Math.cos(-angle) * lineOffset
+      );
     }
     this.repositionPowerUpHud(radius);
   }
@@ -1588,44 +1607,41 @@ export default class GameScene extends Phaser.Scene {
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = angles[2] + angStep;
-    const titleAngle = (titleAngleDeg * Math.PI) / 180;
-    const titleX = this.centerX + Math.cos(titleAngle) * hudDist;
-    const titleY = this.centerY + Math.sin(titleAngle) * hudDist;
-    const title = this.add.text(titleX, titleY, 'POWER UPS', {
+    const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
+    const title = this.add.text(titleLayout.x, titleLayout.y, 'POWER UPS', {
       fontSize: `${32 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
-    title.setOrigin(1, 0.5);
-    title.setRotation(titleAngle + Math.PI);
+    title.setOrigin(titleLayout.originX, 0.5);
+    title.setRotation(titleLayout.rotation);
     this.powerUpUIElements.push(title);
 
     selection.forEach((powerUp, index) => {
       const rarityLabel = powerUp.consumable ? 'CONSUMABLE' : powerUp.rarity;
-      const angle = (angles[index] * Math.PI) / 180;
-      const tx = this.centerX + Math.cos(angle) * hudDist;
-      const ty = this.centerY + Math.sin(angle) * hudDist;
+      const layout = this.radialTextLayout(angles[index], hudDist);
 
       // Name (main line)
-      const nameText = this.add.text(tx, ty, powerUp.name, {
+      const nameText = this.add.text(layout.x, layout.y, powerUp.name, {
         fontSize: `${52 * PX}px`,
         color: '#cccccc',
         fontFamily: "'Rajdhani', sans-serif",
       });
-      nameText.setOrigin(1, 0.5);
-      nameText.setRotation(angle + Math.PI);
+      nameText.setOrigin(layout.originX, 0.5);
+      nameText.setRotation(layout.rotation);
 
       // Rarity label (below the name — offset perpendicular to the radial direction)
+      const angle = (angles[index] * Math.PI) / 180;
       const lineOffset = -40 * PX;
-      const rx = tx + Math.sin(-angle) * lineOffset;
-      const ry = ty + Math.cos(-angle) * lineOffset;
+      const rx = layout.x + Math.sin(-angle) * lineOffset;
+      const ry = layout.y + Math.cos(-angle) * lineOffset;
       const rarityText = this.add.text(rx, ry, rarityLabel, {
         fontSize: `${28 * PX}px`,
         color: '#888888',
         fontFamily: "'Rajdhani', sans-serif",
       });
-      rarityText.setOrigin(1, 0.5);
-      rarityText.setRotation(angle + Math.PI);
+      rarityText.setOrigin(layout.originX, 0.5);
+      rarityText.setRotation(layout.rotation);
 
       // Hit area on the name text
       nameText.setInteractive({ useHandCursor: true });
