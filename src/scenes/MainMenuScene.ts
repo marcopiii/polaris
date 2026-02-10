@@ -33,8 +33,8 @@ export default class MainMenuScene extends Phaser.Scene {
     const centerY = GAME_HEIGHT / 2;
 
     this.createLogo(centerX, centerY);
-    this.createStartButton(centerX, centerY + 300 * PX);
-    this.createLeaderboardButton(centerX, centerY + 380 * PX);
+    this.createStartButton(centerX, centerY + 280 * PX);
+    this.createLeaderboardButton(centerX, centerY + 400 * PX);
   }
 
   private createLogo(x: number, y: number) {
@@ -86,11 +86,11 @@ export default class MainMenuScene extends Phaser.Scene {
     Object.assign(button.style, {
       fontFamily: "'Rajdhani', sans-serif",
       fontWeight: '300',
-      fontSize: '24px',
-      color: '#aaaaaa',
-      background: 'transparent',
-      border: '1px solid #666666',
-      padding: '6px 16px',
+      fontSize: '32px',
+      color: '#ffffff',
+      background: '#444444',
+      border: 'none',
+      padding: '10px 20px',
       cursor: 'pointer',
       textTransform: 'uppercase',
       letterSpacing: '0.1em',
@@ -99,14 +99,12 @@ export default class MainMenuScene extends Phaser.Scene {
 
     button.addEventListener('mouseenter', () => {
       if (!this.isAnimating) {
-        button.style.color = '#ffffff';
-        button.style.borderColor = '#aaaaaa';
+        button.style.background = '#666666';
       }
     });
     button.addEventListener('mouseleave', () => {
       if (!this.isAnimating) {
-        button.style.color = '#aaaaaa';
-        button.style.borderColor = '#666666';
+        button.style.background = '#444444';
       }
     });
     button.addEventListener('click', () => {
