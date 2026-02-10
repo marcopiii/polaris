@@ -34,6 +34,10 @@ pnpm knip             # Detect unused exports (dead code)
 
 Fix all errors before committing. TypeScript compilation errors and ESLint errors must be resolved.
 
+### Git Merge Policy
+
+Always merge with a merge commit (`git merge --no-ff`). Never fast-forward.
+
 ## Architecture
 
 ### Coordinate System
