@@ -68,7 +68,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     // Leaderboard entries
     const topScores = this.leaderboardManager.getTopScores(10);
     const startY = centerY - 240 * PX;
-    const rowHeight = 48 * PX;
+    const rowHeight = 64 * PX;
 
     if (topScores.length === 0) {
       const emptyText = this.add.text(centerX, centerY, 'No scores yet. Play a game!', {
@@ -95,10 +95,10 @@ export default class LeaderboardScene extends Phaser.Scene {
 
         // Top 3 get special colors
         const isTop3 = index < 3;
-        const rankColor = isTop3 ? '#ba0000' : '#666666';
+        const rankColor = isTop3 ? '#ffffff' : '#666666';
         const nameColor = isTop3 ? '#ffffff' : '#aaaaaa';
         const scoreColor = isTop3 ? '#ffffff' : '#aaaaaa';
-        const fontSize = isTop3 ? `${22 * PX}px` : `${20 * PX}px`;
+        const fontSize = `${32 * PX}px`;
 
         // Rank
         const rankText = this.add.text(centerX - 270 * PX, entryY, `${index + 1}`, {
@@ -134,8 +134,9 @@ export default class LeaderboardScene extends Phaser.Scene {
       });
     }
 
-    // Back button
-    const backButton = this.add.text(centerX, centerY + 340 * PX, 'BACK', {
+    // Back button positioned below the list
+    const listBottom = startY + Math.max(topScores.length, 1) * rowHeight;
+    const backButton = this.add.text(centerX, listBottom + 80 * PX, 'BACK', {
       fontSize: `${28 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
