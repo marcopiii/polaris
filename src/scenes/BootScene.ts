@@ -12,8 +12,11 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Explicitly trigger Rajdhani font download and wait for it
-    document.fonts.load("300 16px 'Rajdhani'").then(() => {
+    // Explicitly trigger download of both Rajdhani weights and wait for them
+    Promise.all([
+      document.fonts.load("300 16px 'Rajdhani'"),
+      document.fonts.load("400 16px 'Rajdhani'"),
+    ]).then(() => {
       this.scene.start('MainMenuScene');
     });
   }
