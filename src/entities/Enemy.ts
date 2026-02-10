@@ -114,6 +114,13 @@ export default class Enemy {
     });
   }
 
+  /** Push enemy away from center by the given pixel distance, clamped to playfield. */
+  pushBack(amount: number) {
+    this.polar.r = Math.min(this.polar.r + amount, PLAYFIELD_RADIUS);
+    this.updatePosition();
+    this.draw();
+  }
+
   getRadius(): number {
     return this.polar.r;
   }

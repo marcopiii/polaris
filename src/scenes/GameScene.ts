@@ -930,6 +930,10 @@ export default class GameScene extends Phaser.Scene {
             this.scoreManager.addKill(enemy.tier);
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           } else {
+            const pushbackDist = this.powerUpManager.getPushbackDistance();
+            if (pushbackDist > 0) {
+              enemy.pushBack(pushbackDist);
+            }
             ParticleEffects.createEnemyHitParticles(this, hitX, hitY, bx, by);
           }
 
