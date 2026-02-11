@@ -1248,7 +1248,7 @@ export default class GameScene extends Phaser.Scene {
         onComplete: () => {
           // Save old terminal radius before increasing
           const oldTerminalRadius = this.terminalRadius;
-          const newTerminalRadius = this.terminalRadius + TERMINAL_RADIUS_INCREASE;
+          const newTerminalRadius = this.terminalRadius + TERMINAL_RADIUS_INCREASE[this.difficulty];
 
           this.audioManager.playSound('terminalGrow');
 
