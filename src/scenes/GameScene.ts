@@ -590,8 +590,7 @@ export default class GameScene extends Phaser.Scene {
       this.player.setScale(1.8 + Math.random() * 0.4);
     }
 
-    const pointer = this.input.activePointer;
-    const aimAngle = Math.atan2(pointer.y - this.player.y, pointer.x - this.player.x);
+    const aimAngle = this.player.getRotation();
 
     // Draw laser beam as a filled arc/wedge
     this.laserGraphics.clear();
