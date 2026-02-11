@@ -77,10 +77,16 @@ export default class GameScene extends Phaser.Scene {
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
   private powerUpSelectedIndex: number = 0;
-  private powerUpCardHighlights: Phaser.GameObjects.Graphics[] = [];
-  private powerUpSelectionData: { selection: PowerUpDefinition[]; nextLevel: number } = {
+  private powerUpItemTexts: { name: Phaser.GameObjects.Text; rarity: Phaser.GameObjects.Text }[] =
+    [];
+  private powerUpSelectionData: {
+    selection: PowerUpDefinition[];
+    nextLevel: number;
+    angles: number[];
+  } = {
     selection: [],
     nextLevel: 0,
+    angles: [],
   };
 
   // Consumable state
@@ -130,7 +136,7 @@ export default class GameScene extends Phaser.Scene {
     this.bullets = [];
     this.shields = [];
     this.powerUpUIElements = [];
-    this.powerUpCardHighlights = [];
+    this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
     this.slotHudElements = [];
     this.equipUIElements = [];
@@ -1536,7 +1542,7 @@ export default class GameScene extends Phaser.Scene {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
     this.powerUpSelectedIndex = 0;
-    this.powerUpCardHighlights = [];
+    this.powerUpItemTexts = [];
 
     // In benchmark mode, auto-select the first power-up
     if (BENCHMARK_MODE) {
@@ -1622,13 +1628,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
-    this.powerUpSelectionData = { selection, nextLevel };
 
     // Layout: radial text on the left side, tilted to align with circle center
     const hudDist = this.playfieldVisualRadius + 15 * PX;
     const angStep = 10; // degrees between items
     const centerDeg = 192; // center item angle (degrees), left side
     const angles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
+    this.powerUpSelectionData = { selection, nextLevel, angles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = angles[2] + angStep;
@@ -1694,6 +1700,7 @@ export default class GameScene extends Phaser.Scene {
         ease: 'Back.easeOut',
       });
 
+      this.powerUpItemTexts.push({ name: nameText, rarity: rarityText });
       this.powerUpUIElements.push(nameText);
       this.powerUpUIElements.push(rarityText);
     });
@@ -1702,25 +1709,44 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private drawPowerUpHighlight() {
-    const nodeRadius = 260 * PX;
-    const startAngle = -Math.PI / 2;
-    this.powerUpCardHighlights.forEach((highlight, index) => {
-      highlight.clear();
+    this.powerUpItemTexts.forEach((item, index) => {
       if (index === this.powerUpSelectedIndex) {
-        const angle = startAngle + (index * (Math.PI * 2)) / 3;
-        const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
-        const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
-        highlight.lineStyle(4 * PX, 0xffff00, 1);
-        highlight.strokeCircle(nodeX, nodeY, 105 * PX);
+        item.name.setColor('#ffffff');
+        item.rarity.setColor('#cccccc');
+      } else {
+        item.name.setColor('#cccccc');
+        item.rarity.setColor('#888888');
       }
     });
   }
 
   private updatePowerUpGamepadNavigation() {
-    const { selection, nextLevel } = this.powerUpSelectionData;
+    const { selection, nextLevel, angles } = this.powerUpSelectionData;
     if (!this.isPowerUpSelectionActive || selection.length === 0) return;
 
-    const nav = this.gamepadManager.getHorizontalNavigation();
+    // Left stick: find the item whose angle is closest to the stick direction
+    const aimAngle = this.gamepadManager.getAimAngle();
+    if (aimAngle !== null) {
+      const stickDeg = ((aimAngle * 180) / Math.PI + 360) % 360;
+      let bestIndex = this.powerUpSelectedIndex;
+      let bestDist = Infinity;
+      for (let i = 0; i < angles.length; i++) {
+        const diff = Math.abs(((stickDeg - angles[i] + 540) % 360) - 180);
+        if (diff < bestDist) {
+          bestDist = diff;
+          bestIndex = i;
+        }
+      }
+      if (bestIndex !== this.powerUpSelectedIndex) {
+        this.powerUpSelectedIndex = bestIndex;
+        this.drawPowerUpHighlight();
+      }
+    }
+
+    // D-pad up/down as fallback
+    let nav = 0;
+    if (this.gamepadManager.isDpadDownJustPressed()) nav = 1;
+    else if (this.gamepadManager.isDpadUpJustPressed()) nav = -1;
     if (nav !== 0) {
       this.powerUpSelectedIndex = Math.max(
         0,
@@ -1756,8 +1782,8 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
-    this.powerUpCardHighlights = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0 };
+    this.powerUpItemTexts = [];
+    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [] };
 
     // Show equip screen if player has consumables, otherwise restore and start next level
     if (this.powerUpManager.hasAnyConsumables()) {
