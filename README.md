@@ -17,6 +17,7 @@ You're the red dot at the center of a circle. Enemies spawn at the edge and move
 ## Features
 
 ✨ **Implemented**
+
 - Polar coordinate-based gameplay
 - Automatic shooting on mouse hold (250ms cooldown)
 - Dynamic enemy spawning with acceleration
@@ -128,6 +129,7 @@ src/
 ## Visual Design
 
 Minimalist dark pastel aesthetic:
+
 - **Player**: Red dot (#ff4444)
 - **Enemies**: Black dots (#000000)
 - **Bullets**: White glowing ovals (#ffffff)
@@ -140,6 +142,20 @@ Minimalist dark pastel aesthetic:
 - Firefox: ✅ Full support
 - Safari: ✅ Full support
 - Requires WebGL for blur effect (gracefully degrades if unavailable)
+
+## Debug Query Parameters
+
+The game supports URL query parameters for debugging and testing:
+
+- `?level=N` — Start the game at level N (default: 1)
+- `?powerups=TYPE:COUNT,TYPE:COUNT,...` — Start with pre-applied power-ups (e.g. `?powerups=RAPID_FIRE:3,PUSHBACK:2`). Count defaults to 1 if omitted. Uses `PowerUpType` enum names.
+- `?scene=powerup` — Jump directly to the power-up selection screen
+- `?scene=gameover&score=N&level=N` — Jump to the game over screen
+- `?scene=leaderboard` — Jump to the leaderboard screen
+- `?benchmark` — Enable benchmark mode (seeded PRNG, auto-aim bot, locked delta, auto-selects power-ups)
+- `?seed=N` — Set PRNG seed for benchmark mode (default: 12345)
+
+Parameters can be combined, e.g. `?level=5&powerups=TAIL_GUN:2,MULTI_SHOT:3`.
 
 ## License
 

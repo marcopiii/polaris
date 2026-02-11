@@ -43,6 +43,7 @@ Always merge with a merge commit (`git merge --no-ff`). Never fast-forward.
 ### Coordinate System
 
 The game uses **polar coordinates** (r, θ) with the player fixed at the center:
+
 - **Player**: Always at origin (r=0, theta=any)
 - **Enemies**: Spawn at playfield edge (r=PLAYFIELD_RADIUS, random θ), move toward center (decreasing r)
 - **Bullets**: Use Cartesian coordinates internally for straight-line movement
@@ -83,6 +84,7 @@ Core gameplay mechanic with two concentric circles:
 - **Game Over**: When terminal radius >= playfield radius (900px)
 
 The blur effect is implemented via **WebGL PostFX shader** (`VisionBlurShader.ts`):
+
 - Shader must be registered with `renderer.pipelines.addPostPipeline(name, ShaderClass)` (pass class, not instance)
 - Uniforms are set in `onPreRender()` callback, not during update loop
 - Camera receives shader with `camera.setPostPipeline(name)` which returns an array
@@ -97,6 +99,7 @@ The blur effect is implemented via **WebGL PostFX shader** (`VisionBlurShader.ts
 ## Key Constants
 
 All gameplay values are in `constants.ts`. When tweaking game feel:
+
 - `SPAWN_RATE_INITIAL` and `SPAWN_RATE_ACCELERATION`: Control difficulty curve
 - `ENEMY_SPEED` and `BULLET_SPEED`: Expressed as fractions of playfield radius per second
 - `VISION_RADIUS_DECREASE` and `TERMINAL_RADIUS_INCREASE`: Control damage progression
