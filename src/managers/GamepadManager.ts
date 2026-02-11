@@ -7,8 +7,8 @@ export default class GamepadManager {
   private getPad(): Gamepad | null {
     const pads = navigator.getGamepads?.();
     if (!pads) return null;
-    for (const pad of pads) {
-      if (pad) return pad;
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i]) return pads[i];
     }
     return null;
   }

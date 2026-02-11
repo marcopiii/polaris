@@ -1712,10 +1712,14 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpItemTexts.forEach((item, index) => {
       if (index === this.powerUpSelectedIndex) {
         item.name.setColor('#ffffff');
+        item.name.setScale(1.15);
         item.rarity.setColor('#cccccc');
+        item.rarity.setScale(1.15);
       } else {
         item.name.setColor('#cccccc');
+        item.name.setScale(1);
         item.rarity.setColor('#888888');
+        item.rarity.setScale(1);
       }
     });
   }
@@ -1728,7 +1732,7 @@ export default class GameScene extends Phaser.Scene {
     const aimAngle = this.gamepadManager.getAimAngle();
     if (aimAngle !== null) {
       const stickDeg = ((aimAngle * 180) / Math.PI + 360) % 360;
-      let bestIndex = this.powerUpSelectedIndex;
+      let bestIndex = 0;
       let bestDist = Infinity;
       for (let i = 0; i < angles.length; i++) {
         const diff = Math.abs(((stickDeg - angles[i] + 540) % 360) - 180);
@@ -1737,10 +1741,8 @@ export default class GameScene extends Phaser.Scene {
           bestIndex = i;
         }
       }
-      if (bestIndex !== this.powerUpSelectedIndex) {
-        this.powerUpSelectedIndex = bestIndex;
-        this.drawPowerUpHighlight();
-      }
+      this.powerUpSelectedIndex = bestIndex;
+      this.drawPowerUpHighlight();
     }
 
     // D-pad up/down as fallback
