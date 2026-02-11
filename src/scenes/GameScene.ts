@@ -125,6 +125,29 @@ export default class GameScene extends Phaser.Scene {
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
     this.visionRadius = VISION_RADIUS_INITIAL;
 
+    // Reset arrays to avoid stale references from previous scene runs
+    this.enemies = [];
+    this.bullets = [];
+    this.shields = [];
+    this.powerUpUIElements = [];
+    this.powerUpCardHighlights = [];
+    this.powerUpHudElements = [];
+    this.slotHudElements = [];
+    this.equipUIElements = [];
+    this.laserSparks = [];
+    this.dustParticles = [];
+    this.pauseUIElements = [];
+    this.isPaused = false;
+    this.isPowerUpSelectionActive = false;
+    this.playfieldTremble = 0;
+    this.playfieldVisualRadius = PLAYFIELD_RADIUS;
+    this.savedTerminalRadius = 0;
+    this.laserBeamTimer = 0;
+    this.laserScaleUpDone = false;
+    this.dustSpawnTimer = 0;
+    this.dustSpawnBatch = 0;
+    this.benchmarkDone = false;
+
     // Read difficulty from localStorage
     const stored = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
     this.difficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
@@ -134,7 +157,7 @@ export default class GameScene extends Phaser.Scene {
     this.levelManager = new LevelManager(this.difficulty);
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
-    this.gamepadManager = new GamepadManager(this);
+    this.gamepadManager = new GamepadManager();
 
     // Set up blur effect
     this.setupBlurEffect();

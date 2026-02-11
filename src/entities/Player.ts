@@ -41,14 +41,6 @@ export default class Player {
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.rotation = angleBetween(this.x, this.y, pointer.x, pointer.y);
     });
-
-    this.scene.input.on('pointerdown', () => {
-      this.isShooting = true;
-    });
-
-    this.scene.input.on('pointerup', () => {
-      this.isShooting = false;
-    });
   }
 
   private draw() {
@@ -80,12 +72,13 @@ export default class Player {
       this.shootCooldown -= delta;
     }
 
-    // Check if should shoot (pointer or gamepad stick movement)
+    // Check if should shoot (pointer held or gamepad stick outside deadzone)
+    const pointerShooting = !this.benchmarkMode && this.scene.input.activePointer?.isDown;
     let shouldShoot = false;
     let targetX = 0;
     let targetY = 0;
 
-    if ((this.isShooting || gamepadAiming) && this.shootCooldown <= 0) {
+    if ((this.isShooting || pointerShooting || gamepadAiming) && this.shootCooldown <= 0) {
       shouldShoot = true;
       this.shootCooldown = fireCooldown;
 

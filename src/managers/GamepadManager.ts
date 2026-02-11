@@ -1,17 +1,16 @@
-import Phaser from 'phaser';
 import { GAMEPAD_DEADZONE } from '../constants';
 
 export default class GamepadManager {
-  private scene: Phaser.Scene;
   private prevButtons: boolean[] = [];
+  private prevStickX: number = 0;
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-  }
-
-  private getPad(): Phaser.Input.Gamepad.Gamepad | null {
-    if (!this.scene.input.gamepad) return null;
-    return this.scene.input.gamepad.pad1 ?? null;
+  private getPad(): Gamepad | null {
+    const pads = navigator.getGamepads?.();
+    if (!pads) return null;
+    for (const pad of pads) {
+      if (pad) return pad;
+    }
+    return null;
   }
 
   /** Returns the aim angle from the left stick, or null if within deadzone. */
@@ -19,8 +18,8 @@ export default class GamepadManager {
     const pad = this.getPad();
     if (!pad) return null;
 
-    const lx = pad.leftStick.x;
-    const ly = pad.leftStick.y;
+    const lx = pad.axes[0] ?? 0;
+    const ly = pad.axes[1] ?? 0;
     const magnitude = Math.sqrt(lx * lx + ly * ly);
 
     if (magnitude < GAMEPAD_DEADZONE) return null;
@@ -87,11 +86,9 @@ export default class GamepadManager {
     if (dpadRight) return 1;
 
     // Left stick snap navigation
-    const lx = pad.leftStick.x;
-    const prevMagnitude = Math.abs(this.prevButtons.length > 0 ? 0 : 0);
+    const lx = pad.axes[0] ?? 0;
 
-    if (Math.abs(lx) > 0.7 && prevMagnitude === 0) {
-      // Use stick x but only when crossing the threshold
+    if (Math.abs(lx) > 0.7) {
       const prevLx = this.prevStickX;
       if (Math.abs(prevLx) <= 0.7) {
         return lx > 0 ? 1 : -1;
@@ -101,16 +98,12 @@ export default class GamepadManager {
     return 0;
   }
 
-  private prevStickX: number = 0;
-
   /** Triggers gamepad vibration if a pad is connected and supports it. */
   vibrate(duration: number, weakMagnitude: number = 0, strongMagnitude: number = 0.5): void {
     const pad = this.getPad();
     if (!pad) return;
 
-    // Access the native browser Gamepad for vibrationActuator (dual-rumble)
-    const nativePad = navigator.getGamepads?.()[pad.index];
-    const actuator = nativePad?.vibrationActuator as
+    const actuator = pad.vibrationActuator as
       | { playEffect(type: string, params: object): void }
       | undefined;
     if (actuator?.playEffect) {
@@ -132,6 +125,6 @@ export default class GamepadManager {
     }
 
     this.prevButtons = pad.buttons.map((b) => b.pressed);
-    this.prevStickX = pad.leftStick.x;
+    this.prevStickX = pad.axes[0] ?? 0;
   }
 }

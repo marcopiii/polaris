@@ -44,7 +44,7 @@ export default class SettingsScene extends Phaser.Scene {
   }
 
   create() {
-    this.gamepadManager = new GamepadManager(this);
+    this.gamepadManager = new GamepadManager();
     const stored = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
     this.selectedDifficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
     this.highlightedIndex = DIFFICULTIES.indexOf(this.selectedDifficulty);
