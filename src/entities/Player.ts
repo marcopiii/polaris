@@ -9,6 +9,7 @@ export default class Player {
   public x: number;
   public y: number;
   private rotation: number = 0;
+  private prevRotation: number = 0;
   private shootCooldown: number = 0;
   private isShooting: boolean = false;
   private scale: number = 1.0;
@@ -55,7 +56,8 @@ export default class Player {
     _time: number,
     delta: number,
     fireCooldown: number = FIRE_COOLDOWN,
-    aimTarget?: { x: number; y: number }
+    aimTarget?: { x: number; y: number },
+    maxAngularSpeed?: number
   ): { shouldShoot: boolean; targetX: number; targetY: number } {
     // Poll gamepad for aim and shoot
     let gamepadAiming = false;
@@ -64,6 +66,18 @@ export default class Player {
       if (aimAngle !== null) {
         this.rotation = aimAngle;
         gamepadAiming = true;
+      }
+    }
+
+    // Clamp angular velocity when a cap is active
+    if (maxAngularSpeed !== undefined) {
+      const maxDelta = maxAngularSpeed * (delta / 1000);
+      let diff = this.rotation - this.prevRotation;
+      // Wrap to [-PI, PI]
+      diff = ((diff + Math.PI) % (2 * Math.PI)) - Math.PI;
+      if (diff > Math.PI) diff -= 2 * Math.PI;
+      if (Math.abs(diff) > maxDelta) {
+        this.rotation = this.prevRotation + Math.sign(diff) * maxDelta;
       }
     }
 
@@ -107,6 +121,9 @@ export default class Player {
     }
 
     this.draw();
+
+    // Snapshot rotation for next frame's angular velocity cap
+    this.prevRotation = this.rotation;
 
     return { shouldShoot, targetX, targetY };
   }

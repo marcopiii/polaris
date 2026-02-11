@@ -99,6 +99,7 @@ export const SCORE_MULTIPLIER: Record<Difficulty, number> = {
 // Consumables
 export const LASER_BEAM_DURATION = 3000; // milliseconds
 export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side = 6 deg total
+export const LASER_MAX_ANGULAR_SPEED = Math.PI * 1.5; // radians per second (~270°/s)
 
 // Orbital Shield
 export const SHIELD_ORBIT_OFFSET = 60 * PX; // pixels outside the terminal radius

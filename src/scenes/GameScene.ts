@@ -12,6 +12,7 @@ import {
   ENEMY_LEVEL_GAP,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
+  LASER_MAX_ANGULAR_SPEED,
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
   HUD_FONT_PRIMARY,
@@ -870,11 +871,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Update player — suppress normal shooting while laser is active
+    const laserActive = this.laserBeamTimer > 0;
     const shootInfo = this.player.update(
       time,
       delta,
       this.powerUpManager.getFireCooldown(),
-      aimTarget
+      aimTarget,
+      laserActive ? LASER_MAX_ANGULAR_SPEED : undefined
     );
     if (shootInfo.shouldShoot && this.laserBeamTimer <= 0) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
