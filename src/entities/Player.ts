@@ -11,6 +11,7 @@ export default class Player {
   private rotation: number = 0;
   private shootCooldown: number = 0;
   private isShooting: boolean = false;
+  private firing: boolean = false;
   private scale: number = 1.0;
   private benchmarkMode: boolean;
   private gamepadManager: GamepadManager | null = null;
@@ -74,6 +75,7 @@ export default class Player {
 
     // Check if should shoot (pointer held or gamepad stick outside deadzone)
     const pointerShooting = !this.benchmarkMode && this.scene.input.activePointer?.isDown;
+    this.firing = this.isShooting || pointerShooting || gamepadAiming;
     let shouldShoot = false;
     let targetX = 0;
     let targetY = 0;
@@ -121,6 +123,10 @@ export default class Player {
 
   getRotation(): number {
     return this.rotation;
+  }
+
+  isFiringActive(): boolean {
+    return this.firing;
   }
 
   destroy() {

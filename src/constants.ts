@@ -53,7 +53,7 @@ export const ENEMY_LEVEL_GAP: Record<Difficulty, number> = {
 // Bullet
 export const BULLET_WIDTH = 24 * PX;
 export const BULLET_HEIGHT = 6 * PX;
-export const BULLET_SPEED = 1.5; // 1.5 playfield radius per second
+export const BULLET_SPEED = 2.5; // 2.5 playfield radius per second
 
 // Damage system
 export const TERMINAL_RADIUS_INITIAL = 72 * PX;
