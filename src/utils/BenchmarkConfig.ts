@@ -4,13 +4,14 @@ const params = new URLSearchParams(window.location.search);
 
 export const BENCHMARK_MODE: boolean = params.has('benchmark');
 export const BENCHMARK_SEED: number = parseInt(params.get('seed') ?? '12345', 10) || 12345;
-export const BENCHMARK_START_LEVEL: number = parseInt(params.get('level') ?? '1', 10) || 1;
+export const START_LEVEL: number = parseInt(params.get('level') ?? '1', 10) || 1;
 
 /**
  * Parse power-ups from query param, e.g. `?powerups=RAPID_FIRE:3,MULTI_SHOT:2,SHOCKWAVE:1`
  * Returns array of { type: string, count: number } entries.
+ * Works independently of benchmark mode.
  */
-export function parseBenchmarkPowerUps(): { type: string; count: number }[] {
+export function parsePowerUpsParam(): { type: string; count: number }[] {
   const raw = params.get('powerups');
   if (!raw) return [];
   return raw.split(',').map((entry) => {

@@ -179,7 +179,11 @@ export default class GameOverScene extends Phaser.Scene {
         nameInput.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' && nameInput!.value.trim()) {
             if (isHighScore) {
-              this.leaderboardManager.addScore(nameInput!.value.trim(), this.finalScore, this.finalLevel);
+              this.leaderboardManager.addScore(
+                nameInput!.value.trim(),
+                this.finalScore,
+                this.finalLevel
+              );
             }
             this.scene.start('MainMenuScene');
           }

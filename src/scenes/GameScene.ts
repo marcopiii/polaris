@@ -38,8 +38,8 @@ import {
   gameRandom,
   BENCHMARK_MODE,
   BENCHMARK_SEED,
-  BENCHMARK_START_LEVEL,
-  parseBenchmarkPowerUps,
+  START_LEVEL,
+  parsePowerUpsParam,
 } from '../utils/BenchmarkConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -152,9 +152,9 @@ export default class GameScene extends Phaser.Scene {
       this.benchmarkText.setText(`BENCHMARK seed=${BENCHMARK_SEED}`);
     }
 
-    // Apply benchmark power-ups from query params
-    if (BENCHMARK_MODE) {
-      for (const { type, count } of parseBenchmarkPowerUps()) {
+    // Apply power-ups from ?powerups= query param
+    {
+      for (const { type, count } of parsePowerUpsParam()) {
         const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
         if (powerUpType) {
           for (let i = 0; i < count; i++) {
@@ -165,7 +165,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Start first level
-    this.levelManager.startLevel(BENCHMARK_MODE ? BENCHMARK_START_LEVEL : 1);
+    this.levelManager.startLevel(START_LEVEL);
   }
 
   private setupConsumableKeys() {
