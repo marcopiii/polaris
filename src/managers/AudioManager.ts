@@ -26,6 +26,9 @@ export default class AudioManager {
         case 'terminalGrow':
           this.audioGenerator.playTerminalGrow();
           break;
+        case 'terminalShrink':
+          this.audioGenerator.playTerminalShrink();
+          break;
         case 'gameOver':
           this.audioGenerator.playGameOver();
           break;

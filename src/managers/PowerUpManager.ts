@@ -7,7 +7,6 @@ export enum PowerUpType {
   REINFORCED_VISION = 'REINFORCED_VISION',
   MULTI_SHOT = 'MULTI_SHOT',
   ENEMY_SLOWDOWN = 'ENEMY_SLOWDOWN',
-  TERMINAL_SHRINK = 'TERMINAL_SHRINK',
   PIERCING_ROUNDS = 'PIERCING_ROUNDS',
   ORBITAL_SHIELD = 'ORBITAL_SHIELD',
   CHAIN_LIGHTNING = 'CHAIN_LIGHTNING',
@@ -82,14 +81,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     description: 'Enemies move 15% slower',
     rarity: PowerUpRarity.UNCOMMON,
     weight: 18,
-    consumable: false,
-  },
-  {
-    type: PowerUpType.TERMINAL_SHRINK,
-    name: 'Terminal Shrink',
-    description: 'Shrink the terminal radius',
-    rarity: PowerUpRarity.UNCOMMON,
-    weight: 15,
     consumable: false,
   },
   {
