@@ -15,6 +15,9 @@ import {
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
   PX,
+  DIFFICULTY_STORAGE_KEY,
+  DEFAULT_DIFFICULTY,
+  type Difficulty,
 } from '../constants';
 import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
@@ -103,6 +106,8 @@ export default class GameScene extends Phaser.Scene {
   private benchmarkText!: Phaser.GameObjects.Text;
   private benchmarkDone: boolean = false;
 
+  private difficulty: Difficulty = DEFAULT_DIFFICULTY;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -113,9 +118,13 @@ export default class GameScene extends Phaser.Scene {
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
     this.visionRadius = VISION_RADIUS_INITIAL;
 
+    // Read difficulty from localStorage
+    const stored = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
+    this.difficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
+
     // Initialize managers
-    this.scoreManager = new ScoreManager();
-    this.levelManager = new LevelManager();
+    this.scoreManager = new ScoreManager(this.difficulty);
+    this.levelManager = new LevelManager(this.difficulty);
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
     this.gamepadManager = new GamepadManager(this);
@@ -982,12 +991,14 @@ export default class GameScene extends Phaser.Scene {
   private rollEnemyHealth(): number {
     const playerLevel = this.levelManager.getCurrentLevel();
     const weights: { level: number; weight: number }[] = [];
+    const gap = ENEMY_LEVEL_GAP[this.difficulty];
+    const exp = ENEMY_LEVEL_EXP[this.difficulty];
 
     for (let L = 1; ; L++) {
-      const threshold = L === 1 ? 0 : ENEMY_LEVEL_GAP * (L - 1) - 1;
+      const threshold = L === 1 ? 0 : gap * (L - 1) - 1;
       if (playerLevel < threshold) break;
       const raw = playerLevel - threshold + 1;
-      weights.push({ level: L, weight: Math.pow(raw, ENEMY_LEVEL_EXP) });
+      weights.push({ level: L, weight: Math.pow(raw, exp) });
     }
 
     const total = weights.reduce((s, w) => s + w.weight, 0);

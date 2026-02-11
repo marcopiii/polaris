@@ -1,3 +1,9 @@
+// ─── Difficulty ─────────────────────────────────────────────────────────
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'madness';
+export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard', 'madness'];
+export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
+export const DIFFICULTY_STORAGE_KEY = 'noxPolaris_difficulty';
+
 // ─── Fundamental Scale ──────────────────────────────────────────────────
 // PLAYFIELD_RADIUS is the single source of truth for sizing.
 // All pixel measurements are expressed relative to it via the PX factor.
@@ -31,8 +37,18 @@ export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
 // Enemy Level Distribution — Power Weights
 // weight(L) = (playerLvl - threshold(L) + 1) ^ ENEMY_LEVEL_EXP
 // threshold(L) = ENEMY_LEVEL_GAP * (L - 1) - 1  (for L >= 2)
-export const ENEMY_LEVEL_EXP = 3.6;
-export const ENEMY_LEVEL_GAP = 3;
+export const ENEMY_LEVEL_EXP: Record<Difficulty, number> = {
+  easy: 3.0,
+  normal: 3.6,
+  hard: 4.0,
+  madness: 4.5,
+};
+export const ENEMY_LEVEL_GAP: Record<Difficulty, number> = {
+  easy: 4,
+  normal: 3,
+  hard: 2,
+  madness: 1,
+};
 
 // Bullet
 export const BULLET_WIDTH = 24 * PX;
@@ -47,12 +63,33 @@ export const TERMINAL_RADIUS_INCREASE = 45 * PX;
 // Level system
 export const LEVEL_BASE_DURATION = 20; // seconds
 export const LEVEL_DURATION_INCREMENT = 5; // seconds
-export const SPAWN_RATE_INITIAL = 0.5; // enemies per second
-export const SPAWN_RATE_ACCELERATION = 0.05; // per second squared
-export const SPAWN_RATE_LEVEL_INCREMENT = 0.2; // increase per level
+export const SPAWN_RATE_INITIAL: Record<Difficulty, number> = {
+  easy: 0.35,
+  normal: 0.5,
+  hard: 0.65,
+  madness: 0.9,
+};
+export const SPAWN_RATE_ACCELERATION: Record<Difficulty, number> = {
+  easy: 0.03,
+  normal: 0.05,
+  hard: 0.08,
+  madness: 0.12,
+};
+export const SPAWN_RATE_LEVEL_INCREMENT: Record<Difficulty, number> = {
+  easy: 0.15,
+  normal: 0.2,
+  hard: 0.3,
+  madness: 0.4,
+};
 
 // Scoring
 export const POINTS_PER_KILL = 10;
+export const SCORE_MULTIPLIER: Record<Difficulty, number> = {
+  easy: 0.5,
+  normal: 1.0,
+  hard: 1.5,
+  madness: 2.0,
+};
 
 // Consumables
 export const LASER_BEAM_DURATION = 3000; // milliseconds
