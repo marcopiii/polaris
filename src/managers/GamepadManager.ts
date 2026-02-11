@@ -1,8 +1,26 @@
-import { GAMEPAD_DEADZONE } from '../constants';
+import { GAMEPAD_DEADZONE_DEFAULT, GAMEPAD_DEADZONE_STORAGE_KEY } from '../constants';
+
+export function loadGamepadDeadzone(): number {
+  const stored = localStorage.getItem(GAMEPAD_DEADZONE_STORAGE_KEY);
+  if (stored !== null) {
+    const val = parseFloat(stored);
+    if (!isNaN(val)) return val;
+  }
+  return GAMEPAD_DEADZONE_DEFAULT;
+}
+
+export function saveGamepadDeadzone(value: number): void {
+  localStorage.setItem(GAMEPAD_DEADZONE_STORAGE_KEY, value.toFixed(2));
+}
 
 export default class GamepadManager {
   private prevButtons: boolean[] = [];
   private prevStickX: number = 0;
+  private deadzone: number;
+
+  constructor(deadzone?: number) {
+    this.deadzone = deadzone ?? loadGamepadDeadzone();
+  }
 
   private getPad(): Gamepad | null {
     const pads = navigator.getGamepads?.();
@@ -22,7 +40,7 @@ export default class GamepadManager {
     const ly = pad.axes[1] ?? 0;
     const magnitude = Math.sqrt(lx * lx + ly * ly);
 
-    if (magnitude < GAMEPAD_DEADZONE) return null;
+    if (magnitude < this.deadzone) return null;
 
     return Math.atan2(ly, lx);
   }
