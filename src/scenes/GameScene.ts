@@ -829,6 +829,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Skip game logic while paused
     if (this.isPaused) {
+      this.updatePauseGamepadNavigation();
       this.gamepadManager.updatePrevState();
       return;
     }
@@ -1475,9 +1476,16 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private pauseMenuIndex: number = 0;
+  private pauseMenuButtons: Phaser.GameObjects.Text[] = [];
+  private pauseMenuActions: (() => void)[] = [];
+
   private showPauseUI() {
     this.isPaused = true;
     this.pauseButton.setAlpha(0);
+    this.pauseMenuIndex = 0;
+    this.pauseMenuButtons = [];
+    this.pauseMenuActions = [];
 
     // Pause all active tweens
     this.tweens.pauseAll();
@@ -1499,33 +1507,72 @@ export default class GameScene extends Phaser.Scene {
     title.setDepth(21);
     this.pauseUIElements.push(title);
 
-    // Resume button
-    const resumeBtn = this.add.text(this.centerX, this.centerY + 40 * PX, 'RESUME', {
-      fontSize: `${32 * PX}px`,
-      color: '#ffffff',
-      fontFamily: "'Rajdhani', sans-serif",
-      backgroundColor: '#444444',
-      padding: { x: 24 * PX, y: 10 * PX },
-    });
-    resumeBtn.setOrigin(0.5);
-    resumeBtn.setDepth(21);
-    resumeBtn.setInteractive({ useHandCursor: true });
+    // Menu buttons
+    const buttons: { label: string; action: () => void }[] = [
+      { label: 'RESUME', action: () => this.togglePause() },
+      { label: 'QUIT TO MENU', action: () => this.quitToMenu() },
+    ];
 
-    resumeBtn.on('pointerover', () => {
-      resumeBtn.setStyle({ backgroundColor: '#666666' });
+    buttons.forEach(({ label, action }, index) => {
+      const btnY = this.centerY + (40 + index * 70) * PX;
+      const btn = this.add.text(this.centerX, btnY, label, {
+        fontSize: `${32 * PX}px`,
+        color: '#ffffff',
+        fontFamily: "'Rajdhani', sans-serif",
+        backgroundColor: '#444444',
+        padding: { x: 24 * PX, y: 10 * PX },
+      });
+      btn.setOrigin(0.5);
+      btn.setDepth(21);
+      btn.setInteractive({ useHandCursor: true });
+
+      btn.on('pointerover', () => {
+        this.pauseMenuIndex = index;
+        this.updatePauseHighlight();
+      });
+      btn.on('pointerout', () => {
+        btn.setStyle({ backgroundColor: '#444444' });
+      });
+      btn.on('pointerdown', () => action());
+
+      this.pauseUIElements.push(btn);
+      this.pauseMenuButtons.push(btn);
+      this.pauseMenuActions.push(action);
     });
-    resumeBtn.on('pointerout', () => {
-      resumeBtn.setStyle({ backgroundColor: '#444444' });
+
+    this.updatePauseHighlight();
+  }
+
+  private updatePauseHighlight() {
+    this.pauseMenuButtons.forEach((btn, i) => {
+      btn.setStyle({ backgroundColor: i === this.pauseMenuIndex ? '#666666' : '#444444' });
     });
-    resumeBtn.on('pointerdown', () => {
+  }
+
+  private updatePauseGamepadNavigation() {
+    if (this.gamepadManager.isDpadDownJustPressed()) {
+      this.pauseMenuIndex = (this.pauseMenuIndex + 1) % this.pauseMenuButtons.length;
+      this.updatePauseHighlight();
+    } else if (this.gamepadManager.isDpadUpJustPressed()) {
+      this.pauseMenuIndex =
+        (this.pauseMenuIndex - 1 + this.pauseMenuButtons.length) % this.pauseMenuButtons.length;
+      this.updatePauseHighlight();
+    }
+
+    if (this.gamepadManager.isAJustPressed()) {
+      this.pauseMenuActions[this.pauseMenuIndex]();
+    }
+
+    if (this.gamepadManager.isBJustPressed()) {
       this.togglePause();
-    });
-    this.pauseUIElements.push(resumeBtn);
+    }
   }
 
   private hidePauseUI() {
     this.isPaused = false;
     this.pauseButton.setAlpha(0.5);
+    this.pauseMenuButtons = [];
+    this.pauseMenuActions = [];
 
     // Resume all tweens
     this.tweens.resumeAll();
@@ -1534,6 +1581,35 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.pauseUIElements = [];
+  }
+
+  private quitToMenu() {
+    // Clean up pause UI first (resumes tweens)
+    this.hidePauseUI();
+
+    // Clean up game state
+    for (const shield of this.shields) {
+      shield.destroy();
+    }
+    this.shields = [];
+
+    if (this.laserBeamTimer > 0) {
+      this.laserBeamTimer = 0;
+      this.laserGraphics.clear();
+      this.player.setScale(1.0);
+      this.audioManager.stopSound('laser');
+    }
+
+    for (const el of this.powerUpUIElements) {
+      el.destroy();
+    }
+    this.powerUpUIElements = [];
+    for (const el of this.equipUIElements) {
+      el.destroy();
+    }
+    this.equipUIElements = [];
+
+    this.scene.start('MainMenuScene');
   }
 
   // ─── Radial Power-Up Selection UI ─────────────────────────────────────

@@ -20,6 +20,9 @@ export default class GamepadManager {
 
   constructor(deadzone?: number) {
     this.deadzone = deadzone ?? loadGamepadDeadzone();
+    // Snapshot current state so buttons held from the previous scene
+    // don't register as "just pressed" on the first frame.
+    this.updatePrevState();
   }
 
   private getPad(): Gamepad | null {
