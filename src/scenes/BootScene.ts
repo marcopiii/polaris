@@ -32,6 +32,8 @@ export default class BootScene extends Phaser.Scene {
         this.scene.start('GameOverScene', { score, level });
       } else if (debugScene === 'leaderboard') {
         this.scene.start('LeaderboardScene');
+      } else if (debugScene === 'settings') {
+        this.scene.start('SettingsScene');
       } else {
         this.scene.start('MainMenuScene');
       }

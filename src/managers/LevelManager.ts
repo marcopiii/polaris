@@ -4,6 +4,7 @@ import {
   SPAWN_RATE_INITIAL,
   SPAWN_RATE_ACCELERATION,
   SPAWN_RATE_LEVEL_INCREMENT,
+  type Difficulty,
 } from '../constants';
 
 export default class LevelManager {
@@ -13,6 +14,11 @@ export default class LevelManager {
   private timeSinceLastSpawn: number = 0;
   private enemiesSpawnedThisLevel: number = 0;
   private isLevelActive: boolean = false;
+  private difficulty: Difficulty;
+
+  constructor(difficulty: Difficulty) {
+    this.difficulty = difficulty;
+  }
 
   startLevel(levelNumber: number = 1) {
     this.currentLevel = levelNumber;
@@ -47,9 +53,9 @@ export default class LevelManager {
 
   getCurrentSpawnRate(): number {
     return (
-      SPAWN_RATE_INITIAL +
-      SPAWN_RATE_LEVEL_INCREMENT * (this.currentLevel - 1) +
-      SPAWN_RATE_ACCELERATION * this.levelTimer
+      SPAWN_RATE_INITIAL[this.difficulty] +
+      SPAWN_RATE_LEVEL_INCREMENT[this.difficulty] * (this.currentLevel - 1) +
+      SPAWN_RATE_ACCELERATION[this.difficulty] * this.levelTimer
     );
   }
 
