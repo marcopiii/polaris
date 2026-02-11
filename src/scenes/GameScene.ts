@@ -390,8 +390,8 @@ export default class GameScene extends Phaser.Scene {
       this.bullets.push(bullet);
     }
 
-    this.cameras.main.shake(100, 0.005);
-    this.gamepadManager.vibrate(100, 0.2, 0.5);
+    this.cameras.main.shake(100, 0.008);
+    this.gamepadManager.vibrate(100, 0.3, 0.8);
     this.audioManager.playSound('shoot');
   }
 
