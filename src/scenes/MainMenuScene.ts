@@ -18,6 +18,7 @@ import logoHtml from './logo.html?raw';
 export default class MainMenuScene extends Phaser.Scene {
   private logoDom!: Phaser.GameObjects.DOMElement;
   private buttonDom!: Phaser.GameObjects.DOMElement;
+  private settingsDom!: Phaser.GameObjects.DOMElement;
   private leaderboardDom!: Phaser.GameObjects.DOMElement;
   private enemyCircle?: Phaser.GameObjects.Graphics;
   private enemyPos = { x: 0, y: 0 };
@@ -37,7 +38,8 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.createLogo(centerX, centerY);
     this.createStartButton(centerX, centerY + 280 * PX);
-    this.createLeaderboardButton(centerX, centerY + 400 * PX);
+    this.createSettingsButton(centerX, centerY + 400 * PX);
+    this.createLeaderboardButton(centerX, centerY + 520 * PX);
   }
 
   private createLogo(x: number, y: number) {
@@ -81,6 +83,43 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.buttonDom = this.add.dom(x, y, button);
     this.buttonDom.setScale(PX * 1.4);
+  }
+
+  private createSettingsButton(x: number, y: number) {
+    const button = document.createElement('button');
+    button.textContent = 'SETTINGS';
+    Object.assign(button.style, {
+      fontFamily: "'Rajdhani', sans-serif",
+      fontWeight: '300',
+      fontSize: '32px',
+      color: '#ffffff',
+      background: '#444444',
+      border: 'none',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
+      transition: 'none',
+    });
+
+    button.addEventListener('mouseenter', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#666666';
+      }
+    });
+    button.addEventListener('mouseleave', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#444444';
+      }
+    });
+    button.addEventListener('click', () => {
+      if (!this.isAnimating) {
+        this.scene.start('SettingsScene');
+      }
+    });
+
+    this.settingsDom = this.add.dom(x, y, button);
+    this.settingsDom.setScale(PX * 1.4);
   }
 
   private createLeaderboardButton(x: number, y: number) {
@@ -175,7 +214,11 @@ export default class MainMenuScene extends Phaser.Scene {
     button.style.pointerEvents = 'none';
     button.style.visibility = 'hidden';
 
-    // Hide leaderboard button during animation
+    // Hide settings and leaderboard buttons during animation
+    const settingsButton = this.settingsDom.node as HTMLElement;
+    settingsButton.style.pointerEvents = 'none';
+    settingsButton.style.visibility = 'hidden';
+
     const lbButton = this.leaderboardDom.node as HTMLElement;
     lbButton.style.pointerEvents = 'none';
     lbButton.style.visibility = 'hidden';
