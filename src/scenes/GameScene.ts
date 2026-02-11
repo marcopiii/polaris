@@ -100,6 +100,7 @@ export default class GameScene extends Phaser.Scene {
   private dustSpawnTimer: number = 0;
   private dustSpawnBatch: number = 0;
   private dustGraphics!: Phaser.GameObjects.Graphics;
+  private aimingDotGraphics!: Phaser.GameObjects.Graphics;
 
   // Equip screen state
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
@@ -179,6 +180,9 @@ export default class GameScene extends Phaser.Scene {
     // Create player
     this.player = new Player(this, this.centerX, this.centerY, BENCHMARK_MODE);
     this.player.setGamepadManager(this.gamepadManager);
+
+    // Aiming dot (drawn on terminal radius while firing)
+    this.aimingDotGraphics = this.add.graphics();
 
     // Set up consumable keybindings
     this.setupConsumableKeys();
@@ -879,6 +883,16 @@ export default class GameScene extends Phaser.Scene {
     );
     if (shootInfo.shouldShoot && this.laserBeamTimer <= 0) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
+    }
+
+    // Draw aiming dot on terminal radius while firing
+    this.aimingDotGraphics.clear();
+    if (this.player.isFiringActive() && this.terminalRadius > 0) {
+      const aimAngle = this.player.getRotation();
+      const dotX = this.centerX + Math.cos(aimAngle) * this.terminalRadius;
+      const dotY = this.centerY + Math.sin(aimAngle) * this.terminalRadius;
+      this.aimingDotGraphics.fillStyle(COLORS.terminalRadiusHint, 1);
+      this.aimingDotGraphics.fillCircle(dotX, dotY, 6 * PX);
     }
 
     // Update level manager and spawn enemies
