@@ -24,6 +24,9 @@ export default class MainMenuScene extends Phaser.Scene {
   private enemyPos = { x: 0, y: 0 };
   private isAnimating = false;
   private gamepadManager!: GamepadManager;
+  private menuButtons: HTMLButtonElement[] = [];
+  private menuActions: (() => void)[] = [];
+  private selectedIndex: number = 0;
 
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -35,6 +38,10 @@ export default class MainMenuScene extends Phaser.Scene {
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
     this.gamepadManager = new GamepadManager(this);
+
+    this.menuButtons = [];
+    this.menuActions = [];
+    this.selectedIndex = 0;
 
     this.createLogo(centerX, centerY);
     this.createStartButton(centerX, centerY + 280 * PX);
@@ -83,6 +90,9 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.buttonDom = this.add.dom(x, y, button);
     this.buttonDom.setScale(PX * 1.4);
+
+    this.menuButtons.push(button);
+    this.menuActions.push(() => this.playStartAnimation());
   }
 
   private createSettingsButton(x: number, y: number) {
@@ -120,6 +130,11 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.settingsDom = this.add.dom(x, y, button);
     this.settingsDom.setScale(PX * 1.4);
+
+    this.menuButtons.push(button);
+    this.menuActions.push(() => {
+      if (!this.isAnimating) this.scene.start('SettingsScene');
+    });
   }
 
   private createLeaderboardButton(x: number, y: number) {
@@ -157,6 +172,11 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.leaderboardDom = this.add.dom(x, y, button);
     this.leaderboardDom.setScale(PX * 1.4);
+
+    this.menuButtons.push(button);
+    this.menuActions.push(() => {
+      if (!this.isAnimating) this.scene.start('LeaderboardScene');
+    });
   }
 
   private getOPositionInGameWorld(): { x: number; y: number } {
@@ -463,10 +483,33 @@ export default class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  update() {
-    if (this.gamepadManager.isAJustPressed() || this.gamepadManager.isStartJustPressed()) {
-      this.playStartAnimation();
+  private updateMenuHighlight() {
+    for (let i = 0; i < this.menuButtons.length; i++) {
+      this.menuButtons[i].style.background = i === this.selectedIndex ? '#666666' : '#444444';
     }
+  }
+
+  update() {
+    if (this.isAnimating) {
+      this.gamepadManager.updatePrevState();
+      return;
+    }
+
+    // D-pad / stick navigation
+    if (this.gamepadManager.isDpadDownJustPressed()) {
+      this.selectedIndex = (this.selectedIndex + 1) % this.menuButtons.length;
+      this.updateMenuHighlight();
+    } else if (this.gamepadManager.isDpadUpJustPressed()) {
+      this.selectedIndex =
+        (this.selectedIndex - 1 + this.menuButtons.length) % this.menuButtons.length;
+      this.updateMenuHighlight();
+    }
+
+    // Confirm selection
+    if (this.gamepadManager.isAJustPressed() || this.gamepadManager.isStartJustPressed()) {
+      this.menuActions[this.selectedIndex]();
+    }
+
     this.gamepadManager.updatePrevState();
   }
 }

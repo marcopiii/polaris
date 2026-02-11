@@ -11,6 +11,7 @@ import {
   SCORE_MULTIPLIER,
   type Difficulty,
 } from '../constants';
+import GamepadManager from '../managers/GamepadManager';
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   easy: 'EASY',
@@ -27,7 +28,9 @@ const DIFFICULTY_DESCRIPTIONS: Record<Difficulty, string> = {
 };
 
 export default class SettingsScene extends Phaser.Scene {
+  private gamepadManager!: GamepadManager;
   private selectedDifficulty: Difficulty = DEFAULT_DIFFICULTY;
+  private highlightedIndex: number = 0;
   private rowElements: {
     bg: Phaser.GameObjects.Graphics;
     label: Phaser.GameObjects.Text;
@@ -41,8 +44,10 @@ export default class SettingsScene extends Phaser.Scene {
   }
 
   create() {
+    this.gamepadManager = new GamepadManager(this);
     const stored = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
     this.selectedDifficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
+    this.highlightedIndex = DIFFICULTIES.indexOf(this.selectedDifficulty);
 
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
@@ -206,6 +211,44 @@ export default class SettingsScene extends Phaser.Scene {
       row.desc.setColor(isSelected ? '#aaaaaa' : '#666666');
       row.mult.setColor(isSelected ? '#ffffff' : '#888888');
     });
+  }
+
+  private updateHighlight() {
+    const centerX = GAME_WIDTH / 2;
+    const startY = GAME_HEIGHT / 2 - 200 * PX;
+    const rowHeight = 100 * PX;
+    const rowWidth = 500 * PX;
+
+    DIFFICULTIES.forEach((d, i) => {
+      const rowY = startY + i * rowHeight;
+      const isSelected = d === this.selectedDifficulty;
+      const isHighlighted = i === this.highlightedIndex && !isSelected;
+      const row = this.rowElements[i];
+
+      row.bg.clear();
+      this.drawRow(row.bg, centerX, rowY, rowWidth, rowHeight, d, isSelected, isHighlighted);
+    });
+  }
+
+  update() {
+    if (this.gamepadManager.isDpadDownJustPressed()) {
+      this.highlightedIndex = (this.highlightedIndex + 1) % DIFFICULTIES.length;
+      this.updateHighlight();
+    } else if (this.gamepadManager.isDpadUpJustPressed()) {
+      this.highlightedIndex =
+        (this.highlightedIndex - 1 + DIFFICULTIES.length) % DIFFICULTIES.length;
+      this.updateHighlight();
+    }
+
+    if (this.gamepadManager.isAJustPressed()) {
+      this.selectDifficulty(DIFFICULTIES[this.highlightedIndex]);
+    }
+
+    if (this.gamepadManager.isBJustPressed() || this.gamepadManager.isStartJustPressed()) {
+      this.scene.start('MainMenuScene');
+    }
+
+    this.gamepadManager.updatePrevState();
   }
 
   private drawRow(
