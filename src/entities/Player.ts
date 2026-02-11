@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import { PLAYER_SIZE, FIRE_COOLDOWN, COLORS, PLAYFIELD_RADIUS } from '../constants';
+import {
+  PLAYER_SIZE,
+  FIRE_COOLDOWN,
+  COLORS,
+  PLAYFIELD_RADIUS,
+  LASER_ANGULAR_ACCEL,
+} from '../constants';
 import { angleBetween } from '../utils/MathUtils';
 import GamepadManager from '../managers/GamepadManager';
 
@@ -9,6 +15,8 @@ export default class Player {
   public x: number;
   public y: number;
   private rotation: number = 0;
+  private desiredRotation: number = 0;
+  private angularVelocity: number = 0;
   private shootCooldown: number = 0;
   private isShooting: boolean = false;
   private firing: boolean = false;
@@ -40,7 +48,7 @@ export default class Player {
 
   private setupInput() {
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      this.rotation = angleBetween(this.x, this.y, pointer.x, pointer.y);
+      this.desiredRotation = angleBetween(this.x, this.y, pointer.x, pointer.y);
     });
   }
 
@@ -56,16 +64,68 @@ export default class Player {
     _time: number,
     delta: number,
     fireCooldown: number = FIRE_COOLDOWN,
-    aimTarget?: { x: number; y: number }
+    aimTarget?: { x: number; y: number },
+    maxAngularSpeed?: number
   ): { shouldShoot: boolean; targetX: number; targetY: number } {
     // Poll gamepad for aim and shoot
     let gamepadAiming = false;
     if (this.gamepadManager) {
       const aimAngle = this.gamepadManager.getAimAngle();
       if (aimAngle !== null) {
-        this.rotation = aimAngle;
+        this.desiredRotation = aimAngle;
         gamepadAiming = true;
       }
+    }
+
+    // Apply rotation toward desired angle
+    if (maxAngularSpeed !== undefined) {
+      // Accelerate/decelerate with trapezoidal velocity profile
+      const dt = delta / 1000;
+      const diff = Math.atan2(
+        Math.sin(this.desiredRotation - this.rotation),
+        Math.cos(this.desiredRotation - this.rotation)
+      );
+      const absDiff = Math.abs(diff);
+
+      // Braking distance at current speed: v² / (2a)
+      const absVel = Math.abs(this.angularVelocity);
+      const brakeDist = (absVel * absVel) / (2 * LASER_ANGULAR_ACCEL);
+
+      // Brake if heading toward target and close enough to need stopping
+      const headingToward = Math.sign(this.angularVelocity) === Math.sign(diff);
+      const shouldBrake = headingToward && absDiff <= brakeDist;
+
+      if (shouldBrake || absDiff < 0.005) {
+        // Decelerate
+        const decel = LASER_ANGULAR_ACCEL * dt;
+        if (absVel <= decel) {
+          this.angularVelocity = 0;
+        } else {
+          this.angularVelocity -= Math.sign(this.angularVelocity) * decel;
+        }
+      } else {
+        // Accelerate toward target
+        this.angularVelocity += Math.sign(diff) * LASER_ANGULAR_ACCEL * dt;
+      }
+
+      // Clamp to max speed
+      this.angularVelocity = Math.max(
+        -maxAngularSpeed,
+        Math.min(maxAngularSpeed, this.angularVelocity)
+      );
+
+      // Apply velocity
+      this.rotation += this.angularVelocity * dt;
+
+      // Snap if very close and nearly stopped
+      if (absDiff < 0.01 && absVel < 0.1) {
+        this.rotation = this.desiredRotation;
+        this.angularVelocity = 0;
+      }
+    } else {
+      // No cap — snap instantly
+      this.rotation = this.desiredRotation;
+      this.angularVelocity = 0;
     }
 
     // Update cooldown
@@ -87,7 +147,8 @@ export default class Player {
       if (this.benchmarkMode && aimTarget) {
         targetX = aimTarget.x;
         targetY = aimTarget.y;
-        this.rotation = angleBetween(this.x, this.y, targetX, targetY);
+        this.desiredRotation = angleBetween(this.x, this.y, targetX, targetY);
+        this.rotation = this.desiredRotation;
       } else if (gamepadAiming) {
         // Project target from player position along the aim direction
         targetX = this.x + Math.cos(this.rotation) * PLAYFIELD_RADIUS;

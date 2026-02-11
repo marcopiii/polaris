@@ -12,6 +12,7 @@ import {
   ENEMY_LEVEL_GAP,
   LASER_BEAM_DURATION,
   LASER_BEAM_HALF_ANGLE,
+  LASER_MAX_ANGULAR_SPEED,
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
   HUD_FONT_PRIMARY,
@@ -597,8 +598,7 @@ export default class GameScene extends Phaser.Scene {
       this.player.setScale(1.8 + Math.random() * 0.4);
     }
 
-    const pointer = this.input.activePointer;
-    const aimAngle = Math.atan2(pointer.y - this.player.y, pointer.x - this.player.x);
+    const aimAngle = this.player.getRotation();
 
     // Draw laser beam as a filled arc/wedge
     this.laserGraphics.clear();
@@ -903,11 +903,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Update player — suppress normal shooting while laser is active
+    const laserActive = this.laserBeamTimer > 0;
     const shootInfo = this.player.update(
       time,
       delta,
       this.powerUpManager.getFireCooldown(),
-      aimTarget
+      aimTarget,
+      laserActive ? LASER_MAX_ANGULAR_SPEED : undefined
     );
     if (shootInfo.shouldShoot && this.laserBeamTimer <= 0) {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
