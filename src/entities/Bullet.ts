@@ -14,6 +14,8 @@ export default class Bullet {
   private graphics: Phaser.GameObjects.Graphics;
   public x: number;
   public y: number;
+  public prevX: number;
+  public prevY: number;
   private velocityX: number;
   private velocityY: number;
   private centerX: number;
@@ -36,6 +38,8 @@ export default class Bullet {
   ) {
     this.x = startX;
     this.y = startY;
+    this.prevX = startX;
+    this.prevY = startY;
     this.centerX = centerX;
     this.centerY = centerY;
     this.pierceChance = pierceChance;
@@ -87,6 +91,8 @@ export default class Bullet {
     if (!this.active) return;
 
     const deltaSec = delta / 1000;
+    this.prevX = this.x;
+    this.prevY = this.y;
     this.x += this.velocityX * deltaSec;
     this.y += this.velocityY * deltaSec;
 

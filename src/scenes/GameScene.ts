@@ -38,7 +38,7 @@ import PowerUpManager, {
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
 import GamepadManager from '../managers/GamepadManager';
-import { distance } from '../utils/MathUtils';
+import { distance, distPointToSegment } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
 import {
@@ -1193,7 +1193,14 @@ export default class GameScene extends Phaser.Scene {
 
         const bulletBounds = bullet.getBounds();
         const enemyBounds = enemy.getBounds();
-        const dist = distance(bulletBounds.x, bulletBounds.y, enemyBounds.x, enemyBounds.y);
+        const dist = distPointToSegment(
+          enemyBounds.x,
+          enemyBounds.y,
+          bullet.prevX,
+          bullet.prevY,
+          bulletBounds.x,
+          bulletBounds.y
+        );
 
         if (dist < bulletBounds.radius + enemyBounds.radius) {
           // Hit!

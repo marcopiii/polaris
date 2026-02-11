@@ -11,3 +11,22 @@ export function angleBetween(x1: number, y1: number, x2: number, y2: number): nu
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
+
+/** Shortest distance from point (px, py) to line segment (ax, ay)-(bx, by) */
+export function distPointToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return distance(px, py, ax, ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  return distance(px, py, projX, projY);
+}
