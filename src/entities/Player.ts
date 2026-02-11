@@ -72,10 +72,10 @@ export default class Player {
     // Clamp angular velocity when a cap is active
     if (maxAngularSpeed !== undefined) {
       const maxDelta = maxAngularSpeed * (delta / 1000);
-      let diff = this.rotation - this.prevRotation;
-      // Wrap to [-PI, PI]
-      diff = ((diff + Math.PI) % (2 * Math.PI)) - Math.PI;
-      if (diff > Math.PI) diff -= 2 * Math.PI;
+      const diff = Math.atan2(
+        Math.sin(this.rotation - this.prevRotation),
+        Math.cos(this.rotation - this.prevRotation)
+      );
       if (Math.abs(diff) > maxDelta) {
         this.rotation = this.prevRotation + Math.sign(diff) * maxDelta;
       }
