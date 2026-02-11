@@ -101,6 +101,7 @@ export default class GameScene extends Phaser.Scene {
   private dustSpawnBatch: number = 0;
   private dustGraphics!: Phaser.GameObjects.Graphics;
   private aimingDotGraphics!: Phaser.GameObjects.Graphics;
+  private aimingDotVisible: boolean = false;
 
   // Equip screen state
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
@@ -183,6 +184,8 @@ export default class GameScene extends Phaser.Scene {
 
     // Aiming dot (drawn on terminal radius while firing)
     this.aimingDotGraphics = this.add.graphics();
+    this.aimingDotGraphics.setAlpha(0);
+    this.aimingDotVisible = false;
 
     // Set up consumable keybindings
     this.setupConsumableKeys();
@@ -775,6 +778,30 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private updateAimingDot() {
+    const shouldShowDot = this.player.isFiringActive() && this.terminalRadius > 0;
+    if (shouldShowDot !== this.aimingDotVisible) {
+      this.aimingDotVisible = shouldShowDot;
+      this.tweens.killTweensOf(this.aimingDotGraphics);
+      this.tweens.add({
+        targets: this.aimingDotGraphics,
+        alpha: shouldShowDot ? 1 : 0,
+        duration: shouldShowDot ? 80 : 200,
+        ease: 'Quad.easeOut',
+      });
+    }
+    if (this.aimingDotGraphics.alpha > 0) {
+      this.aimingDotGraphics.clear();
+      const aimAngle = this.player.getRotation();
+      const dotX = this.centerX + Math.cos(aimAngle) * this.terminalRadius;
+      const dotY = this.centerY + Math.sin(aimAngle) * this.terminalRadius;
+      this.aimingDotGraphics.fillStyle(COLORS.terminalRadiusHint, 1);
+      this.aimingDotGraphics.fillCircle(dotX, dotY, 6 * PX);
+    } else if (!this.aimingDotVisible) {
+      this.aimingDotGraphics.clear();
+    }
+  }
+
   private setupBlurEffect() {
     try {
       const renderer = this.game.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
@@ -840,6 +867,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Pause game while power-up selection, equip screen, or benchmark end is active
     if (this.isPowerUpSelectionActive || this.benchmarkDone) {
+      this.updateAimingDot();
       this.updatePowerUpGamepadNavigation();
       this.gamepadManager.updatePrevState();
       return;
@@ -885,15 +913,7 @@ export default class GameScene extends Phaser.Scene {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
 
-    // Draw aiming dot on terminal radius while firing
-    this.aimingDotGraphics.clear();
-    if (this.player.isFiringActive() && this.terminalRadius > 0) {
-      const aimAngle = this.player.getRotation();
-      const dotX = this.centerX + Math.cos(aimAngle) * this.terminalRadius;
-      const dotY = this.centerY + Math.sin(aimAngle) * this.terminalRadius;
-      this.aimingDotGraphics.fillStyle(COLORS.terminalRadiusHint, 1);
-      this.aimingDotGraphics.fillCircle(dotX, dotY, 6 * PX);
-    }
+    this.updateAimingDot();
 
     // Update level manager and spawn enemies
     if (this.levelManager.update(delta)) {
