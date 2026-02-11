@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BENCHMARK_MODE } from '../utils/BenchmarkConfig';
 
 export default class BootScene extends Phaser.Scene {
+  private fontsReady = false;
+
   constructor() {
     super({ key: 'BootScene' });
   }
@@ -18,27 +20,34 @@ export default class BootScene extends Phaser.Scene {
       document.fonts.load("300 16px 'Rajdhani'"),
       document.fonts.load("400 16px 'Rajdhani'"),
     ]).then(() => {
-      if (BENCHMARK_MODE) {
-        this.scene.start('GameScene');
-        return;
-      }
-
-      // Debug: ?scene=gameover&score=1234&level=5 jumps straight to GameOverScene
-      const params = new URLSearchParams(window.location.search);
-      const debugScene = params.get('scene');
-      if (debugScene === 'gameover') {
-        const score = parseInt(params.get('score') ?? '0', 10);
-        const level = parseInt(params.get('level') ?? '1', 10);
-        this.scene.start('GameOverScene', { score, level });
-      } else if (debugScene === 'leaderboard') {
-        this.scene.start('LeaderboardScene');
-      } else if (debugScene === 'settings') {
-        this.scene.start('SettingsScene');
-      } else if (debugScene === 'powerup') {
-        this.scene.start('GameScene', { debugPowerUp: true });
-      } else {
-        this.scene.start('MainMenuScene');
-      }
+      this.fontsReady = true;
     });
+  }
+
+  update() {
+    if (!this.fontsReady) return;
+    this.fontsReady = false;
+
+    if (BENCHMARK_MODE) {
+      this.scene.start('GameScene');
+      return;
+    }
+
+    // Debug: ?scene=gameover&score=1234&level=5 jumps straight to GameOverScene
+    const params = new URLSearchParams(window.location.search);
+    const debugScene = params.get('scene');
+    if (debugScene === 'gameover') {
+      const score = parseInt(params.get('score') ?? '0', 10);
+      const level = parseInt(params.get('level') ?? '1', 10);
+      this.scene.start('GameOverScene', { score, level });
+    } else if (debugScene === 'leaderboard') {
+      this.scene.start('LeaderboardScene');
+    } else if (debugScene === 'settings') {
+      this.scene.start('SettingsScene');
+    } else if (debugScene === 'powerup') {
+      this.scene.start('GameScene', { debugPowerUp: true });
+    } else {
+      this.scene.start('MainMenuScene');
+    }
   }
 }

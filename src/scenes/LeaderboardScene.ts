@@ -13,7 +13,7 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   create() {
-    this.gamepadManager = new GamepadManager(this);
+    this.gamepadManager = new GamepadManager();
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
 

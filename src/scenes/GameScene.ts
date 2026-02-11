@@ -77,10 +77,16 @@ export default class GameScene extends Phaser.Scene {
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
   private powerUpSelectedIndex: number = 0;
-  private powerUpCardHighlights: Phaser.GameObjects.Graphics[] = [];
-  private powerUpSelectionData: { selection: PowerUpDefinition[]; nextLevel: number } = {
+  private powerUpItemTexts: { name: Phaser.GameObjects.Text; rarity: Phaser.GameObjects.Text }[] =
+    [];
+  private powerUpSelectionData: {
+    selection: PowerUpDefinition[];
+    nextLevel: number;
+    angles: number[];
+  } = {
     selection: [],
     nextLevel: 0,
+    angles: [],
   };
 
   // Consumable state
@@ -125,6 +131,29 @@ export default class GameScene extends Phaser.Scene {
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
     this.visionRadius = VISION_RADIUS_INITIAL;
 
+    // Reset arrays to avoid stale references from previous scene runs
+    this.enemies = [];
+    this.bullets = [];
+    this.shields = [];
+    this.powerUpUIElements = [];
+    this.powerUpItemTexts = [];
+    this.powerUpHudElements = [];
+    this.slotHudElements = [];
+    this.equipUIElements = [];
+    this.laserSparks = [];
+    this.dustParticles = [];
+    this.pauseUIElements = [];
+    this.isPaused = false;
+    this.isPowerUpSelectionActive = false;
+    this.playfieldTremble = 0;
+    this.playfieldVisualRadius = PLAYFIELD_RADIUS;
+    this.savedTerminalRadius = 0;
+    this.laserBeamTimer = 0;
+    this.laserScaleUpDone = false;
+    this.dustSpawnTimer = 0;
+    this.dustSpawnBatch = 0;
+    this.benchmarkDone = false;
+
     // Read difficulty from localStorage
     const stored = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
     this.difficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
@@ -134,7 +163,7 @@ export default class GameScene extends Phaser.Scene {
     this.levelManager = new LevelManager(this.difficulty);
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
-    this.gamepadManager = new GamepadManager(this);
+    this.gamepadManager = new GamepadManager();
 
     // Set up blur effect
     this.setupBlurEffect();
@@ -800,6 +829,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Skip game logic while paused
     if (this.isPaused) {
+      this.updatePauseGamepadNavigation();
       this.gamepadManager.updatePrevState();
       return;
     }
@@ -1446,9 +1476,16 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private pauseMenuIndex: number = 0;
+  private pauseMenuButtons: Phaser.GameObjects.Text[] = [];
+  private pauseMenuActions: (() => void)[] = [];
+
   private showPauseUI() {
     this.isPaused = true;
     this.pauseButton.setAlpha(0);
+    this.pauseMenuIndex = 0;
+    this.pauseMenuButtons = [];
+    this.pauseMenuActions = [];
 
     // Pause all active tweens
     this.tweens.pauseAll();
@@ -1470,33 +1507,72 @@ export default class GameScene extends Phaser.Scene {
     title.setDepth(21);
     this.pauseUIElements.push(title);
 
-    // Resume button
-    const resumeBtn = this.add.text(this.centerX, this.centerY + 40 * PX, 'RESUME', {
-      fontSize: `${32 * PX}px`,
-      color: '#ffffff',
-      fontFamily: "'Rajdhani', sans-serif",
-      backgroundColor: '#444444',
-      padding: { x: 24 * PX, y: 10 * PX },
-    });
-    resumeBtn.setOrigin(0.5);
-    resumeBtn.setDepth(21);
-    resumeBtn.setInteractive({ useHandCursor: true });
+    // Menu buttons
+    const buttons: { label: string; action: () => void }[] = [
+      { label: 'RESUME', action: () => this.togglePause() },
+      { label: 'QUIT TO MENU', action: () => this.quitToMenu() },
+    ];
 
-    resumeBtn.on('pointerover', () => {
-      resumeBtn.setStyle({ backgroundColor: '#666666' });
+    buttons.forEach(({ label, action }, index) => {
+      const btnY = this.centerY + (40 + index * 70) * PX;
+      const btn = this.add.text(this.centerX, btnY, label, {
+        fontSize: `${32 * PX}px`,
+        color: '#ffffff',
+        fontFamily: "'Rajdhani', sans-serif",
+        backgroundColor: '#444444',
+        padding: { x: 24 * PX, y: 10 * PX },
+      });
+      btn.setOrigin(0.5);
+      btn.setDepth(21);
+      btn.setInteractive({ useHandCursor: true });
+
+      btn.on('pointerover', () => {
+        this.pauseMenuIndex = index;
+        this.updatePauseHighlight();
+      });
+      btn.on('pointerout', () => {
+        btn.setStyle({ backgroundColor: '#444444' });
+      });
+      btn.on('pointerdown', () => action());
+
+      this.pauseUIElements.push(btn);
+      this.pauseMenuButtons.push(btn);
+      this.pauseMenuActions.push(action);
     });
-    resumeBtn.on('pointerout', () => {
-      resumeBtn.setStyle({ backgroundColor: '#444444' });
+
+    this.updatePauseHighlight();
+  }
+
+  private updatePauseHighlight() {
+    this.pauseMenuButtons.forEach((btn, i) => {
+      btn.setStyle({ backgroundColor: i === this.pauseMenuIndex ? '#666666' : '#444444' });
     });
-    resumeBtn.on('pointerdown', () => {
+  }
+
+  private updatePauseGamepadNavigation() {
+    if (this.gamepadManager.isDpadDownJustPressed()) {
+      this.pauseMenuIndex = (this.pauseMenuIndex + 1) % this.pauseMenuButtons.length;
+      this.updatePauseHighlight();
+    } else if (this.gamepadManager.isDpadUpJustPressed()) {
+      this.pauseMenuIndex =
+        (this.pauseMenuIndex - 1 + this.pauseMenuButtons.length) % this.pauseMenuButtons.length;
+      this.updatePauseHighlight();
+    }
+
+    if (this.gamepadManager.isAJustPressed()) {
+      this.pauseMenuActions[this.pauseMenuIndex]();
+    }
+
+    if (this.gamepadManager.isBJustPressed()) {
       this.togglePause();
-    });
-    this.pauseUIElements.push(resumeBtn);
+    }
   }
 
   private hidePauseUI() {
     this.isPaused = false;
     this.pauseButton.setAlpha(0.5);
+    this.pauseMenuButtons = [];
+    this.pauseMenuActions = [];
 
     // Resume all tweens
     this.tweens.resumeAll();
@@ -1507,13 +1583,42 @@ export default class GameScene extends Phaser.Scene {
     this.pauseUIElements = [];
   }
 
+  private quitToMenu() {
+    // Clean up pause UI first (resumes tweens)
+    this.hidePauseUI();
+
+    // Clean up game state
+    for (const shield of this.shields) {
+      shield.destroy();
+    }
+    this.shields = [];
+
+    if (this.laserBeamTimer > 0) {
+      this.laserBeamTimer = 0;
+      this.laserGraphics.clear();
+      this.player.setScale(1.0);
+      this.audioManager.stopSound('laser');
+    }
+
+    for (const el of this.powerUpUIElements) {
+      el.destroy();
+    }
+    this.powerUpUIElements = [];
+    for (const el of this.equipUIElements) {
+      el.destroy();
+    }
+    this.equipUIElements = [];
+
+    this.scene.start('MainMenuScene');
+  }
+
   // ─── Radial Power-Up Selection UI ─────────────────────────────────────
 
   private showPowerUpSelection(completedLevel: number) {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
     this.powerUpSelectedIndex = 0;
-    this.powerUpCardHighlights = [];
+    this.powerUpItemTexts = [];
 
     // In benchmark mode, auto-select the first power-up
     if (BENCHMARK_MODE) {
@@ -1599,13 +1704,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
-    this.powerUpSelectionData = { selection, nextLevel };
 
     // Layout: radial text on the left side, tilted to align with circle center
     const hudDist = this.playfieldVisualRadius + 15 * PX;
     const angStep = 10; // degrees between items
     const centerDeg = 192; // center item angle (degrees), left side
     const angles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
+    this.powerUpSelectionData = { selection, nextLevel, angles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = angles[2] + angStep;
@@ -1671,6 +1776,7 @@ export default class GameScene extends Phaser.Scene {
         ease: 'Back.easeOut',
       });
 
+      this.powerUpItemTexts.push({ name: nameText, rarity: rarityText });
       this.powerUpUIElements.push(nameText);
       this.powerUpUIElements.push(rarityText);
     });
@@ -1679,25 +1785,46 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private drawPowerUpHighlight() {
-    const nodeRadius = 260 * PX;
-    const startAngle = -Math.PI / 2;
-    this.powerUpCardHighlights.forEach((highlight, index) => {
-      highlight.clear();
+    this.powerUpItemTexts.forEach((item, index) => {
       if (index === this.powerUpSelectedIndex) {
-        const angle = startAngle + (index * (Math.PI * 2)) / 3;
-        const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
-        const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
-        highlight.lineStyle(4 * PX, 0xffff00, 1);
-        highlight.strokeCircle(nodeX, nodeY, 105 * PX);
+        item.name.setColor('#ffffff');
+        item.name.setScale(1.15);
+        item.rarity.setColor('#cccccc');
+        item.rarity.setScale(1.15);
+      } else {
+        item.name.setColor('#cccccc');
+        item.name.setScale(1);
+        item.rarity.setColor('#888888');
+        item.rarity.setScale(1);
       }
     });
   }
 
   private updatePowerUpGamepadNavigation() {
-    const { selection, nextLevel } = this.powerUpSelectionData;
+    const { selection, nextLevel, angles } = this.powerUpSelectionData;
     if (!this.isPowerUpSelectionActive || selection.length === 0) return;
 
-    const nav = this.gamepadManager.getHorizontalNavigation();
+    // Left stick: find the item whose angle is closest to the stick direction
+    const aimAngle = this.gamepadManager.getAimAngle();
+    if (aimAngle !== null) {
+      const stickDeg = ((aimAngle * 180) / Math.PI + 360) % 360;
+      let bestIndex = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < angles.length; i++) {
+        const diff = Math.abs(((stickDeg - angles[i] + 540) % 360) - 180);
+        if (diff < bestDist) {
+          bestDist = diff;
+          bestIndex = i;
+        }
+      }
+      this.powerUpSelectedIndex = bestIndex;
+      this.drawPowerUpHighlight();
+    }
+
+    // D-pad up/down as fallback
+    let nav = 0;
+    if (this.gamepadManager.isDpadDownJustPressed()) nav = 1;
+    else if (this.gamepadManager.isDpadUpJustPressed()) nav = -1;
     if (nav !== 0) {
       this.powerUpSelectedIndex = Math.max(
         0,
@@ -1733,8 +1860,8 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
-    this.powerUpCardHighlights = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0 };
+    this.powerUpItemTexts = [];
+    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [] };
 
     // Show equip screen if player has consumables, otherwise restore and start next level
     if (this.powerUpManager.hasAnyConsumables()) {

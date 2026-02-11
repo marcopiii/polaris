@@ -60,7 +60,7 @@ export default class LevelManager {
   }
 
   isLevelComplete(aliveEnemies: number): boolean {
-    return this.levelTimer >= this.levelDuration && aliveEnemies === 0;
+    return this.isLevelActive && this.levelTimer >= this.levelDuration && aliveEnemies === 0;
   }
 
   completeLevel() {

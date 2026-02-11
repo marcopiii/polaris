@@ -1,17 +1,37 @@
-import Phaser from 'phaser';
-import { GAMEPAD_DEADZONE } from '../constants';
+import { GAMEPAD_DEADZONE_DEFAULT, GAMEPAD_DEADZONE_STORAGE_KEY } from '../constants';
+
+export function loadGamepadDeadzone(): number {
+  const stored = localStorage.getItem(GAMEPAD_DEADZONE_STORAGE_KEY);
+  if (stored !== null) {
+    const val = parseFloat(stored);
+    if (!isNaN(val)) return val;
+  }
+  return GAMEPAD_DEADZONE_DEFAULT;
+}
+
+export function saveGamepadDeadzone(value: number): void {
+  localStorage.setItem(GAMEPAD_DEADZONE_STORAGE_KEY, value.toFixed(2));
+}
 
 export default class GamepadManager {
-  private scene: Phaser.Scene;
   private prevButtons: boolean[] = [];
+  private prevStickX: number = 0;
+  private deadzone: number;
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
+  constructor(deadzone?: number) {
+    this.deadzone = deadzone ?? loadGamepadDeadzone();
+    // Snapshot current state so buttons held from the previous scene
+    // don't register as "just pressed" on the first frame.
+    this.updatePrevState();
   }
 
-  private getPad(): Phaser.Input.Gamepad.Gamepad | null {
-    if (!this.scene.input.gamepad) return null;
-    return this.scene.input.gamepad.pad1 ?? null;
+  private getPad(): Gamepad | null {
+    const pads = navigator.getGamepads?.();
+    if (!pads) return null;
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i]) return pads[i];
+    }
+    return null;
   }
 
   /** Returns the aim angle from the left stick, or null if within deadzone. */
@@ -19,11 +39,11 @@ export default class GamepadManager {
     const pad = this.getPad();
     if (!pad) return null;
 
-    const lx = pad.leftStick.x;
-    const ly = pad.leftStick.y;
+    const lx = pad.axes[0] ?? 0;
+    const ly = pad.axes[1] ?? 0;
     const magnitude = Math.sqrt(lx * lx + ly * ly);
 
-    if (magnitude < GAMEPAD_DEADZONE) return null;
+    if (magnitude < this.deadzone) return null;
 
     return Math.atan2(ly, lx);
   }
@@ -87,11 +107,9 @@ export default class GamepadManager {
     if (dpadRight) return 1;
 
     // Left stick snap navigation
-    const lx = pad.leftStick.x;
-    const prevMagnitude = Math.abs(this.prevButtons.length > 0 ? 0 : 0);
+    const lx = pad.axes[0] ?? 0;
 
-    if (Math.abs(lx) > 0.7 && prevMagnitude === 0) {
-      // Use stick x but only when crossing the threshold
+    if (Math.abs(lx) > 0.7) {
       const prevLx = this.prevStickX;
       if (Math.abs(prevLx) <= 0.7) {
         return lx > 0 ? 1 : -1;
@@ -101,16 +119,12 @@ export default class GamepadManager {
     return 0;
   }
 
-  private prevStickX: number = 0;
-
   /** Triggers gamepad vibration if a pad is connected and supports it. */
   vibrate(duration: number, weakMagnitude: number = 0, strongMagnitude: number = 0.5): void {
     const pad = this.getPad();
     if (!pad) return;
 
-    // Access the native browser Gamepad for vibrationActuator (dual-rumble)
-    const nativePad = navigator.getGamepads?.()[pad.index];
-    const actuator = nativePad?.vibrationActuator as
+    const actuator = pad.vibrationActuator as
       | { playEffect(type: string, params: object): void }
       | undefined;
     if (actuator?.playEffect) {
@@ -132,6 +146,6 @@ export default class GamepadManager {
     }
 
     this.prevButtons = pad.buttons.map((b) => b.pressed);
-    this.prevStickX = pad.leftStick.x;
+    this.prevStickX = pad.axes[0] ?? 0;
   }
 }

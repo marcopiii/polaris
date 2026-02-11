@@ -110,7 +110,8 @@ export const SHIELD_ARC_MIN = (19 * Math.PI) / 180; // destroyed when below this
 export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 
 // Gamepad
-export const GAMEPAD_DEADZONE = 0.2;
+export const GAMEPAD_DEADZONE_DEFAULT = 0.3;
+export const GAMEPAD_DEADZONE_STORAGE_KEY = 'noxPolaris_gamepadDeadzone';
 
 // HUD font sizes
 export const HUD_FONT_PRIMARY = 58 * PX;

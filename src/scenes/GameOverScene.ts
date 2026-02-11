@@ -29,7 +29,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
-    this.gamepadManager = new GamepadManager(this);
+    this.gamepadManager = new GamepadManager();
     this.confirmAction = null;
 
     // Background circle matching playfield aesthetic
