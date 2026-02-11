@@ -31,6 +31,7 @@ import PowerUpManager, {
   getConsumableDefinition,
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
+import GamepadManager from '../managers/GamepadManager';
 import { distance } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
@@ -52,6 +53,7 @@ export default class GameScene extends Phaser.Scene {
   private levelManager!: LevelManager;
   private audioManager!: AudioManager;
   private powerUpManager!: PowerUpManager;
+  private gamepadManager!: GamepadManager;
 
   private centerX!: number;
   private centerY!: number;
@@ -61,8 +63,18 @@ export default class GameScene extends Phaser.Scene {
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
+  private isPaused: boolean = false;
+  private pauseUIElements: Phaser.GameObjects.GameObject[] = [];
+  private pauseButton!: Phaser.GameObjects.Text;
+  private escKey!: Phaser.Input.Keyboard.Key;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
+  private powerUpSelectedIndex: number = 0;
+  private powerUpCardHighlights: Phaser.GameObjects.Graphics[] = [];
+  private powerUpSelectionData: { selection: PowerUpDefinition[]; nextLevel: number } = {
+    selection: [],
+    nextLevel: 0,
+  };
 
   // Consumable state
   private laserBeamTimer: number = 0;
@@ -106,6 +118,7 @@ export default class GameScene extends Phaser.Scene {
     this.levelManager = new LevelManager();
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
+    this.gamepadManager = new GamepadManager(this);
 
     // Set up blur effect
     this.setupBlurEffect();
@@ -120,6 +133,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Create player
     this.player = new Player(this, this.centerX, this.centerY, BENCHMARK_MODE);
+    this.player.setGamepadManager(this.gamepadManager);
 
     // Set up consumable keybindings
     this.setupConsumableKeys();
@@ -132,6 +146,31 @@ export default class GameScene extends Phaser.Scene {
 
     // Animate UI elements in with overshoot
     this.animateHudEntrance();
+
+    // Pause button (top-right)
+    this.pauseButton = this.add.text(GAME_WIDTH - 60 * PX, 40 * PX, '||', {
+      fontSize: `${40 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    this.pauseButton.setOrigin(0.5);
+    this.pauseButton.setAlpha(0.5);
+    this.pauseButton.setInteractive({ useHandCursor: true });
+    this.pauseButton.on('pointerover', () => {
+      if (!this.isPaused) this.pauseButton.setAlpha(1);
+    });
+    this.pauseButton.on('pointerout', () => {
+      if (!this.isPaused) this.pauseButton.setAlpha(0.5);
+    });
+    this.pauseButton.on('pointerdown', () => {
+      this.togglePause();
+    });
+    this.pauseButton.setDepth(10);
+
+    // Escape key for pause
+    if (this.input.keyboard) {
+      this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    }
 
     // FPS counter (top-left corner)
     this.fpsText = this.add.text(16 * PX, 16 * PX, '', {
@@ -153,13 +192,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Apply power-ups from ?powerups= query param
-    {
-      for (const { type, count } of parsePowerUpsParam()) {
-        const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
-        if (powerUpType) {
-          for (let i = 0; i < count; i++) {
-            this.powerUpManager.addPowerUp(powerUpType);
-          }
+    for (const { type, count } of parsePowerUpsParam()) {
+      const powerUpType = PowerUpType[type as keyof typeof PowerUpType];
+      if (powerUpType) {
+        for (let i = 0; i < count; i++) {
+          this.powerUpManager.addPowerUp(powerUpType);
         }
       }
     }
@@ -315,6 +352,7 @@ export default class GameScene extends Phaser.Scene {
     // Visual effect
     ParticleEffects.createShockwaveEffect(this, this.centerX, this.centerY);
     this.cameras.main.shake(200, 0.008);
+    this.gamepadManager.vibrate(200, 0.3, 0.8);
     this.audioManager.playSound('terminalGrow');
 
     // Kill all enemies
@@ -352,7 +390,8 @@ export default class GameScene extends Phaser.Scene {
       this.bullets.push(bullet);
     }
 
-    this.cameras.main.shake(100, 0.005);
+    this.cameras.main.shake(100, 0.008);
+    this.gamepadManager.vibrate(100, 0.3, 0.8);
     this.audioManager.playSound('shoot');
   }
 
@@ -405,6 +444,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Subtle screen tremble while beam is active
     this.cameras.main.shake(delta, 0.004);
+    this.gamepadManager.vibrate(delta, 0.1, 0.3);
 
     // Chaotic player pulsation while beam is active (after tween-in)
     if (this.laserScaleUpDone) {
@@ -639,8 +679,31 @@ export default class GameScene extends Phaser.Scene {
     // Update blur effect every frame
     this.updateBlurEffect();
 
+    // Check pause toggle (Escape key or gamepad Start)
+    const escPressed = this.escKey && Phaser.Input.Keyboard.JustDown(this.escKey);
+    const startPressed = this.gamepadManager.isStartJustPressed();
+    if ((escPressed || startPressed) && !this.isPowerUpSelectionActive) {
+      this.togglePause();
+    }
+
+    // Skip game logic while paused
+    if (this.isPaused) {
+      this.gamepadManager.updatePrevState();
+      return;
+    }
+
     // Pause game while power-up selection, equip screen, or benchmark end is active
-    if (this.isPowerUpSelectionActive || this.benchmarkDone) return;
+    if (this.isPowerUpSelectionActive || this.benchmarkDone) {
+      this.updatePowerUpGamepadNavigation();
+      this.gamepadManager.updatePrevState();
+      return;
+    }
+
+    // Gamepad consumable activation (A/B/X/Y map to slots 0-3)
+    if (this.gamepadManager.isAJustPressed()) this.activateSlot(0);
+    if (this.gamepadManager.isBJustPressed()) this.activateSlot(1);
+    if (this.gamepadManager.isButtonJustPressed(2)) this.activateSlot(2);
+    if (this.gamepadManager.isButtonJustPressed(3)) this.activateSlot(3);
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
@@ -815,6 +878,8 @@ export default class GameScene extends Phaser.Scene {
     if (this.terminalRadius >= PLAYFIELD_RADIUS) {
       this.gameOver();
     }
+
+    this.gamepadManager.updatePrevState();
   }
 
   private shoot(targetX: number, targetY: number) {
@@ -1157,6 +1222,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Screen shake on damage
     this.cameras.main.shake(100, 0.005);
+    this.gamepadManager.vibrate(100, 0.2, 0.6);
 
     if (newVisionRadius <= 0) {
       // Smoothly transition vision radius to 0, then reset
@@ -1177,6 +1243,7 @@ export default class GameScene extends Phaser.Scene {
 
           // Strong screen shake for terminal grow
           this.cameras.main.shake(300, 0.01);
+          this.gamepadManager.vibrate(300, 0.5, 1.0);
 
           // Smoothly increase terminal radius
           this.tweens.add({
@@ -1255,11 +1322,84 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // ─── Pause ──────────────────────────────────────────────────────────────
+
+  private togglePause() {
+    if (this.isPaused) {
+      this.hidePauseUI();
+    } else {
+      this.showPauseUI();
+    }
+  }
+
+  private showPauseUI() {
+    this.isPaused = true;
+    this.pauseButton.setAlpha(0);
+
+    // Pause all active tweens
+    this.tweens.pauseAll();
+
+    // Semi-transparent backdrop
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x000000, 0.7);
+    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    backdrop.setDepth(20);
+    this.pauseUIElements.push(backdrop);
+
+    // PAUSED title
+    const title = this.add.text(this.centerX, this.centerY - 80 * PX, 'PAUSED', {
+      fontSize: `${64 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    title.setOrigin(0.5);
+    title.setDepth(21);
+    this.pauseUIElements.push(title);
+
+    // Resume button
+    const resumeBtn = this.add.text(this.centerX, this.centerY + 40 * PX, 'RESUME', {
+      fontSize: `${32 * PX}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+      backgroundColor: '#444444',
+      padding: { x: 24 * PX, y: 10 * PX },
+    });
+    resumeBtn.setOrigin(0.5);
+    resumeBtn.setDepth(21);
+    resumeBtn.setInteractive({ useHandCursor: true });
+
+    resumeBtn.on('pointerover', () => {
+      resumeBtn.setStyle({ backgroundColor: '#666666' });
+    });
+    resumeBtn.on('pointerout', () => {
+      resumeBtn.setStyle({ backgroundColor: '#444444' });
+    });
+    resumeBtn.on('pointerdown', () => {
+      this.togglePause();
+    });
+    this.pauseUIElements.push(resumeBtn);
+  }
+
+  private hidePauseUI() {
+    this.isPaused = false;
+    this.pauseButton.setAlpha(0.5);
+
+    // Resume all tweens
+    this.tweens.resumeAll();
+
+    for (const el of this.pauseUIElements) {
+      el.destroy();
+    }
+    this.pauseUIElements = [];
+  }
+
   // ─── Radial Power-Up Selection UI ─────────────────────────────────────
 
   private showPowerUpSelection(completedLevel: number) {
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
+    this.powerUpSelectedIndex = 0;
+    this.powerUpCardHighlights = [];
 
     // In benchmark mode, auto-select the first power-up
     if (BENCHMARK_MODE) {
@@ -1300,6 +1440,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomSelection();
+    this.powerUpSelectionData = { selection, nextLevel };
 
     // Draw central hub circle
     const hubGraphics = this.add.graphics();
@@ -1381,6 +1522,11 @@ export default class GameScene extends Phaser.Scene {
         this.powerUpUIElements.push(rarityText);
       }
 
+      // Gamepad highlight border (drawn on top, only visible for selected card)
+      const highlight = this.add.graphics();
+      this.powerUpCardHighlights.push(highlight);
+      this.powerUpUIElements.push(highlight);
+
       // Power-up name
       const nameText = this.add.text(nodeX, nodeY - 35 * PX, powerUp.name, {
         fontSize: `${22 * PX}px`,
@@ -1446,6 +1592,41 @@ export default class GameScene extends Phaser.Scene {
       });
       this.powerUpUIElements.push(hitArea);
     });
+
+    this.drawPowerUpHighlight();
+  }
+
+  private drawPowerUpHighlight() {
+    const nodeRadius = 260 * PX;
+    const startAngle = -Math.PI / 2;
+    this.powerUpCardHighlights.forEach((highlight, index) => {
+      highlight.clear();
+      if (index === this.powerUpSelectedIndex) {
+        const angle = startAngle + (index * (Math.PI * 2)) / 3;
+        const nodeX = this.centerX + Math.cos(angle) * nodeRadius;
+        const nodeY = this.centerY + Math.sin(angle) * nodeRadius;
+        highlight.lineStyle(4 * PX, 0xffff00, 1);
+        highlight.strokeCircle(nodeX, nodeY, 105 * PX);
+      }
+    });
+  }
+
+  private updatePowerUpGamepadNavigation() {
+    const { selection, nextLevel } = this.powerUpSelectionData;
+    if (!this.isPowerUpSelectionActive || selection.length === 0) return;
+
+    const nav = this.gamepadManager.getHorizontalNavigation();
+    if (nav !== 0) {
+      this.powerUpSelectedIndex = Math.max(
+        0,
+        Math.min(selection.length - 1, this.powerUpSelectedIndex + nav)
+      );
+      this.drawPowerUpHighlight();
+    }
+
+    if (this.gamepadManager.isAJustPressed()) {
+      this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
+    }
   }
 
   private drawNodeBg(
@@ -1509,6 +1690,8 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
+    this.powerUpCardHighlights = [];
+    this.powerUpSelectionData = { selection: [], nextLevel: 0 };
 
     // Show equip screen if player has consumables, otherwise start next level
     if (this.powerUpManager.hasAnyConsumables()) {

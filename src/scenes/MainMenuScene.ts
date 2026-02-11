@@ -12,6 +12,7 @@ import {
 } from '../constants';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import { AudioGenerator } from '../utils/AudioGenerator';
+import GamepadManager from '../managers/GamepadManager';
 import logoHtml from './logo.html?raw';
 
 export default class MainMenuScene extends Phaser.Scene {
@@ -21,6 +22,7 @@ export default class MainMenuScene extends Phaser.Scene {
   private enemyCircle?: Phaser.GameObjects.Graphics;
   private enemyPos = { x: 0, y: 0 };
   private isAnimating = false;
+  private gamepadManager!: GamepadManager;
 
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -31,6 +33,7 @@ export default class MainMenuScene extends Phaser.Scene {
 
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
+    this.gamepadManager = new GamepadManager(this);
 
     this.createLogo(centerX, centerY);
     this.createStartButton(centerX, centerY + 280 * PX);
@@ -415,5 +418,12 @@ export default class MainMenuScene extends Phaser.Scene {
         this.scene.start('GameScene');
       },
     });
+  }
+
+  update() {
+    if (this.gamepadManager.isAJustPressed() || this.gamepadManager.isStartJustPressed()) {
+      this.playStartAnimation();
+    }
+    this.gamepadManager.updatePrevState();
   }
 }

@@ -67,6 +67,9 @@ export const SHIELD_ARC_SHRINK = (3 * Math.PI) / 180; // shrink per hit in radia
 export const SHIELD_ARC_MIN = (19 * Math.PI) / 180; // destroyed when below this
 export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 
+// Gamepad
+export const GAMEPAD_DEADZONE = 0.2;
+
 // Colors
 export const COLORS = {
   player: 0xba0000,

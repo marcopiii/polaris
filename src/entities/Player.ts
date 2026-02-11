@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { PLAYER_SIZE, FIRE_COOLDOWN, COLORS } from '../constants';
+import { PLAYER_SIZE, FIRE_COOLDOWN, COLORS, PLAYFIELD_RADIUS } from '../constants';
 import { angleBetween } from '../utils/MathUtils';
+import GamepadManager from '../managers/GamepadManager';
 
 export default class Player {
   private scene: Phaser.Scene;
@@ -12,6 +13,7 @@ export default class Player {
   private isShooting: boolean = false;
   private scale: number = 1.0;
   private benchmarkMode: boolean;
+  private gamepadManager: GamepadManager | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, benchmarkMode: boolean = false) {
     this.scene = scene;
@@ -29,6 +31,10 @@ export default class Player {
     } else {
       this.setupInput();
     }
+  }
+
+  setGamepadManager(manager: GamepadManager) {
+    this.gamepadManager = manager;
   }
 
   private setupInput() {
@@ -59,17 +65,27 @@ export default class Player {
     fireCooldown: number = FIRE_COOLDOWN,
     aimTarget?: { x: number; y: number }
   ): { shouldShoot: boolean; targetX: number; targetY: number } {
+    // Poll gamepad for aim and shoot
+    let gamepadAiming = false;
+    if (this.gamepadManager) {
+      const aimAngle = this.gamepadManager.getAimAngle();
+      if (aimAngle !== null) {
+        this.rotation = aimAngle;
+        gamepadAiming = true;
+      }
+    }
+
     // Update cooldown
     if (this.shootCooldown > 0) {
       this.shootCooldown -= delta;
     }
 
-    // Check if should shoot
+    // Check if should shoot (pointer or gamepad stick movement)
     let shouldShoot = false;
     let targetX = 0;
     let targetY = 0;
 
-    if (this.isShooting && this.shootCooldown <= 0) {
+    if ((this.isShooting || gamepadAiming) && this.shootCooldown <= 0) {
       shouldShoot = true;
       this.shootCooldown = fireCooldown;
 
@@ -77,6 +93,10 @@ export default class Player {
         targetX = aimTarget.x;
         targetY = aimTarget.y;
         this.rotation = angleBetween(this.x, this.y, targetX, targetY);
+      } else if (gamepadAiming) {
+        // Project target from player position along the aim direction
+        targetX = this.x + Math.cos(this.rotation) * PLAYFIELD_RADIUS;
+        targetY = this.y + Math.sin(this.rotation) * PLAYFIELD_RADIUS;
       } else {
         const pointer = this.scene.input.activePointer;
         targetX = pointer.x;

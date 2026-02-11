@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
 import LeaderboardManager from '../managers/LeaderboardManager';
+import GamepadManager from '../managers/GamepadManager';
 import type { LeaderboardEntry } from '../types';
 import { BENCHMARK_MODE, BENCHMARK_SEED } from '../utils/BenchmarkConfig';
 
@@ -8,6 +9,8 @@ export default class GameOverScene extends Phaser.Scene {
   private finalScore: number = 0;
   private finalLevel: number = 1;
   private leaderboardManager: LeaderboardManager;
+  private gamepadManager!: GamepadManager;
+  private confirmAction: (() => void) | null = null;
 
   constructor() {
     super({ key: 'GameOverScene' });
@@ -26,6 +29,8 @@ export default class GameOverScene extends Phaser.Scene {
 
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
+    this.gamepadManager = new GamepadManager(this);
+    this.confirmAction = null;
 
     // Background circle matching playfield aesthetic
     const bg = this.add.graphics();
@@ -241,7 +246,9 @@ export default class GameOverScene extends Phaser.Scene {
     confirmButton.on('pointerout', () => {
       confirmButton.setStyle({ backgroundColor: '#444444' });
     });
-    confirmButton.on('pointerdown', () => {
+
+    // Shared confirm logic
+    this.confirmAction = () => {
       if (nameInput) {
         const name = nameInput.value.trim();
         if (!name) return;
@@ -250,6 +257,17 @@ export default class GameOverScene extends Phaser.Scene {
         }
       }
       this.scene.start('MainMenuScene');
+    };
+
+    confirmButton.on('pointerdown', () => {
+      this.confirmAction?.();
     });
+  }
+
+  update() {
+    if (this.gamepadManager.isAJustPressed() || this.gamepadManager.isStartJustPressed()) {
+      this.confirmAction?.();
+    }
+    this.gamepadManager.updatePrevState();
   }
 }
