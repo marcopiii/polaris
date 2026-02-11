@@ -103,6 +103,25 @@ export default class GamepadManager {
 
   private prevStickX: number = 0;
 
+  /** Triggers gamepad vibration if a pad is connected and supports it. */
+  vibrate(duration: number, weakMagnitude: number = 0, strongMagnitude: number = 0.5): void {
+    const pad = this.getPad();
+    if (!pad) return;
+
+    // Access the native browser Gamepad for vibrationActuator (dual-rumble)
+    const nativePad = navigator.getGamepads?.()[pad.index];
+    const actuator = nativePad?.vibrationActuator as
+      | { playEffect(type: string, params: object): void }
+      | undefined;
+    if (actuator?.playEffect) {
+      actuator.playEffect('dual-rumble', {
+        duration,
+        weakMagnitude,
+        strongMagnitude,
+      });
+    }
+  }
+
   /** Call at the end of each frame to snapshot button state. */
   updatePrevState(): void {
     const pad = this.getPad();

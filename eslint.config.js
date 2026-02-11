@@ -20,6 +20,7 @@ export default [
         document: 'readonly',
         window: 'readonly',
         localStorage: 'readonly',
+        navigator: 'readonly',
       },
     },
     plugins: {

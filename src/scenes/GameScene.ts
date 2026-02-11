@@ -352,6 +352,7 @@ export default class GameScene extends Phaser.Scene {
     // Visual effect
     ParticleEffects.createShockwaveEffect(this, this.centerX, this.centerY);
     this.cameras.main.shake(200, 0.008);
+    this.gamepadManager.vibrate(200, 0.3, 0.8);
     this.audioManager.playSound('terminalGrow');
 
     // Kill all enemies
@@ -390,6 +391,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.cameras.main.shake(100, 0.005);
+    this.gamepadManager.vibrate(100, 0.2, 0.5);
     this.audioManager.playSound('shoot');
   }
 
@@ -442,6 +444,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Subtle screen tremble while beam is active
     this.cameras.main.shake(delta, 0.004);
+    this.gamepadManager.vibrate(delta, 0.1, 0.3);
 
     // Chaotic player pulsation while beam is active (after tween-in)
     if (this.laserScaleUpDone) {
@@ -1219,6 +1222,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Screen shake on damage
     this.cameras.main.shake(100, 0.005);
+    this.gamepadManager.vibrate(100, 0.2, 0.6);
 
     if (newVisionRadius <= 0) {
       // Smoothly transition vision radius to 0, then reset
@@ -1239,6 +1243,7 @@ export default class GameScene extends Phaser.Scene {
 
           // Strong screen shake for terminal grow
           this.cameras.main.shake(300, 0.01);
+          this.gamepadManager.vibrate(300, 0.5, 1.0);
 
           // Smoothly increase terminal radius
           this.tweens.add({
