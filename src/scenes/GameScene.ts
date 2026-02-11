@@ -1670,12 +1670,13 @@ export default class GameScene extends Phaser.Scene {
     // Save real terminal radius and collapse playfield visually
     this.savedTerminalRadius = this.terminalRadius;
     const collapsedR = 600 * PX;
+    const terminalRatio = this.terminalRadius / PLAYFIELD_RADIUS;
 
-    // Tween playfield visual radius down and terminal radius to initial
+    // Tween playfield visual radius down and terminal radius proportionally
     this.tweens.add({
       targets: this,
       playfieldVisualRadius: collapsedR,
-      terminalRadius: TERMINAL_RADIUS_INITIAL,
+      terminalRadius: terminalRatio * collapsedR,
       duration: 400,
       ease: 'Quad.easeInOut',
       onUpdate: () => {
@@ -1951,8 +1952,7 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpManager.addPowerUp(powerUp.type);
     this.updatePowerUpHud();
 
-    // Restore the real terminal radius from before the visual collapse
-    this.terminalRadius = this.savedTerminalRadius;
+    // savedTerminalRadius already holds the real value to restore to
 
     // Orbital Shield: shields will be spawned in updateShields on next frame
 
@@ -1975,10 +1975,14 @@ export default class GameScene extends Phaser.Scene {
   private selectTerminalShrink(nextLevel: number) {
     // Apply shrink to the real saved terminal radius
     const shrinkAmount = 0.04 * PLAYFIELD_RADIUS;
-    this.terminalRadius = Math.max(
+    this.savedTerminalRadius = Math.max(
       this.savedTerminalRadius - shrinkAmount,
       TERMINAL_RADIUS_INITIAL
     );
+
+    // Compute proportional target for the collapsed playfield
+    const targetTerminal =
+      this.savedTerminalRadius * (this.playfieldVisualRadius / PLAYFIELD_RADIUS);
 
     // Destroy all power-up UI elements
     for (const el of this.powerUpUIElements) {
@@ -1988,19 +1992,32 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpItemTexts = [];
     this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
 
-    // Show equip screen if player has consumables, otherwise restore and start next level
-    if (this.powerUpManager.hasAnyConsumables()) {
-      this.showEquipScreen(nextLevel);
-    } else {
-      this.restorePlayfield(nextLevel);
-    }
+    // Animate the terminal shrink visually before proceeding
+    this.audioManager.playSound('terminalShrink');
+    this.tweens.add({
+      targets: this,
+      terminalRadius: targetTerminal,
+      duration: 300,
+      ease: 'Quad.easeInOut',
+      onUpdate: () => {
+        this.drawPlayfield();
+      },
+      onComplete: () => {
+        if (this.powerUpManager.hasAnyConsumables()) {
+          this.showEquipScreen(nextLevel);
+        } else {
+          this.restorePlayfield(nextLevel);
+        }
+      },
+    });
   }
 
   private restorePlayfield(nextLevel: number) {
-    // Expand playfield back to full size and move HUD outward
+    // Expand playfield back to full size with terminal radius restoring proportionally
     this.tweens.add({
       targets: this,
       playfieldVisualRadius: PLAYFIELD_RADIUS,
+      terminalRadius: this.savedTerminalRadius,
       duration: 300,
       ease: 'Quad.easeOut',
       onUpdate: () => {

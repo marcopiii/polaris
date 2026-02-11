@@ -103,6 +103,27 @@ export class AudioGenerator {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
+  playTerminalShrink() {
+    const duration = 0.35;
+    const t = this.audioContext.currentTime;
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    // Descending tone — inverse of terminalGrow
+    oscillator.frequency.setValueAtTime(300, t);
+    oscillator.frequency.exponentialRampToValueAtTime(100, t + duration);
+
+    gainNode.gain.setValueAtTime(0.25, t);
+    gainNode.gain.linearRampToValueAtTime(0.01, t + duration);
+
+    oscillator.start(t);
+    oscillator.stop(t + duration);
+  }
+
   playGameOver() {
     const duration = 1.0;
     const oscillator = this.audioContext.createOscillator();
