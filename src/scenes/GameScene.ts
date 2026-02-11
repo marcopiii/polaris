@@ -696,6 +696,12 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Gamepad consumable activation (A/B/X/Y map to slots 0-3)
+    if (this.gamepadManager.isAJustPressed()) this.activateSlot(0);
+    if (this.gamepadManager.isBJustPressed()) this.activateSlot(1);
+    if (this.gamepadManager.isButtonJustPressed(2)) this.activateSlot(2);
+    if (this.gamepadManager.isButtonJustPressed(3)) this.activateSlot(3);
+
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
 

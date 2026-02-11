@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYFIELD_RADIUS, COLORS, PX } from '../constants';
 import LeaderboardManager from '../managers/LeaderboardManager';
+import GamepadManager from '../managers/GamepadManager';
 
 export default class LeaderboardScene extends Phaser.Scene {
   private leaderboardManager: LeaderboardManager;
+  private gamepadManager!: GamepadManager;
 
   constructor() {
     super({ key: 'LeaderboardScene' });
@@ -11,6 +13,7 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   create() {
+    this.gamepadManager = new GamepadManager(this);
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
 
@@ -157,5 +160,16 @@ export default class LeaderboardScene extends Phaser.Scene {
     backButton.on('pointerdown', () => {
       this.scene.start('MainMenuScene');
     });
+  }
+
+  update() {
+    if (
+      this.gamepadManager.isBJustPressed() ||
+      this.gamepadManager.isAJustPressed() ||
+      this.gamepadManager.isStartJustPressed()
+    ) {
+      this.scene.start('MainMenuScene');
+    }
+    this.gamepadManager.updatePrevState();
   }
 }

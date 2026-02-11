@@ -44,9 +44,34 @@ export default class GamepadManager {
     return this.isButtonJustPressed(0);
   }
 
+  /** Returns true if B (button 1) was just pressed. */
+  isBJustPressed(): boolean {
+    return this.isButtonJustPressed(1);
+  }
+
   /** Returns true if Start (button 9) was just pressed. */
   isStartJustPressed(): boolean {
     return this.isButtonJustPressed(9);
+  }
+
+  /** Returns true if D-pad Up (button 12) was just pressed. */
+  isDpadUpJustPressed(): boolean {
+    return this.isButtonJustPressed(12);
+  }
+
+  /** Returns true if D-pad Down (button 13) was just pressed. */
+  isDpadDownJustPressed(): boolean {
+    return this.isButtonJustPressed(13);
+  }
+
+  /** Returns true if D-pad Left (button 14) was just pressed. */
+  isDpadLeftJustPressed(): boolean {
+    return this.isButtonJustPressed(14);
+  }
+
+  /** Returns true if D-pad Right (button 15) was just pressed. */
+  isDpadRightJustPressed(): boolean {
+    return this.isButtonJustPressed(15);
   }
 
   /** Returns -1 for left, 1 for right, 0 for no horizontal input. D-pad or left stick. */
