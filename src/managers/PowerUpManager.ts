@@ -353,6 +353,18 @@ export default class PowerUpManager {
     return selected;
   }
 
+  /** Return all passive power-ups that have at least 1 stack */
+  getActivePassives(): { name: string; stacks: number }[] {
+    const result: { name: string; stacks: number }[] = [];
+    for (const [type, count] of this.stacks.entries()) {
+      if (count > 0) {
+        const def = POWER_UP_DEFINITIONS.find((d) => d.type === type);
+        if (def) result.push({ name: def.name, stacks: count });
+      }
+    }
+    return result;
+  }
+
   reset(): void {
     this.stacks.clear();
     this.inventory.clear();

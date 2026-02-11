@@ -15,8 +15,8 @@ export const PLAYFIELD_RADIUS = 1800;
 const BASE_PLAYFIELD_RADIUS = 900;
 export const PX = PLAYFIELD_RADIUS / BASE_PLAYFIELD_RADIUS;
 
-// Game world derived from playfield (maintains original proportions)
-export const GAME_WIDTH = Math.ceil(2048 * PX);
+// Game world derived from playfield (wider to fit radial HUD)
+export const GAME_WIDTH = Math.ceil(2560 * PX);
 export const GAME_HEIGHT = Math.ceil(2048 * PX);
 
 // Player
@@ -111,6 +111,10 @@ export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 
 // Gamepad
 export const GAMEPAD_DEADZONE = 0.2;
+
+// HUD font sizes
+export const HUD_FONT_PRIMARY = 58 * PX;
+export const HUD_FONT_SECONDARY = 32 * PX;
 
 // Colors
 export const COLORS = {
