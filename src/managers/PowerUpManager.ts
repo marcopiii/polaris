@@ -11,6 +11,8 @@ export enum PowerUpType {
   PIERCING_ROUNDS = 'PIERCING_ROUNDS',
   ORBITAL_SHIELD = 'ORBITAL_SHIELD',
   CHAIN_LIGHTNING = 'CHAIN_LIGHTNING',
+  PUSHBACK = 'PUSHBACK',
+  TAIL_GUN = 'TAIL_GUN',
   // Consumables (one-use, activated during gameplay)
   SHOCKWAVE = 'SHOCKWAVE',
   NOVA_BURST = 'NOVA_BURST',
@@ -112,6 +114,22 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     description: 'Kills chain to nearby enemies',
     rarity: PowerUpRarity.LEGENDARY,
     weight: 5,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.PUSHBACK,
+    name: 'Pushback',
+    description: 'Enemies are knocked back on hit',
+    rarity: PowerUpRarity.UNCOMMON,
+    weight: 18,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.TAIL_GUN,
+    name: 'Tail Gun',
+    description: 'Fire bullets behind you too',
+    rarity: PowerUpRarity.RARE,
+    weight: 10,
     consumable: false,
   },
   {
@@ -290,6 +308,16 @@ export default class PowerUpManager {
   /** Number of chain lightning bounces per kill */
   getChainCount(): number {
     return this.getStacks(PowerUpType.CHAIN_LIGHTNING);
+  }
+
+  /** Tail gun bullet count: number of stacks (0 = no tail gun) */
+  getTailGunBulletCount(): number {
+    return this.getStacks(PowerUpType.TAIL_GUN);
+  }
+
+  /** Pushback distance: 5% of playfield radius per stack */
+  getPushbackDistance(): number {
+    return this.getStacks(PowerUpType.PUSHBACK) * 0.05 * PLAYFIELD_RADIUS;
   }
 
   /** Chain lightning range in pixels */

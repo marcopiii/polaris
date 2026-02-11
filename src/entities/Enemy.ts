@@ -18,6 +18,7 @@ export default class Enemy {
   private centerY: number;
   private health: number;
   private displaySize: number;
+  private pushbackTween: Phaser.Tweens.Tween | null = null;
   public active: boolean = true;
   public x: number = 0;
   public y: number = 0;
@@ -111,6 +112,34 @@ export default class Enemy {
       if (this.active) {
         this.draw();
       }
+    });
+  }
+
+  /** Push enemy away from center by the given pixel distance, clamped to playfield. */
+  pushBack(amount: number) {
+    const targetR = Math.min(this.polar.r + amount, PLAYFIELD_RADIUS);
+
+    // Cancel any in-progress pushback so we tween from current position
+    if (this.pushbackTween) {
+      this.pushbackTween.stop();
+      this.pushbackTween = null;
+    }
+
+    const proxy = { r: this.polar.r };
+    this.pushbackTween = this.scene.tweens.add({
+      targets: proxy,
+      r: targetR,
+      duration: 120,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        if (!this.active) return;
+        this.polar.r = proxy.r;
+        this.updatePosition();
+        this.draw();
+      },
+      onComplete: () => {
+        this.pushbackTween = null;
+      },
     });
   }
 
