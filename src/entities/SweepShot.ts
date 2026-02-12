@@ -79,7 +79,7 @@ export default class SweepShot {
     );
 
     // Draw outer arc (thickest, brightest)
-    if (outerR > 0) {
+    if (outerR > 0 && outerR - SWEEPSHOT_THICKNESS_OUTER / 2 < PLAYFIELD_RADIUS) {
       this.graphics.lineStyle(SWEEPSHOT_THICKNESS_OUTER, 0xffffff, 1.0);
       this.graphics.beginPath();
       this.graphics.arc(this.centerX, this.centerY, outerR, startAngle, endAngle, false);
@@ -87,7 +87,7 @@ export default class SweepShot {
     }
 
     // Draw mid arc
-    if (midR > 0) {
+    if (midR > 0 && midR - SWEEPSHOT_THICKNESS_MID / 2 < PLAYFIELD_RADIUS) {
       this.graphics.lineStyle(SWEEPSHOT_THICKNESS_MID, 0xffffff, 0.8);
       this.graphics.beginPath();
       this.graphics.arc(this.centerX, this.centerY, midR, startAngle, endAngle, false);
@@ -95,7 +95,7 @@ export default class SweepShot {
     }
 
     // Draw inner arc (thinnest, dimmest)
-    if (innerR > 0) {
+    if (innerR > 0 && innerR - SWEEPSHOT_THICKNESS_INNER / 2 < PLAYFIELD_RADIUS) {
       this.graphics.lineStyle(SWEEPSHOT_THICKNESS_INNER, 0xffffff, 0.6);
       this.graphics.beginPath();
       this.graphics.arc(this.centerX, this.centerY, innerR, startAngle, endAngle, false);
