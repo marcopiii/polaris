@@ -110,6 +110,14 @@ export const SWEEPSHOT_THICKNESS_MID = 8 * PX;
 export const SWEEPSHOT_THICKNESS_OUTER = 12 * PX;
 export const SWEEPSHOT_LAYER_GAP = 18 * PX; // distance between concentric arcs
 
+// Orbital Flare
+export const ORBITAL_FLARE_SPEED = 0.5; // radii per second (center → edge)
+export const ORBITAL_FLARE_SPAWN_INTERVAL = 0.05; // radii between bullet spawns
+export const ORBITAL_BULLET_ANGULAR_SPEED = (135 * Math.PI) / 180; // rad/s
+export const ORBITAL_BULLET_SIZE = 8 * PX; // visual/collision radius
+export const ORBITAL_FLARE_WIDTH = 20 * PX;
+export const ORBITAL_FLARE_HEIGHT = 12 * PX;
+
 // Orbital Shield
 export const SHIELD_ORBIT_OFFSET = 60 * PX; // pixels outside the terminal radius
 export const SHIELD_MAX_SLOTS = 8; // max shields around the player

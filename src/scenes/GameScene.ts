@@ -27,6 +27,8 @@ import Enemy from '../entities/Enemy';
 import Bullet from '../entities/Bullet';
 import OrbitalShield from '../entities/OrbitalShield';
 import SweepShot from '../entities/SweepShot';
+import OrbitalFlare from '../entities/OrbitalFlare';
+import OrbitalBullet from '../entities/OrbitalBullet';
 import ScoreManager from '../managers/ScoreManager';
 import LevelManager from '../managers/LevelManager';
 import AudioManager from '../managers/AudioManager';
@@ -56,6 +58,8 @@ export default class GameScene extends Phaser.Scene {
   private bullets: Bullet[] = [];
   private shields: OrbitalShield[] = [];
   private sweepShots: SweepShot[] = [];
+  private orbitalFlares: OrbitalFlare[] = [];
+  private orbitalBullets: OrbitalBullet[] = [];
   private shieldRotation: number = 0;
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
@@ -143,6 +147,8 @@ export default class GameScene extends Phaser.Scene {
     this.bullets = [];
     this.shields = [];
     this.sweepShots = [];
+    this.orbitalFlares = [];
+    this.orbitalBullets = [];
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
@@ -500,6 +506,9 @@ export default class GameScene extends Phaser.Scene {
       case PowerUpType.SWEEPSHOT:
         this.activateSweepShot();
         break;
+      case PowerUpType.ORBITAL_FLARE:
+        this.activateOrbitalFlare();
+        break;
     }
   }
 
@@ -581,6 +590,17 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager.playSound('shoot');
   }
 
+  private activateOrbitalFlare() {
+    const aimAngle = this.player.getRotation();
+    const pierceChance = this.powerUpManager.getPierceChance();
+    const flare = new OrbitalFlare(this, this.centerX, this.centerY, aimAngle, pierceChance);
+    this.orbitalFlares.push(flare);
+
+    this.cameras.main.shake(100, 0.006);
+    this.gamepadManager.vibrate(100, 0.2, 0.6);
+    this.audioManager.playSound('shoot');
+  }
+
   private updateSweepShots(delta: number) {
     for (let i = this.sweepShots.length - 1; i >= 0; i--) {
       const sweep = this.sweepShots[i];
@@ -607,6 +627,83 @@ export default class GameScene extends Phaser.Scene {
           this.audioManager.playSound('hit');
           enemy.destroy();
           this.enemies.splice(j, 1);
+        }
+      }
+    }
+  }
+
+  private updateOrbitalFlares(delta: number) {
+    for (let i = this.orbitalFlares.length - 1; i >= 0; i--) {
+      const flare = this.orbitalFlares[i];
+      const spawned = flare.update(delta);
+      for (const bullet of spawned) {
+        this.orbitalBullets.push(bullet);
+      }
+      if (!flare.active) {
+        this.orbitalFlares.splice(i, 1);
+      }
+    }
+  }
+
+  private updateOrbitalBullets(delta: number) {
+    for (let i = this.orbitalBullets.length - 1; i >= 0; i--) {
+      const bullet = this.orbitalBullets[i];
+      bullet.update(delta);
+      if (!bullet.active) {
+        this.orbitalBullets.splice(i, 1);
+      }
+    }
+  }
+
+  private checkOrbitalBulletCollisions() {
+    for (let i = this.orbitalBullets.length - 1; i >= 0; i--) {
+      const bullet = this.orbitalBullets[i];
+      if (!bullet.active) continue;
+
+      for (let j = this.enemies.length - 1; j >= 0; j--) {
+        const enemy = this.enemies[j];
+        if (!enemy.active) continue;
+
+        const bulletBounds = bullet.getBounds();
+        const enemyBounds = enemy.getBounds();
+        const dist = distPointToSegment(
+          enemyBounds.x,
+          enemyBounds.y,
+          bullet.prevX,
+          bullet.prevY,
+          bulletBounds.x,
+          bulletBounds.y
+        );
+
+        if (dist < bulletBounds.radius + enemyBounds.radius) {
+          const hitX = enemyBounds.x;
+          const hitY = enemyBounds.y;
+
+          const bulletSurvives = bullet.onHitEnemy();
+          if (!bulletSurvives) {
+            bullet.destroy();
+            this.orbitalBullets.splice(i, 1);
+          }
+
+          const killed = enemy.hit();
+          if (killed) {
+            this.enemies.splice(j, 1);
+            this.scoreManager.addKill(enemy.tier);
+            ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+          } else {
+            ParticleEffects.createEnemyHitParticles(
+              this,
+              hitX,
+              hitY,
+              bulletBounds.x,
+              bulletBounds.y
+            );
+          }
+
+          this.audioManager.playSound('hit');
+          ParticleEffects.createBulletHitParticles(this, hitX, hitY);
+
+          if (!bulletSurvives) break;
         }
       }
     }
@@ -1039,6 +1136,10 @@ export default class GameScene extends Phaser.Scene {
     // Update sweep shots
     this.updateSweepShots(delta);
 
+    // Update orbital flares & bullets
+    this.updateOrbitalFlares(delta);
+    this.updateOrbitalBullets(delta);
+
     // Check collisions
     this.checkCollisions();
 
@@ -1047,6 +1148,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Check sweep shot-enemy collisions
     this.checkSweepShotCollisions();
+
+    // Check orbital bullet-enemy collisions
+    this.checkOrbitalBulletCollisions();
 
     // Check level completion
     if (this.levelManager.isLevelComplete(this.enemies.length)) {
@@ -1695,6 +1799,15 @@ export default class GameScene extends Phaser.Scene {
       sweep.destroy();
     }
     this.sweepShots = [];
+
+    for (const flare of this.orbitalFlares) {
+      flare.destroy();
+    }
+    this.orbitalFlares = [];
+    for (const bullet of this.orbitalBullets) {
+      bullet.destroy();
+    }
+    this.orbitalBullets = [];
 
     if (this.laserBeamTimer > 0) {
       this.laserBeamTimer = 0;
@@ -2456,6 +2569,16 @@ export default class GameScene extends Phaser.Scene {
       sweep.destroy();
     }
     this.sweepShots = [];
+
+    // Clean up orbital flares & bullets
+    for (const flare of this.orbitalFlares) {
+      flare.destroy();
+    }
+    this.orbitalFlares = [];
+    for (const bullet of this.orbitalBullets) {
+      bullet.destroy();
+    }
+    this.orbitalBullets = [];
 
     // Clean up laser beam
     this.laserBeamTimer = 0;
