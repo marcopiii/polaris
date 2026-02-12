@@ -12,6 +12,7 @@ export enum PowerUpType {
   CHAIN_LIGHTNING = 'CHAIN_LIGHTNING',
   PUSHBACK = 'PUSHBACK',
   TAIL_GUN = 'TAIL_GUN',
+  VISION_SIPHON = 'VISION_SIPHON',
   // Consumables (one-use, activated during gameplay)
   SHOCKWAVE = 'SHOCKWAVE',
   NOVA_BURST = 'NOVA_BURST',
@@ -124,6 +125,13 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Tail Gun',
     description: 'Fire bullets behind you too',
     rarity: PowerUpRarity.RARE,
+    consumable: false,
+  },
+  {
+    type: PowerUpType.VISION_SIPHON,
+    name: 'Vision Siphon',
+    description: 'Recover 1% vision per enemy killed',
+    rarity: PowerUpRarity.UNCOMMON,
     consumable: false,
   },
   {
@@ -309,6 +317,12 @@ export default class PowerUpManager {
   /** Pushback distance: 5% of playfield radius per stack */
   getPushbackDistance(): number {
     return this.getStacks(PowerUpType.PUSHBACK) * 0.05 * PLAYFIELD_RADIUS;
+  }
+
+  /** Vision recovery per kill: 1% of playfield radius per stack (0 if no stacks) */
+  getVisionSiphonRecovery(): number {
+    const stacks = this.getStacks(PowerUpType.VISION_SIPHON);
+    return stacks > 0 ? 0.01 * PLAYFIELD_RADIUS * stacks : 0;
   }
 
   /** Chain lightning range in pixels */
