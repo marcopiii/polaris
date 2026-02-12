@@ -781,7 +781,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateAimingDot() {
-    const shouldShowDot = this.player.isFiringActive() && this.terminalRadius > 0;
+    const shouldShowDot =
+      (this.player.isFiringActive() || this.player.isGamepadAiming()) && this.terminalRadius > 0;
     if (shouldShowDot !== this.aimingDotVisible) {
       this.aimingDotVisible = shouldShowDot;
       this.tweens.killTweensOf(this.aimingDotGraphics);

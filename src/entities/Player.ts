@@ -23,6 +23,7 @@ export default class Player {
   private scale: number = 1.0;
   private benchmarkMode: boolean;
   private gamepadManager: GamepadManager | null = null;
+  private gamepadAimActive: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, benchmarkMode: boolean = false) {
     this.scene = scene;
@@ -67,14 +68,16 @@ export default class Player {
     aimTarget?: { x: number; y: number },
     maxAngularSpeed?: number
   ): { shouldShoot: boolean; targetX: number; targetY: number } {
-    // Poll gamepad for aim and shoot
-    let gamepadAiming = false;
+    // Poll gamepad for aim (stick) and shoot (RB)
+    this.gamepadAimActive = false;
+    let gamepadShooting = false;
     if (this.gamepadManager) {
       const aimAngle = this.gamepadManager.getAimAngle();
       if (aimAngle !== null) {
         this.desiredRotation = aimAngle;
-        gamepadAiming = true;
+        this.gamepadAimActive = true;
       }
+      gamepadShooting = this.gamepadManager.isRBPressed();
     }
 
     // Apply rotation toward desired angle
@@ -133,14 +136,14 @@ export default class Player {
       this.shootCooldown -= delta;
     }
 
-    // Check if should shoot (pointer held or gamepad stick outside deadzone)
+    // Check if should shoot (pointer held, gamepad RB, or benchmark auto-shoot)
     const pointerShooting = !this.benchmarkMode && this.scene.input.activePointer?.isDown;
-    this.firing = this.isShooting || pointerShooting || gamepadAiming;
+    this.firing = this.isShooting || pointerShooting || gamepadShooting;
     let shouldShoot = false;
     let targetX = 0;
     let targetY = 0;
 
-    if ((this.isShooting || pointerShooting || gamepadAiming) && this.shootCooldown <= 0) {
+    if ((this.isShooting || pointerShooting || gamepadShooting) && this.shootCooldown <= 0) {
       shouldShoot = true;
       this.shootCooldown = fireCooldown;
 
@@ -149,7 +152,7 @@ export default class Player {
         targetY = aimTarget.y;
         this.desiredRotation = angleBetween(this.x, this.y, targetX, targetY);
         this.rotation = this.desiredRotation;
-      } else if (gamepadAiming) {
+      } else if (gamepadShooting) {
         // Project target from player position along the aim direction
         targetX = this.x + Math.cos(this.rotation) * PLAYFIELD_RADIUS;
         targetY = this.y + Math.sin(this.rotation) * PLAYFIELD_RADIUS;
@@ -188,6 +191,10 @@ export default class Player {
 
   isFiringActive(): boolean {
     return this.firing;
+  }
+
+  isGamepadAiming(): boolean {
+    return this.gamepadAimActive;
   }
 
   destroy() {
