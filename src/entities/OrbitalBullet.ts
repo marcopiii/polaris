@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import { ORBITAL_BULLET_ANGULAR_SPEED, ORBITAL_BULLET_SIZE, PX } from '../constants';
+import {
+  COLORS,
+  ORBITAL_BULLET_LINEAR_SPEED,
+  ORBITAL_BULLET_SIZE,
+  PLAYFIELD_RADIUS,
+  PX,
+} from '../constants';
 import { gameRandom } from '../utils/BenchmarkConfig';
 
 export default class OrbitalBullet {
@@ -41,20 +47,32 @@ export default class OrbitalBullet {
     this.draw();
   }
 
+  private static readonly WIDTH = 18 * PX;
+  private static readonly HEIGHT = 6 * PX;
+
   private draw() {
     this.graphics.clear();
 
+    // Orient along direction of travel (tangent to orbit)
+    const tangentAngle = this.angle + (this.direction > 0 ? Math.PI / 2 : -Math.PI / 2);
+
+    this.graphics.save();
+    this.graphics.translateCanvas(this.x, this.y);
+    this.graphics.rotateCanvas(tangentAngle);
+
     // Outer glow
-    this.graphics.fillStyle(0xffffff, 0.2);
-    this.graphics.fillCircle(this.x, this.y, ORBITAL_BULLET_SIZE + 4 * PX);
+    this.graphics.fillStyle(COLORS.bullet, 0.2);
+    this.graphics.fillEllipse(0, 0, OrbitalBullet.WIDTH + 4 * PX, OrbitalBullet.HEIGHT + 4 * PX);
 
     // Mid glow
-    this.graphics.fillStyle(0xffffff, 0.5);
-    this.graphics.fillCircle(this.x, this.y, ORBITAL_BULLET_SIZE + 2 * PX);
+    this.graphics.fillStyle(COLORS.bullet, 0.5);
+    this.graphics.fillEllipse(0, 0, OrbitalBullet.WIDTH + 2 * PX, OrbitalBullet.HEIGHT + 2 * PX);
 
     // Core
-    this.graphics.fillStyle(0xffffff, 1);
-    this.graphics.fillCircle(this.x, this.y, ORBITAL_BULLET_SIZE);
+    this.graphics.fillStyle(COLORS.bullet, 1);
+    this.graphics.fillEllipse(0, 0, OrbitalBullet.WIDTH, OrbitalBullet.HEIGHT);
+
+    this.graphics.restore();
   }
 
   update(delta: number) {
@@ -64,7 +82,8 @@ export default class OrbitalBullet {
     this.prevX = this.x;
     this.prevY = this.y;
 
-    this.angle += this.direction * ORBITAL_BULLET_ANGULAR_SPEED * dt;
+    const angularSpeed = (ORBITAL_BULLET_LINEAR_SPEED * PLAYFIELD_RADIUS) / this.orbitRadius;
+    this.angle += this.direction * angularSpeed * dt;
 
     this.x = this.centerX + Math.cos(this.angle) * this.orbitRadius;
     this.y = this.centerY + Math.sin(this.angle) * this.orbitRadius;

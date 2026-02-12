@@ -593,7 +593,14 @@ export default class GameScene extends Phaser.Scene {
   private activateOrbitalFlare() {
     const aimAngle = this.player.getRotation();
     const pierceChance = this.powerUpManager.getPierceChance();
-    const flare = new OrbitalFlare(this, this.centerX, this.centerY, aimAngle, pierceChance);
+    const flare = new OrbitalFlare(
+      this,
+      this.centerX,
+      this.centerY,
+      aimAngle,
+      pierceChance,
+      this.terminalRadius
+    );
     this.orbitalFlares.push(flare);
 
     this.cameras.main.shake(100, 0.006);

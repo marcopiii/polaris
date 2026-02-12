@@ -19,6 +19,7 @@ export default class OrbitalFlare {
   private distanceSinceLastSpawn: number = 0; // in radii units
   private nextDirection: number = 1; // alternates +1 / -1
   private pierceChance: number;
+  private minSpawnRadius: number;
   public active: boolean = true;
 
   constructor(
@@ -26,13 +27,15 @@ export default class OrbitalFlare {
     centerX: number,
     centerY: number,
     angle: number,
-    pierceChance: number
+    pierceChance: number,
+    minSpawnRadius: number
   ) {
     this.scene = scene;
     this.centerX = centerX;
     this.centerY = centerY;
     this.angle = angle;
     this.pierceChance = pierceChance;
+    this.minSpawnRadius = minSpawnRadius;
 
     this.graphics = scene.add.graphics();
   }
@@ -54,8 +57,14 @@ export default class OrbitalFlare {
     // Accumulate distance in radii units
     this.distanceSinceLastSpawn += ORBITAL_FLARE_SPEED * dt;
 
-    // Spawn bullets at intervals
+    // Only spawn bullets once past the terminal radius
     const spawned: OrbitalBullet[] = [];
+    if (this.radius < this.minSpawnRadius) {
+      this.distanceSinceLastSpawn = 0;
+      this.draw();
+      return spawned;
+    }
+
     while (this.distanceSinceLastSpawn >= ORBITAL_FLARE_SPAWN_INTERVAL) {
       this.distanceSinceLastSpawn -= ORBITAL_FLARE_SPAWN_INTERVAL;
 
