@@ -131,6 +131,13 @@ export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 export const GAMEPAD_DEADZONE_DEFAULT = 0.3;
 export const GAMEPAD_DEADZONE_STORAGE_KEY = 'noxPolaris_gamepadDeadzone';
 
+// Audio
+export const VOLUME_DEFAULT = 10;
+export const VOLUME_MIN = 0;
+export const VOLUME_MAX = 10;
+export const VOLUME_STEP = 1;
+export const VOLUME_STORAGE_KEY = 'noxPolaris_volume';
+
 // HUD font sizes
 export const HUD_FONT_PRIMARY = 58 * PX;
 export const HUD_FONT_SECONDARY = 32 * PX;

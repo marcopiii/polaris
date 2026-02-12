@@ -69,4 +69,8 @@ export default class AudioManager {
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
   }
+
+  setVolume(value: number) {
+    this.audioGenerator.setVolume(value);
+  }
 }

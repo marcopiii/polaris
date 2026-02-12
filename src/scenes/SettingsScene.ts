@@ -10,12 +10,17 @@ import {
   DIFFICULTY_STORAGE_KEY,
   SCORE_MULTIPLIER,
   GAMEPAD_DEADZONE_DEFAULT,
+  VOLUME_DEFAULT,
+  VOLUME_MIN,
+  VOLUME_MAX,
+  VOLUME_STEP,
   type Difficulty,
 } from '../constants';
 import GamepadManager, {
   loadGamepadDeadzone,
   saveGamepadDeadzone,
 } from '../managers/GamepadManager';
+import { loadVolume, saveVolume } from '../utils/AudioGenerator';
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   easy: 'EASY',
@@ -55,6 +60,14 @@ export default class SettingsScene extends Phaser.Scene {
   private deadzoneTrackY: number = 0;
   private deadzoneTrackW: number = 0;
 
+  // Volume slider
+  private volumeValue: number = VOLUME_DEFAULT;
+  private volumeValueText!: Phaser.GameObjects.Text;
+  private volumeTrackGfx!: Phaser.GameObjects.Graphics;
+  private volumeTrackX: number = 0;
+  private volumeTrackY: number = 0;
+  private volumeTrackW: number = 0;
+
   constructor() {
     super({ key: 'SettingsScene' });
   }
@@ -66,6 +79,7 @@ export default class SettingsScene extends Phaser.Scene {
     this.selectedDifficulty = (stored as Difficulty) || DEFAULT_DIFFICULTY;
     this.highlightedIndex = DIFFICULTIES.indexOf(this.selectedDifficulty);
     this.deadzoneValue = loadGamepadDeadzone();
+    this.volumeValue = loadVolume();
 
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
@@ -249,8 +263,74 @@ export default class SettingsScene extends Phaser.Scene {
       this.setDeadzone(Math.round(raw / DEADZONE_STEP) * DEADZONE_STEP);
     });
 
+    // ─── Volume Slider ──────────────────────────────────────────────────
+    const volSectionY = trackY + 80 * PX;
+
+    const volLabel = this.add.text(centerX, volSectionY, 'VOLUME', {
+      fontSize: `${22 * PX}px`,
+      color: '#888888',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    volLabel.setOrigin(0.5);
+
+    const volTrackY = volSectionY + 50 * PX;
+    const volTrackW = 400 * PX;
+    const volTrackX = centerX - volTrackW / 2;
+
+    this.volumeTrackX = volTrackX;
+    this.volumeTrackY = volTrackY;
+    this.volumeTrackW = volTrackW;
+
+    this.volumeTrackGfx = this.add.graphics();
+    this.drawVolumeTrack();
+
+    this.volumeValueText = this.add.text(
+      centerX + volTrackW / 2 + 30 * PX,
+      volTrackY,
+      this.formatVolume(),
+      {
+        fontSize: `${28 * PX}px`,
+        color: '#ffffff',
+        fontFamily: "'Rajdhani', sans-serif",
+      }
+    );
+    this.volumeValueText.setOrigin(0, 0.5);
+
+    const volArrowStyle = {
+      fontSize: `${36 * PX}px`,
+      color: '#aaaaaa',
+      fontFamily: "'Rajdhani', sans-serif",
+    };
+
+    const volLeftArrow = this.add.text(volTrackX - 30 * PX, volTrackY, '<', volArrowStyle);
+    volLeftArrow.setOrigin(0.5);
+    volLeftArrow.setInteractive({ useHandCursor: true });
+    volLeftArrow.on('pointerover', () => volLeftArrow.setColor('#ffffff'));
+    volLeftArrow.on('pointerout', () => volLeftArrow.setColor('#aaaaaa'));
+    volLeftArrow.on('pointerdown', () => this.adjustVolume(-VOLUME_STEP));
+
+    const volRightArrow = this.add.text(
+      centerX + volTrackW / 2 + 10 * PX,
+      volTrackY,
+      '>',
+      volArrowStyle
+    );
+    volRightArrow.setOrigin(0.5);
+    volRightArrow.setInteractive({ useHandCursor: true });
+    volRightArrow.on('pointerover', () => volRightArrow.setColor('#ffffff'));
+    volRightArrow.on('pointerout', () => volRightArrow.setColor('#aaaaaa'));
+    volRightArrow.on('pointerdown', () => this.adjustVolume(VOLUME_STEP));
+
+    const volTrackHit = this.add.rectangle(centerX, volTrackY, volTrackW, 30 * PX, 0x000000, 0);
+    volTrackHit.setInteractive({ useHandCursor: true });
+    volTrackHit.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const pct = Phaser.Math.Clamp((pointer.x - volTrackX) / volTrackW, 0, 1);
+      const raw = VOLUME_MIN + pct * (VOLUME_MAX - VOLUME_MIN);
+      this.setVolume(Math.round(raw / VOLUME_STEP) * VOLUME_STEP);
+    });
+
     // Back button
-    const backY = trackY + 70 * PX;
+    const backY = volTrackY + 70 * PX;
     const backButton = this.add.text(centerX, backY, 'BACK', {
       fontSize: `${28 * PX}px`,
       color: '#ffffff',
@@ -315,6 +395,51 @@ export default class SettingsScene extends Phaser.Scene {
     saveGamepadDeadzone(this.deadzoneValue);
     this.deadzoneValueText.setText(this.formatDeadzone());
     this.drawDeadzoneTrack();
+  }
+
+  private formatVolume(): string {
+    return `${this.volumeValue}/${VOLUME_MAX}`;
+  }
+
+  private drawVolumeTrack() {
+    const gfx = this.volumeTrackGfx;
+    const x = this.volumeTrackX;
+    const y = this.volumeTrackY;
+    const w = this.volumeTrackW;
+    const h = 8 * PX;
+    const r = 4 * PX;
+
+    gfx.clear();
+
+    // Track background
+    gfx.fillStyle(0xffffff, 0.1);
+    gfx.fillRoundedRect(x, y - h / 2, w, h, r);
+
+    // Fill up to current value
+    const pct = (this.volumeValue - VOLUME_MIN) / (VOLUME_MAX - VOLUME_MIN);
+    const fillW = Math.max(h, pct * w);
+    gfx.fillStyle(COLORS.player, 0.6);
+    gfx.fillRoundedRect(x, y - h / 2, fillW, h, r);
+
+    // Thumb
+    const thumbX = x + pct * w;
+    gfx.fillStyle(0xffffff, 1);
+    gfx.fillCircle(thumbX, y, 10 * PX);
+  }
+
+  private adjustVolume(delta: number) {
+    this.setVolume(this.volumeValue + delta);
+  }
+
+  private setVolume(value: number) {
+    this.volumeValue = Phaser.Math.Clamp(
+      Math.round(value / VOLUME_STEP) * VOLUME_STEP,
+      VOLUME_MIN,
+      VOLUME_MAX
+    );
+    saveVolume(this.volumeValue);
+    this.volumeValueText.setText(this.formatVolume());
+    this.drawVolumeTrack();
   }
 
   private selectDifficulty(diff: Difficulty) {
