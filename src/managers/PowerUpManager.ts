@@ -38,11 +38,11 @@ export const RARITY_COLORS: Record<PowerUpRarity, number> = {
 };
 
 const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
-  [PowerUpRarity.COMMON]: 100,
-  [PowerUpRarity.UNCOMMON]: 50,
-  [PowerUpRarity.RARE]: 20,
-  [PowerUpRarity.EPIC]: 7,
-  [PowerUpRarity.LEGENDARY]: 2,
+  [PowerUpRarity.COMMON]: 90,
+  [PowerUpRarity.UNCOMMON]: 60,
+  [PowerUpRarity.RARE]: 30,
+  [PowerUpRarity.EPIC]: 15,
+  [PowerUpRarity.LEGENDARY]: 5,
 };
 
 const STACK_DECAY = 0.9;
