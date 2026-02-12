@@ -1164,6 +1164,14 @@ export default class GameScene extends Phaser.Scene {
       const completedLevel = this.levelManager.getCurrentLevel();
       this.levelManager.completeLevel();
 
+      // Clean up bullets
+      for (const bullet of this.bullets) bullet.destroy();
+      this.bullets = [];
+      for (const flare of this.orbitalFlares) flare.destroy();
+      this.orbitalFlares = [];
+      for (const bullet of this.orbitalBullets) bullet.destroy();
+      this.orbitalBullets = [];
+
       // Stop laser beam if active
       if (this.laserBeamTimer > 0) {
         this.laserBeamTimer = 0;
