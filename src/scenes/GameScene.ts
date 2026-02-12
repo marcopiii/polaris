@@ -510,7 +510,6 @@ export default class GameScene extends Phaser.Scene {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         this.scoreManager.addKill(enemy.tier);
-        this.applyVisionRecovery();
         enemy.destroy();
       }
     }
@@ -677,7 +676,6 @@ export default class GameScene extends Phaser.Scene {
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
         this.processChainLightning(bounds.x, bounds.y);
         this.scoreManager.addKill(enemy.tier);
-        this.applyVisionRecovery();
         this.audioManager.playSound('hit');
         enemy.destroy();
         this.enemies.splice(i, 1);
@@ -1304,7 +1302,6 @@ export default class GameScene extends Phaser.Scene {
       currentY = targetBounds.y;
       closestEnemy.destroy();
       this.scoreManager.addKill(closestEnemy.tier);
-      this.applyVisionRecovery();
 
       chainsRemaining--;
     }
@@ -1369,7 +1366,6 @@ export default class GameScene extends Phaser.Scene {
           enemy.destroy();
           this.enemies.splice(j, 1);
           this.scoreManager.addKill(enemy.tier);
-          this.applyVisionRecovery();
           this.audioManager.playSound('hit');
 
           const arc = shield.getArcInfo();
