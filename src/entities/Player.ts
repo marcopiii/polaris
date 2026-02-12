@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import {
   PLAYER_SIZE,
-  FIRE_COOLDOWN,
   COLORS,
   PLAYFIELD_RADIUS,
   LASER_ANGULAR_ACCEL,
@@ -64,7 +63,7 @@ export default class Player {
   update(
     _time: number,
     delta: number,
-    fireCooldown: number = FIRE_COOLDOWN,
+    fireCooldown: number = 500,
     aimTarget?: { x: number; y: number },
     maxAngularSpeed?: number
   ): { shouldShoot: boolean; targetX: number; targetY: number } {

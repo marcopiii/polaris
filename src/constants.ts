@@ -21,11 +21,10 @@ export const GAME_HEIGHT = Math.ceil(2048 * PX);
 
 // Player
 export const PLAYER_SIZE = 10 * PX;
-export const FIRE_COOLDOWN = 500; // milliseconds
 
 // Enemy
 export const ENEMY_SIZE = 16 * PX;
-export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
+export const ENEMY_SPEED = 0.09; // 9% of playfield radius per second
 
 // Enemy Health System
 export enum HealthModel {
