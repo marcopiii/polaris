@@ -38,11 +38,11 @@ export const RARITY_COLORS: Record<PowerUpRarity, number> = {
 };
 
 const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
-  [PowerUpRarity.COMMON]: 100,
-  [PowerUpRarity.UNCOMMON]: 50,
-  [PowerUpRarity.RARE]: 20,
-  [PowerUpRarity.EPIC]: 7,
-  [PowerUpRarity.LEGENDARY]: 2,
+  [PowerUpRarity.COMMON]: 90,
+  [PowerUpRarity.UNCOMMON]: 60,
+  [PowerUpRarity.RARE]: 30,
+  [PowerUpRarity.EPIC]: 15,
+  [PowerUpRarity.LEGENDARY]: 5,
 };
 
 const STACK_DECAY = 0.9;
@@ -86,14 +86,14 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.MULTI_SHOT,
     name: 'Multi-Shot',
     description: 'Fire additional bullets',
-    rarity: PowerUpRarity.UNCOMMON,
+    rarity: PowerUpRarity.COMMON,
     consumable: false,
   },
   {
     type: PowerUpType.ENEMY_SLOWDOWN,
     name: 'Gravity Well',
     description: 'Enemies move 15% slower',
-    rarity: PowerUpRarity.UNCOMMON,
+    rarity: PowerUpRarity.COMMON,
     consumable: false,
   },
   {
@@ -107,7 +107,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.ORBITAL_SHIELD,
     name: 'Orbital Shield',
     description: 'Orbiting shield destroys enemies',
-    rarity: PowerUpRarity.RARE,
+    rarity: PowerUpRarity.EPIC,
     consumable: false,
   },
   {
@@ -128,21 +128,21 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.TAIL_GUN,
     name: 'Tail Gun',
     description: 'Fire bullets behind you too',
-    rarity: PowerUpRarity.RARE,
+    rarity: PowerUpRarity.UNCOMMON,
     consumable: false,
   },
   {
     type: PowerUpType.VISION_RECOVERY,
     name: 'Photon Harvest',
     description: 'Recover 1% vision per enemy killed',
-    rarity: PowerUpRarity.UNCOMMON,
+    rarity: PowerUpRarity.RARE,
     consumable: false,
   },
   {
     type: PowerUpType.SHOCKWAVE,
     name: 'Shockwave',
     description: 'Destroy all enemies at once',
-    rarity: PowerUpRarity.UNCOMMON,
+    rarity: PowerUpRarity.LEGENDARY,
     consumable: true,
   },
   {
@@ -163,7 +163,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.SWEEPSHOT,
     name: 'Sweepshot',
     description: 'Arc wall sweeps outward, killing enemies',
-    rarity: PowerUpRarity.RARE,
+    rarity: PowerUpRarity.COMMON,
     consumable: true,
   },
   {
