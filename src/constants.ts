@@ -102,6 +102,22 @@ export const LASER_BEAM_HALF_ANGLE = (3 * Math.PI) / 180; // 3 degrees each side
 export const LASER_MAX_ANGULAR_SPEED = Math.PI; // radians per second (180°/s)
 export const LASER_ANGULAR_ACCEL = Math.PI * 4; // radians/s² (~0.25s to reach max speed)
 
+// Sweepshot
+export const SWEEPSHOT_SPEED = 0.75; // radii per second (center → edge)
+export const SWEEPSHOT_ARC_ANGLE = (45 * Math.PI) / 180; // 45 degrees wide
+export const SWEEPSHOT_THICKNESS_INNER = 6 * PX;
+export const SWEEPSHOT_THICKNESS_MID = 8 * PX;
+export const SWEEPSHOT_THICKNESS_OUTER = 12 * PX;
+export const SWEEPSHOT_LAYER_GAP = 18 * PX; // distance between concentric arcs
+
+// Orbital Flare
+export const ORBITAL_FLARE_SPEED = 0.5; // radii per second (center → edge)
+export const ORBITAL_FLARE_SPAWN_INTERVAL = 0.05; // radii between bullet spawns
+export const ORBITAL_BULLET_LINEAR_SPEED = 0.6; // radii/s (angular speed = linear / radius)
+export const ORBITAL_BULLET_SIZE = 8 * PX; // visual/collision radius
+export const ORBITAL_FLARE_WIDTH = 20 * PX;
+export const ORBITAL_FLARE_HEIGHT = 12 * PX;
+
 // Orbital Shield
 export const SHIELD_ORBIT_OFFSET = 60 * PX; // pixels outside the terminal radius
 export const SHIELD_MAX_SLOTS = 8; // max shields around the player

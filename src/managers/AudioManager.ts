@@ -44,6 +44,9 @@ export default class AudioManager {
         case 'shieldDestroy':
           this.audioGenerator.playShieldDestroy();
           break;
+        case 'orbitalPip':
+          this.audioGenerator.playOrbitalPip();
+          break;
       }
     } catch (error) {
       console.warn('Audio playback failed:', error);
