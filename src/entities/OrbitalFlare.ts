@@ -98,15 +98,15 @@ export default class OrbitalFlare {
     this.graphics.rotateCanvas(this.angle);
 
     // Outer glow
-    this.graphics.fillStyle(0xff8844, 0.2);
+    this.graphics.fillStyle(0xffffff, 0.2);
     this.graphics.fillEllipse(0, 0, ORBITAL_FLARE_WIDTH + 4 * PX, ORBITAL_FLARE_HEIGHT + 4 * PX);
 
     // Mid glow
-    this.graphics.fillStyle(0xff8844, 0.5);
+    this.graphics.fillStyle(0xffffff, 0.5);
     this.graphics.fillEllipse(0, 0, ORBITAL_FLARE_WIDTH + 2 * PX, ORBITAL_FLARE_HEIGHT + 2 * PX);
 
     // Core
-    this.graphics.fillStyle(0xff8844, 1);
+    this.graphics.fillStyle(0xffffff, 1);
     this.graphics.fillEllipse(0, 0, ORBITAL_FLARE_WIDTH, ORBITAL_FLARE_HEIGHT);
 
     this.graphics.restore();

@@ -285,6 +285,26 @@ export class AudioGenerator {
     osc.stop(t + duration);
   }
 
+  playOrbitalPip() {
+    const duration = 0.06;
+    const t = this.audioContext.currentTime;
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(900, t + duration);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+
+    osc.start(t);
+    osc.stop(t + duration);
+  }
+
   private createNoiseBuffer(duration: number): AudioBuffer {
     const bufferSize = this.audioContext.sampleRate * duration;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);

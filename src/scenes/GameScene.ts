@@ -643,6 +643,9 @@ export default class GameScene extends Phaser.Scene {
     for (let i = this.orbitalFlares.length - 1; i >= 0; i--) {
       const flare = this.orbitalFlares[i];
       const spawned = flare.update(delta);
+      if (spawned.length > 0) {
+        this.audioManager.playSound('orbitalPip');
+      }
       for (const bullet of spawned) {
         this.orbitalBullets.push(bullet);
       }
