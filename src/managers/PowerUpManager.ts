@@ -16,6 +16,7 @@ export enum PowerUpType {
   SHOCKWAVE = 'SHOCKWAVE',
   NOVA_BURST = 'NOVA_BURST',
   LASER_BEAM = 'LASER_BEAM',
+  SWEEPSHOT = 'SWEEPSHOT',
 }
 
 export enum PowerUpRarity {
@@ -60,6 +61,7 @@ const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.SHOCKWAVE,
   PowerUpType.NOVA_BURST,
   PowerUpType.LASER_BEAM,
+  PowerUpType.SWEEPSHOT,
 ]);
 
 const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
@@ -144,6 +146,13 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.LASER_BEAM,
     name: 'Laser Beam',
     description: 'Wide laser beam for 3 seconds',
+    rarity: PowerUpRarity.RARE,
+    consumable: true,
+  },
+  {
+    type: PowerUpType.SWEEPSHOT,
+    name: 'Sweepshot',
+    description: 'Arc wall sweeps outward, killing enemies',
     rarity: PowerUpRarity.RARE,
     consumable: true,
   },

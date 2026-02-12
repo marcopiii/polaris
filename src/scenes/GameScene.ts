@@ -26,6 +26,7 @@ import Player from '../entities/Player';
 import Enemy from '../entities/Enemy';
 import Bullet from '../entities/Bullet';
 import OrbitalShield from '../entities/OrbitalShield';
+import SweepShot from '../entities/SweepShot';
 import ScoreManager from '../managers/ScoreManager';
 import LevelManager from '../managers/LevelManager';
 import AudioManager from '../managers/AudioManager';
@@ -54,6 +55,7 @@ export default class GameScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private bullets: Bullet[] = [];
   private shields: OrbitalShield[] = [];
+  private sweepShots: SweepShot[] = [];
   private shieldRotation: number = 0;
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
@@ -140,6 +142,7 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.bullets = [];
     this.shields = [];
+    this.sweepShots = [];
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
@@ -494,6 +497,9 @@ export default class GameScene extends Phaser.Scene {
       case PowerUpType.LASER_BEAM:
         this.activateLaserBeam();
         break;
+      case PowerUpType.SWEEPSHOT:
+        this.activateSweepShot();
+        break;
     }
   }
 
@@ -563,6 +569,47 @@ export default class GameScene extends Phaser.Scene {
         this.laserScaleUpDone = true;
       },
     });
+  }
+
+  private activateSweepShot() {
+    const aimAngle = this.player.getRotation();
+    const sweep = new SweepShot(this, this.centerX, this.centerY, aimAngle);
+    this.sweepShots.push(sweep);
+
+    this.cameras.main.shake(100, 0.006);
+    this.gamepadManager.vibrate(100, 0.2, 0.6);
+    this.audioManager.playSound('shoot');
+  }
+
+  private updateSweepShots(delta: number) {
+    for (let i = this.sweepShots.length - 1; i >= 0; i--) {
+      const sweep = this.sweepShots[i];
+      sweep.update(delta);
+      if (!sweep.active) {
+        this.sweepShots.splice(i, 1);
+      }
+    }
+  }
+
+  private checkSweepShotCollisions() {
+    for (const sweep of this.sweepShots) {
+      if (!sweep.active) continue;
+
+      for (let j = this.enemies.length - 1; j >= 0; j--) {
+        const enemy = this.enemies[j];
+        if (!enemy.active) continue;
+
+        const enemyBounds = enemy.getBounds();
+
+        if (sweep.checkCollision(enemyBounds.x, enemyBounds.y, enemyBounds.radius)) {
+          ParticleEffects.createEnemyDeathParticles(this, enemyBounds.x, enemyBounds.y);
+          this.scoreManager.addKill(enemy.tier);
+          this.audioManager.playSound('hit');
+          enemy.destroy();
+          this.enemies.splice(j, 1);
+        }
+      }
+    }
   }
 
   private updateLaserBeam(delta: number) {
@@ -989,11 +1036,17 @@ export default class GameScene extends Phaser.Scene {
     // Update orbital shields
     this.updateShields(delta);
 
+    // Update sweep shots
+    this.updateSweepShots(delta);
+
     // Check collisions
     this.checkCollisions();
 
     // Check shield-enemy collisions
     this.checkShieldCollisions();
+
+    // Check sweep shot-enemy collisions
+    this.checkSweepShotCollisions();
 
     // Check level completion
     if (this.levelManager.isLevelComplete(this.enemies.length)) {
@@ -1637,6 +1690,11 @@ export default class GameScene extends Phaser.Scene {
       shield.destroy();
     }
     this.shields = [];
+
+    for (const sweep of this.sweepShots) {
+      sweep.destroy();
+    }
+    this.sweepShots = [];
 
     if (this.laserBeamTimer > 0) {
       this.laserBeamTimer = 0;
@@ -2392,6 +2450,12 @@ export default class GameScene extends Phaser.Scene {
     }
     this.shields = [];
     this.shieldRotation = 0;
+
+    // Clean up sweep shots
+    for (const sweep of this.sweepShots) {
+      sweep.destroy();
+    }
+    this.sweepShots = [];
 
     // Clean up laser beam
     this.laserBeamTimer = 0;
