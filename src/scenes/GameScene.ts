@@ -1407,7 +1407,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private applyVisionRecovery() {
-    const recovery = this.powerUpManager.getVisionSiphonRecovery();
+    const recovery = this.powerUpManager.getVisionRecovery();
     if (recovery > 0 && this.visionRadius < PLAYFIELD_RADIUS) {
       this.visionRadius = Math.min(PLAYFIELD_RADIUS, this.visionRadius + recovery);
       this.drawPlayfield();

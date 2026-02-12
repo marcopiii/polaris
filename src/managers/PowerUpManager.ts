@@ -12,7 +12,7 @@ export enum PowerUpType {
   CHAIN_LIGHTNING = 'CHAIN_LIGHTNING',
   PUSHBACK = 'PUSHBACK',
   TAIL_GUN = 'TAIL_GUN',
-  VISION_SIPHON = 'VISION_SIPHON',
+  VISION_RECOVERY = 'VISION_RECOVERY',
   // Consumables (one-use, activated during gameplay)
   SHOCKWAVE = 'SHOCKWAVE',
   NOVA_BURST = 'NOVA_BURST',
@@ -128,8 +128,8 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     consumable: false,
   },
   {
-    type: PowerUpType.VISION_SIPHON,
-    name: 'Vision Siphon',
+    type: PowerUpType.VISION_RECOVERY,
+    name: 'Photon Harvest',
     description: 'Recover 1% vision per enemy killed',
     rarity: PowerUpRarity.UNCOMMON,
     consumable: false,
@@ -320,8 +320,8 @@ export default class PowerUpManager {
   }
 
   /** Vision recovery per kill: 1% of playfield radius per stack (0 if no stacks) */
-  getVisionSiphonRecovery(): number {
-    const stacks = this.getStacks(PowerUpType.VISION_SIPHON);
+  getVisionRecovery(): number {
+    const stacks = this.getStacks(PowerUpType.VISION_RECOVERY);
     return stacks > 0 ? 0.01 * PLAYFIELD_RADIUS * stacks : 0;
   }
 
