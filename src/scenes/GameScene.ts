@@ -1401,6 +1401,7 @@ export default class GameScene extends Phaser.Scene {
           if (killed) {
             this.enemies.splice(j, 1);
             this.scoreManager.addKill(enemy.tier);
+            this.applyVisionRecovery();
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
           } else {
             const pushbackDist = this.powerUpManager.getPushbackDistance();
@@ -1578,6 +1579,14 @@ export default class GameScene extends Phaser.Scene {
 
     // Remove destroyed shields
     this.shields = this.shields.filter((s) => s.active);
+  }
+
+  private applyVisionRecovery() {
+    const recovery = this.powerUpManager.getVisionRecovery();
+    if (recovery > 0 && this.visionRadius < PLAYFIELD_RADIUS) {
+      this.visionRadius = Math.min(PLAYFIELD_RADIUS, this.visionRadius + recovery);
+      this.drawPlayfield();
+    }
   }
 
   private onEnemyReachedPlayer(enemy: Enemy) {
