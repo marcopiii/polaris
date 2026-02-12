@@ -828,7 +828,7 @@ export default class GameScene extends Phaser.Scene {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
-        this.processChainLightning(bounds.x, bounds.y);
+        this.processChainLightning(bounds.x, bounds.y, enemy);
         this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
@@ -1415,7 +1415,7 @@ export default class GameScene extends Phaser.Scene {
           ParticleEffects.createBulletHitParticles(this, hitX, hitY);
 
           // Chain lightning
-          this.processChainLightning(hitX, hitY);
+          this.processChainLightning(hitX, hitY, enemy);
 
           if (isFirstHit) {
             this.scoreManager.incrementHitStreak();
@@ -1427,7 +1427,7 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private processChainLightning(originX: number, originY: number) {
+  private processChainLightning(originX: number, originY: number, sourceEnemy?: Enemy) {
     const chainCount = this.powerUpManager.getChainCount();
     if (chainCount <= 0) return;
 
@@ -1436,6 +1436,7 @@ export default class GameScene extends Phaser.Scene {
     let currentX = originX;
     let currentY = originY;
     const hitSet = new Set<Enemy>();
+    if (sourceEnemy) hitSet.add(sourceEnemy);
     let playedSound = false;
 
     while (chainsRemaining > 0) {
