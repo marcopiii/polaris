@@ -69,6 +69,13 @@ export default class GamepadManager {
     return this.isButtonJustPressed(1);
   }
 
+  /** Returns true if RB (button 5) is currently held. */
+  isRBPressed(): boolean {
+    const pad = this.getPad();
+    if (!pad) return false;
+    return pad.buttons[5]?.pressed ?? false;
+  }
+
   /** Returns true if Start (button 9) was just pressed. */
   isStartJustPressed(): boolean {
     return this.isButtonJustPressed(9);
