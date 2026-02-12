@@ -828,7 +828,6 @@ export default class GameScene extends Phaser.Scene {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
-        this.processChainLightning(bounds.x, bounds.y, enemy);
         this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
@@ -1554,9 +1553,6 @@ export default class GameScene extends Phaser.Scene {
             arc.radius
           );
           ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
-
-          // Chain lightning from shield kills too
-          this.processChainLightning(hitX, hitY);
 
           // Shield takes damage
           if (shield.onHit()) {
