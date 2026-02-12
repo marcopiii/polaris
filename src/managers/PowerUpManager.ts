@@ -22,6 +22,7 @@ export enum PowerUpRarity {
   COMMON = 'COMMON',
   UNCOMMON = 'UNCOMMON',
   RARE = 'RARE',
+  EPIC = 'EPIC',
   LEGENDARY = 'LEGENDARY',
 }
 
@@ -29,15 +30,26 @@ export const RARITY_COLORS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.COMMON]: 0xaaaaaa,
   [PowerUpRarity.UNCOMMON]: 0x4488ff,
   [PowerUpRarity.RARE]: 0xaa44ff,
+  [PowerUpRarity.EPIC]: 0xff4488,
   [PowerUpRarity.LEGENDARY]: 0xffaa00,
 };
+
+const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
+  [PowerUpRarity.COMMON]: 100,
+  [PowerUpRarity.UNCOMMON]: 50,
+  [PowerUpRarity.RARE]: 20,
+  [PowerUpRarity.EPIC]: 7,
+  [PowerUpRarity.LEGENDARY]: 2,
+};
+
+const STACK_DECAY = 0.9;
+const STACK_CAP = 5;
 
 export interface PowerUpDefinition {
   type: PowerUpType;
   name: string;
   description: string;
   rarity: PowerUpRarity;
-  weight: number;
   consumable: boolean;
 }
 
@@ -56,7 +68,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Rapid Fire',
     description: 'Increase fire rate',
     rarity: PowerUpRarity.COMMON,
-    weight: 30,
     consumable: false,
   },
   {
@@ -64,7 +75,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Reinforced Vision',
     description: 'Reduce vision loss per hit',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 20,
     consumable: false,
   },
   {
@@ -72,7 +82,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Multi-Shot',
     description: 'Fire additional bullets',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 18,
     consumable: false,
   },
   {
@@ -80,7 +89,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Gravity Well',
     description: 'Enemies move 15% slower',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 18,
     consumable: false,
   },
   {
@@ -88,7 +96,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Piercing Rounds',
     description: 'Bullets pierce through enemies',
     rarity: PowerUpRarity.RARE,
-    weight: 10,
     consumable: false,
   },
   {
@@ -96,7 +103,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Orbital Shield',
     description: 'Orbiting shield destroys enemies',
     rarity: PowerUpRarity.RARE,
-    weight: 8,
     consumable: false,
   },
   {
@@ -104,7 +110,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Chain Lightning',
     description: 'Kills chain to nearby enemies',
     rarity: PowerUpRarity.LEGENDARY,
-    weight: 5,
     consumable: false,
   },
   {
@@ -112,7 +117,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Pushback',
     description: 'Enemies are knocked back on hit',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 18,
     consumable: false,
   },
   {
@@ -120,7 +124,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Tail Gun',
     description: 'Fire bullets behind you too',
     rarity: PowerUpRarity.RARE,
-    weight: 10,
     consumable: false,
   },
   {
@@ -128,7 +131,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Shockwave',
     description: 'Destroy all enemies at once',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 12,
     consumable: true,
   },
   {
@@ -136,7 +138,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Nova Burst',
     description: 'Fire 360 bullets in all directions',
     rarity: PowerUpRarity.UNCOMMON,
-    weight: 12,
     consumable: true,
   },
   {
@@ -144,7 +145,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     name: 'Laser Beam',
     description: 'Wide laser beam for 3 seconds',
     rarity: PowerUpRarity.RARE,
-    weight: 8,
     consumable: true,
   },
 ];
@@ -316,15 +316,23 @@ export default class PowerUpManager {
     return 150;
   }
 
-  /** Return 3 weighted-random power-ups (no duplicates) */
+  /** Effective weight: baseWeight × STACK_DECAY^stacks (capped at STACK_CAP) */
+  private getEffectiveWeight(def: PowerUpDefinition): number {
+    const base = RARITY_WEIGHTS[def.rarity];
+    const stacks = Math.min(this.getStacks(def.type), STACK_CAP);
+    return base * Math.pow(STACK_DECAY, stacks);
+  }
+
+  /** Return 3 weighted-random power-ups (no duplicates, rarity-weighted with stack decay) */
   getRandomSelection(): PowerUpDefinition[] {
-    let pool = [...POWER_UP_DEFINITIONS];
+    let defs = [...POWER_UP_DEFINITIONS];
 
     // If consumable inventory is full, exclude consumables from pool
     if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) {
-      pool = pool.filter((p) => !p.consumable);
+      defs = defs.filter((p) => !p.consumable);
     }
 
+    const pool = defs.map((def) => ({ def, weight: this.getEffectiveWeight(def) }));
     const selected: PowerUpDefinition[] = [];
 
     for (let i = 0; i < 3 && pool.length > 0; i++) {
@@ -334,7 +342,7 @@ export default class PowerUpManager {
       for (let j = 0; j < pool.length; j++) {
         roll -= pool[j].weight;
         if (roll <= 0) {
-          selected.push(pool[j]);
+          selected.push(pool[j].def);
           pool.splice(j, 1);
           break;
         }
