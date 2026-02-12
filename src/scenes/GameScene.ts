@@ -1480,9 +1480,6 @@ export default class GameScene extends Phaser.Scene {
 
       chainsRemaining--;
     }
-
-    // Clean up destroyed enemies
-    this.enemies = this.enemies.filter((e) => e.active);
   }
 
   private getSlotAngle(slot: number): number {
