@@ -1,11 +1,34 @@
+import { VOLUME_STORAGE_KEY, VOLUME_DEFAULT, VOLUME_MIN, VOLUME_MAX } from '../constants';
+
+export function loadVolume(): number {
+  const stored = localStorage.getItem(VOLUME_STORAGE_KEY);
+  if (stored !== null) {
+    const parsed = parseFloat(stored);
+    if (!isNaN(parsed)) return Math.max(VOLUME_MIN, Math.min(VOLUME_MAX, parsed));
+  }
+  return VOLUME_DEFAULT;
+}
+
+export function saveVolume(value: number): void {
+  localStorage.setItem(VOLUME_STORAGE_KEY, String(value));
+}
+
 export class AudioGenerator {
   private audioContext: AudioContext;
+  private masterGain: GainNode;
 
   constructor() {
     const AudioContextClass =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.audioContext = new AudioContextClass();
+    this.masterGain = this.audioContext.createGain();
+    this.masterGain.connect(this.audioContext.destination);
+    this.masterGain.gain.value = loadVolume() / VOLUME_MAX;
+  }
+
+  setVolume(value: number) {
+    this.masterGain.gain.value = value / VOLUME_MAX;
   }
 
   playShoot() {
@@ -14,7 +37,7 @@ export class AudioGenerator {
     const gainNode = this.audioContext.createGain();
 
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(
@@ -41,7 +64,7 @@ export class AudioGenerator {
 
     oscillator.connect(gainNode);
     noiseSource.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + duration);
@@ -62,7 +85,7 @@ export class AudioGenerator {
 
     oscillator.type = 'sawtooth';
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(
@@ -84,7 +107,7 @@ export class AudioGenerator {
 
     oscillator.type = 'sine';
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(100, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(
@@ -111,7 +134,7 @@ export class AudioGenerator {
 
     oscillator.type = 'sine';
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     // Descending tone — inverse of terminalGrow
     oscillator.frequency.setValueAtTime(300, t);
@@ -131,7 +154,7 @@ export class AudioGenerator {
 
     oscillator.type = 'sine';
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(55, this.audioContext.currentTime + duration);
@@ -154,7 +177,7 @@ export class AudioGenerator {
 
     oscillator.connect(gainNode);
     noiseSource.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     oscillator.frequency.setValueAtTime(2000, this.audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(
@@ -195,7 +218,7 @@ export class AudioGenerator {
     lfoGain.connect(oscillator.frequency);
 
     oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    gainNode.connect(this.masterGain);
 
     // Fade in, sustain, fade out
     gainNode.gain.setValueAtTime(0.01, this.audioContext.currentTime);
@@ -244,7 +267,7 @@ export class AudioGenerator {
 
     osc.type = 'triangle';
     osc.connect(gain);
-    gain.connect(this.audioContext.destination);
+    gain.connect(this.masterGain);
 
     osc.frequency.setValueAtTime(1200, t);
     osc.frequency.exponentialRampToValueAtTime(600, t + duration);
@@ -265,7 +288,7 @@ export class AudioGenerator {
     noiseSource.buffer = this.createNoiseBuffer(duration);
     const noiseGain = this.audioContext.createGain();
     noiseSource.connect(noiseGain);
-    noiseGain.connect(this.audioContext.destination);
+    noiseGain.connect(this.masterGain);
     noiseGain.gain.setValueAtTime(0.3, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.01, t + duration);
 
@@ -273,7 +296,7 @@ export class AudioGenerator {
     const oscGain = this.audioContext.createGain();
     osc.type = 'square';
     osc.connect(oscGain);
-    oscGain.connect(this.audioContext.destination);
+    oscGain.connect(this.masterGain);
     osc.frequency.setValueAtTime(800, t);
     osc.frequency.exponentialRampToValueAtTime(100, t + duration);
     oscGain.gain.setValueAtTime(0.2, t);
@@ -293,7 +316,7 @@ export class AudioGenerator {
 
     osc.type = 'sine';
     osc.connect(gain);
-    gain.connect(this.audioContext.destination);
+    gain.connect(this.masterGain);
 
     osc.frequency.setValueAtTime(1400, t);
     osc.frequency.exponentialRampToValueAtTime(900, t + duration);
