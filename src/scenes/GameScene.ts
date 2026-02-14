@@ -41,6 +41,7 @@ import PowerUpManager, {
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
 import GamepadManager from '../managers/GamepadManager';
+import { SpawnDistribution } from '../systems/SpawnDistribution';
 import { distance, distPointToSegment } from '../utils/MathUtils';
 import { ParticleEffects } from '../utils/ParticleEffects';
 import VisionBlurShader from '../shaders/VisionBlurShader';
@@ -63,6 +64,7 @@ export default class GameScene extends Phaser.Scene {
   private shieldRotation: number = 0;
   private scoreManager!: ScoreManager;
   private levelManager!: LevelManager;
+  private spawnDistribution!: SpawnDistribution;
   private audioManager!: AudioManager;
   private powerUpManager!: PowerUpManager;
   private gamepadManager!: GamepadManager;
@@ -178,6 +180,7 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
     this.gamepadManager = new GamepadManager();
+    this.spawnDistribution = new SpawnDistribution();
 
     // Set up blur effect
     this.setupBlurEffect();
@@ -1073,7 +1076,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.updateAimingDot();
 
-    // Update level manager and spawn enemies
+    // Update spawn distribution and level manager
+    this.spawnDistribution.update(delta / 1000);
     if (this.levelManager.update(delta)) {
       this.spawnEnemy();
     }
@@ -1328,9 +1332,9 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemy() {
-    const randomAngle = gameRandom() * Math.PI * 2;
+    const angle = this.spawnDistribution.sample();
     const health = this.rollEnemyHealth();
-    const enemy = new Enemy(this, randomAngle, this.centerX, this.centerY, health);
+    const enemy = new Enemy(this, angle, this.centerX, this.centerY, health);
     this.enemies.push(enemy);
   }
 
