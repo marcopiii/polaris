@@ -292,14 +292,14 @@ export default class PowerUpManager {
     return CONSUMABLE_TYPES.has(type);
   }
 
-  /** Fire cooldown: 1000 / (2 + stacks) — base 500ms (2/s), decreases with stacks */
+  /** Fire cooldown: 1000 / (3 + stacks) */
   getFireCooldown(): number {
-    return 1000 / (2 + this.getStacks(PowerUpType.RAPID_FIRE));
+    return 1000 / (3 + this.getStacks(PowerUpType.RAPID_FIRE));
   }
 
-  /** Vision radius decrease: PLAYFIELD_RADIUS / (5 + stacks) — base 180px */
+  /** Vision radius decrease: PLAYFIELD_RADIUS / (6 + stacks) — base 300px */
   getVisionRadiusDecrease(): number {
-    return PLAYFIELD_RADIUS / (5 + this.getStacks(PowerUpType.REINFORCED_VISION));
+    return PLAYFIELD_RADIUS / (6 + this.getStacks(PowerUpType.REINFORCED_VISION));
   }
 
   /** Bullet count: 1 + stacks */
