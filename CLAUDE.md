@@ -69,6 +69,8 @@ The main game logic lives in `GameScene`:
    - `ScoreManager`: Tracks cumulative score across levels
    - `AudioManager`: Wraps procedural audio generation (Web Audio API)
    - `LeaderboardManager`: localStorage persistence for top 10 scores
+   - `PowerUpManager`: Tracks power-up stacks and computes derived stats (fire cooldown, vision decrease, etc.)
+   - `GamepadManager`: Gamepad input with configurable deadzone
 
 3. **Entity Lifecycle**:
    - Entities are plain classes (not Phaser GameObjects), they manage their own `Graphics` objects
@@ -79,9 +81,9 @@ The main game logic lives in `GameScene`:
 
 Core gameplay mechanic with two concentric circles:
 
-- **Vision Radius**: Starts at 900px (full playfield). When an enemy crosses the terminal radius, vision decreases by 180px (blur expands)
-- **Terminal Radius**: Starts at 45px. When vision reaches 0, it resets to 900px and terminal grows by 45px
-- **Game Over**: When terminal radius >= playfield radius (900px)
+- **Vision Radius**: Starts at `PLAYFIELD_RADIUS` (1800px). When an enemy crosses the terminal radius, vision decreases by `PLAYFIELD_RADIUS / (6 + stacks)` (base 300px, improved by REINFORCED_VISION power-up)
+- **Terminal Radius**: Starts at `TERMINAL_RADIUS_INITIAL` (144px). When vision reaches 0, it resets and terminal grows by `TERMINAL_RADIUS_INCREASE` (varies per difficulty, normal = 90px)
+- **Game Over**: When terminal radius >= `PLAYFIELD_RADIUS` (1800px)
 
 The blur effect is implemented via **WebGL PostFX shader** (`VisionBlurShader.ts`):
 
@@ -92,17 +94,21 @@ The blur effect is implemented via **WebGL PostFX shader** (`VisionBlurShader.ts
 ### Scene Flow
 
 `BootScene` → `MainMenuScene` → `GameScene` ⟷ `GameOverScene`
+                  ↕                            ↕
+           `SettingsScene`              `LeaderboardScene`
 
 - Scenes communicate via `this.scene.start(sceneName, data)` for data passing
-- GameOverScene receives `{ score: number }` from GameScene
+- GameOverScene receives `{ score: number, level: number }` from GameScene
+- SettingsScene and LeaderboardScene return to MainMenuScene
 
 ## Key Constants
 
 All gameplay values are in `constants.ts`. When tweaking game feel:
 
-- `SPAWN_RATE_INITIAL` and `SPAWN_RATE_ACCELERATION`: Control difficulty curve
+- `SPAWN_RATE_INITIAL` and `SPAWN_RATE_ACCELERATION`: Control difficulty curve (per-difficulty `Record`)
 - `ENEMY_SPEED` and `BULLET_SPEED`: Expressed as fractions of playfield radius per second
-- `VISION_RADIUS_DECREASE` and `TERMINAL_RADIUS_INCREASE`: Control damage progression
+- `TERMINAL_RADIUS_INCREASE`: Controls damage progression (per-difficulty `Record`)
+- Vision radius decrease is computed dynamically by `PowerUpManager.getVisionRadiusDecrease()`
 
 ## WebGL Shader Gotchas
 
@@ -123,5 +129,5 @@ Uses procedural generation via Web Audio API (`AudioGenerator.ts`) - no audio fi
 
 - Entities use polar coordinates but store Cartesian `x, y` for rendering
 - All distances/radii should be relative to `PLAYFIELD_RADIUS` for scalability
-- The playfield is centered in a 2048×2048 game world that auto-scales to fit viewport
+- The playfield is centered in a 5120×4096 game world (`GAME_WIDTH`×`GAME_HEIGHT`) that auto-scales to fit viewport
 - TypeScript strict mode is enabled - all unused parameters must be prefixed with `_`
