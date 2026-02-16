@@ -86,7 +86,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.MULTI_SHOT,
     name: 'Multi-Shot',
     description: 'Fire additional bullets',
-    rarity: PowerUpRarity.COMMON,
+    rarity: PowerUpRarity.UNCOMMON,
     consumable: false,
   },
   {

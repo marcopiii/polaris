@@ -8,10 +8,6 @@ export function angleBetween(x1: number, y1: number, x2: number, y2: number): nu
   return Math.atan2(y2 - y1, x2 - x1);
 }
 
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
 /** Shortest distance from point (px, py) to line segment (ax, ay)-(bx, by) */
 export function distPointToSegment(
   px: number,

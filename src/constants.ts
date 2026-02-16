@@ -24,12 +24,11 @@ export const PLAYER_SIZE = 10 * PX;
 
 // Enemy
 export const ENEMY_SIZE = 16 * PX;
-export const ENEMY_SPEED = 0.09; // 9% of playfield radius per second
+export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
 
 // Enemy Health System
 export enum HealthModel {
   CIRCLE = 'CIRCLE', // health ∝ area: size = ENEMY_SIZE × √hits
-  SPHERE = 'SPHERE', // health ∝ volume: size = ENEMY_SIZE × ∛hits
 }
 export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
 
@@ -66,7 +65,7 @@ export const TERMINAL_RADIUS_INCREASE: Record<Difficulty, number> = {
 
 // Level system
 export const LEVEL_BASE_DURATION = 20; // seconds
-export const LEVEL_DURATION_INCREMENT = 5; // seconds
+export const LEVEL_DURATION_INCREMENT = 3; // seconds
 export const SPAWN_RATE_INITIAL: Record<Difficulty, number> = {
   easy: 0.35,
   normal: 0.5,
@@ -75,13 +74,13 @@ export const SPAWN_RATE_INITIAL: Record<Difficulty, number> = {
 };
 export const SPAWN_RATE_ACCELERATION: Record<Difficulty, number> = {
   easy: 0.03,
-  normal: 0.05,
+  normal: 0.06,
   hard: 0.08,
   madness: 0.12,
 };
 export const SPAWN_RATE_LEVEL_INCREMENT: Record<Difficulty, number> = {
   easy: 0.15,
-  normal: 0.2,
+  normal: 0.25,
   hard: 0.3,
   madness: 0.4,
 };

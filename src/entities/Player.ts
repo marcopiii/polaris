@@ -1,10 +1,5 @@
 import Phaser from 'phaser';
-import {
-  PLAYER_SIZE,
-  COLORS,
-  PLAYFIELD_RADIUS,
-  LASER_ANGULAR_ACCEL,
-} from '../constants';
+import { PLAYER_SIZE, COLORS, PLAYFIELD_RADIUS, LASER_ANGULAR_ACCEL } from '../constants';
 import { angleBetween } from '../utils/MathUtils';
 import GamepadManager from '../managers/GamepadManager';
 
