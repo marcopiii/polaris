@@ -1,4 +1,4 @@
-# Nox Polaris - Detailed Implementation Plan
+# Polaris - Detailed Implementation Plan
 
 ## 1. Project Setup & Configuration
 
@@ -241,7 +241,7 @@ COLORS = {
 
 ### 8.2 MainMenuScene
 **UI Elements:**
-- Game title: "NOX POLARIS"
+- Game title: "POLARIS"
 - Start button: "START GAME"
 - Simple centered layout
 - Dark pastel color scheme

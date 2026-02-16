@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Nox Polaris is a radial shoot 'em up game where the player is fixed at the center of a circular playfield, shooting enemies that approach from the edges. The game uses **polar coordinates** as its core coordinate system, with the player always at the origin (r=0).
+Polaris is a radial shoot 'em up game where the player is fixed at the center of a circular playfield, shooting enemies that approach from the edges. The game uses **polar coordinates** as its core coordinate system, with the player always at the origin (r=0).
 
 ## Commands
 

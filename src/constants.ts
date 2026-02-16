@@ -2,7 +2,7 @@
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'madness';
 export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard', 'madness'];
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
-export const DIFFICULTY_STORAGE_KEY = 'noxPolaris_difficulty';
+export const DIFFICULTY_STORAGE_KEY = 'polaris_difficulty';
 
 // ─── Fundamental Scale ──────────────────────────────────────────────────
 // PLAYFIELD_RADIUS is the single source of truth for sizing.
@@ -134,14 +134,14 @@ export const SHIELD_THICKNESS = 15 * PX; // arc thickness in pixels
 
 // Gamepad
 export const GAMEPAD_DEADZONE_DEFAULT = 0.3;
-export const GAMEPAD_DEADZONE_STORAGE_KEY = 'noxPolaris_gamepadDeadzone';
+export const GAMEPAD_DEADZONE_STORAGE_KEY = 'polaris_gamepadDeadzone';
 
 // Audio
 export const VOLUME_DEFAULT = 10;
 export const VOLUME_MIN = 0;
 export const VOLUME_MAX = 10;
 export const VOLUME_STEP = 1;
-export const VOLUME_STORAGE_KEY = 'noxPolaris_volume';
+export const VOLUME_STORAGE_KEY = 'polaris_volume';
 
 // HUD font sizes
 export const HUD_FONT_PRIMARY = 58 * PX;

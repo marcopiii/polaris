@@ -1,8 +1,8 @@
-# Nox Polaris
+# Polaris
 
 A minimalist radial shoot 'em up game built with Phaser 3 and TypeScript.
 
-![Nox Polaris](https://img.shields.io/badge/Phaser-3.90-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue) ![Vite](https://img.shields.io/badge/Vite-7.3-purple)
+![Polaris](https://img.shields.io/badge/Phaser-3.90-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue) ![Vite](https://img.shields.io/badge/Vite-7.3-purple)
 
 ## Game Concept
 

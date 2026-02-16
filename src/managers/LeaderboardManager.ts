@@ -1,6 +1,6 @@
 import type { LeaderboardEntry } from '../types';
 
-const LEADERBOARD_KEY = 'noxPolaris_leaderboard';
+const LEADERBOARD_KEY = 'polaris_leaderboard';
 const MAX_ENTRIES = 10;
 
 export default class LeaderboardManager {
