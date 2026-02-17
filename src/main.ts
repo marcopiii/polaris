@@ -6,6 +6,7 @@ import GameScene from './scenes/GameScene';
 import GameOverScene from './scenes/GameOverScene';
 import LeaderboardScene from './scenes/LeaderboardScene';
 import SettingsScene from './scenes/SettingsScene';
+import ControlsScene from './scenes/ControlsScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -13,7 +14,15 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: COLORS.background,
-  scene: [BootScene, MainMenuScene, GameScene, GameOverScene, LeaderboardScene, SettingsScene],
+  scene: [
+    BootScene,
+    MainMenuScene,
+    GameScene,
+    GameOverScene,
+    LeaderboardScene,
+    SettingsScene,
+    ControlsScene,
+  ],
   physics: {
     default: 'arcade',
     arcade: {
