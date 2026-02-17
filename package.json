@@ -1,6 +1,6 @@
 {
   "name": "polaris",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A radial shoot 'em up game built with Phaser and TypeScript",
   "type": "module",
   "scripts": {
