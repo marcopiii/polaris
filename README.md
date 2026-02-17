@@ -2,6 +2,8 @@
 
 A minimalist radial shoot 'em up built with Phaser 3 and TypeScript.
 
+![Gameplay](gameplay.gif)
+
 ## Game Concept
 
 You're the red dot at the center of a circle. Enemies spawn at the edge and move toward you. Aim and shoot to survive as long as you can.
