@@ -45,7 +45,7 @@ export default class ControlsScene extends Phaser.Scene {
     bg.strokeCircle(centerX, centerY, PLAYFIELD_RADIUS * 0.7);
 
     // Title
-    const title = this.add.text(centerX, centerY - 380 * PX, 'CONTROLS', {
+    const title = this.add.text(centerX, centerY - 440 * PX, 'CONTROLS', {
       fontSize: `${56 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
@@ -56,18 +56,18 @@ export default class ControlsScene extends Phaser.Scene {
     const line = this.add.graphics();
     line.lineStyle(2 * PX, COLORS.player, 0.6);
     line.beginPath();
-    line.moveTo(centerX - 200 * PX, centerY - 340 * PX);
-    line.lineTo(centerX + 200 * PX, centerY - 340 * PX);
+    line.moveTo(centerX - 200 * PX, centerY - 400 * PX);
+    line.lineTo(centerX + 200 * PX, centerY - 400 * PX);
     line.strokePath();
 
-    // Column positions
-    const tableWidth = 600 * PX;
-    const colAction = centerX - tableWidth / 2 + 20 * PX;
-    const colKeyboard = centerX + 20 * PX;
-    const colGamepad = centerX + tableWidth / 2 - 160 * PX;
+    // Column positions — 3 evenly spaced columns within the circle
+    const tableWidth = 700 * PX;
+    const colAction = centerX - tableWidth / 2 + 30 * PX;
+    const colKeyboard = centerX - 60 * PX;
+    const colGamepad = centerX + 200 * PX;
 
     // Gameplay section
-    let currentY = centerY - 280 * PX;
+    let currentY = centerY - 340 * PX;
     currentY = this.drawSection(
       'GAMEPLAY',
       GAMEPLAY_CONTROLS,
@@ -93,9 +93,9 @@ export default class ControlsScene extends Phaser.Scene {
     );
 
     // Back button
-    const backY = currentY + 30 * PX;
+    const backY = currentY + 50 * PX;
     const backButton = this.add.text(centerX, backY, 'BACK', {
-      fontSize: `${28 * PX}px`,
+      fontSize: `${32 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
       backgroundColor: '#444444',
@@ -129,16 +129,16 @@ export default class ControlsScene extends Phaser.Scene {
 
     // Section label
     const sectionLabel = this.add.text(centerX, y, sectionTitle, {
-      fontSize: `${22 * PX}px`,
+      fontSize: `${28 * PX}px`,
       color: '#888888',
       fontFamily: "'Rajdhani', sans-serif",
     });
     sectionLabel.setOrigin(0.5);
-    y += 40 * PX;
+    y += 55 * PX;
 
     // Column headers
     const headerStyle = {
-      fontSize: `${18 * PX}px`,
+      fontSize: `${22 * PX}px`,
       color: '#666666',
       fontFamily: "'Rajdhani', sans-serif",
     };
@@ -149,18 +149,18 @@ export default class ControlsScene extends Phaser.Scene {
     hKeyboard.setOrigin(0, 0.5);
     const hGamepad = this.add.text(colGamepad, y, 'GAMEPAD', headerStyle);
     hGamepad.setOrigin(0, 0.5);
-    y += 30 * PX;
+    y += 40 * PX;
 
     // Header separator line
     const headerLine = this.add.graphics();
     headerLine.lineStyle(1 * PX, 0xffffff, 0.1);
     headerLine.beginPath();
-    headerLine.moveTo(centerX - tableWidth / 2, y - 10 * PX);
-    headerLine.lineTo(centerX + tableWidth / 2, y - 10 * PX);
+    headerLine.moveTo(centerX - tableWidth / 2, y - 28 * PX);
+    headerLine.lineTo(centerX + tableWidth / 2, y - 28 * PX);
     headerLine.strokePath();
 
     // Rows
-    const rowHeight = 40 * PX;
+    const rowHeight = 56 * PX;
     const rowGfx = this.add.graphics();
 
     controls.forEach((entry, index) => {
@@ -174,14 +174,14 @@ export default class ControlsScene extends Phaser.Scene {
           rowY - rowHeight / 2 + 2 * PX,
           tableWidth,
           rowHeight - 4 * PX,
-          4 * PX
+          6 * PX
         );
       }
 
       // Action label
       this.add
         .text(colAction, rowY, entry.action, {
-          fontSize: `${22 * PX}px`,
+          fontSize: `${28 * PX}px`,
           color: '#ffffff',
           fontFamily: "'Rajdhani', sans-serif",
         })
@@ -190,7 +190,7 @@ export default class ControlsScene extends Phaser.Scene {
       // Keyboard binding
       this.add
         .text(colKeyboard, rowY, entry.keyboard, {
-          fontSize: `${22 * PX}px`,
+          fontSize: `${28 * PX}px`,
           color: '#aaaaaa',
           fontFamily: "'Rajdhani', sans-serif",
         })
@@ -199,7 +199,7 @@ export default class ControlsScene extends Phaser.Scene {
       // Gamepad binding
       this.add
         .text(colGamepad, rowY, entry.gamepad, {
-          fontSize: `${22 * PX}px`,
+          fontSize: `${28 * PX}px`,
           color: '#aaaaaa',
           fontFamily: "'Rajdhani', sans-serif",
         })
