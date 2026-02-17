@@ -19,6 +19,7 @@ export default class MainMenuScene extends Phaser.Scene {
   private logoDom!: Phaser.GameObjects.DOMElement;
   private buttonDom!: Phaser.GameObjects.DOMElement;
   private settingsDom!: Phaser.GameObjects.DOMElement;
+  private controlsDom!: Phaser.GameObjects.DOMElement;
   private leaderboardDom!: Phaser.GameObjects.DOMElement;
   private enemyCircle?: Phaser.GameObjects.Graphics;
   private enemyPos = { x: 0, y: 0 };
@@ -45,8 +46,9 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.createLogo(centerX, centerY);
     this.createStartButton(centerX, centerY + 280 * PX);
-    this.createSettingsButton(centerX, centerY + 400 * PX);
-    this.createLeaderboardButton(centerX, centerY + 520 * PX);
+    this.createControlsButton(centerX, centerY + 400 * PX);
+    this.createSettingsButton(centerX, centerY + 520 * PX);
+    this.createLeaderboardButton(centerX, centerY + 640 * PX);
   }
 
   private createLogo(x: number, y: number) {
@@ -93,6 +95,48 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.menuButtons.push(button);
     this.menuActions.push(() => this.playStartAnimation());
+  }
+
+  private createControlsButton(x: number, y: number) {
+    const button = document.createElement('button');
+    button.textContent = 'CONTROLS';
+    Object.assign(button.style, {
+      fontFamily: "'Rajdhani', sans-serif",
+      fontWeight: '300',
+      fontSize: '32px',
+      color: '#ffffff',
+      background: '#444444',
+      border: 'none',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
+      transition: 'none',
+    });
+
+    button.addEventListener('mouseenter', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#666666';
+      }
+    });
+    button.addEventListener('mouseleave', () => {
+      if (!this.isAnimating) {
+        button.style.background = '#444444';
+      }
+    });
+    button.addEventListener('click', () => {
+      if (!this.isAnimating) {
+        this.scene.start('ControlsScene');
+      }
+    });
+
+    this.controlsDom = this.add.dom(x, y, button);
+    this.controlsDom.setScale(PX * 1.4);
+
+    this.menuButtons.push(button);
+    this.menuActions.push(() => {
+      if (!this.isAnimating) this.scene.start('ControlsScene');
+    });
   }
 
   private createSettingsButton(x: number, y: number) {
@@ -234,7 +278,11 @@ export default class MainMenuScene extends Phaser.Scene {
     button.style.pointerEvents = 'none';
     button.style.visibility = 'hidden';
 
-    // Hide settings and leaderboard buttons during animation
+    // Hide controls, settings and leaderboard buttons during animation
+    const controlsButton = this.controlsDom.node as HTMLElement;
+    controlsButton.style.pointerEvents = 'none';
+    controlsButton.style.visibility = 'hidden';
+
     const settingsButton = this.settingsDom.node as HTMLElement;
     settingsButton.style.pointerEvents = 'none';
     settingsButton.style.visibility = 'hidden';
