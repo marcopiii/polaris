@@ -58,10 +58,11 @@ export interface PowerUpDefinition {
 
 const MAX_CONSUMABLE_INVENTORY = 16;
 
-export const CONSUMABLE_SLOTS: { primary: PowerUpType; secondary?: PowerUpType }[] = [
+export const CONSUMABLE_SLOTS: { primary?: PowerUpType; secondary?: PowerUpType }[] = [
   { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
   { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SHOCKWAVE },
   { primary: PowerUpType.ORBITAL_FLARE },
+  {},
 ];
 
 const CONSUMABLE_TYPES = new Set<PowerUpType>([

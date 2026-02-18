@@ -103,9 +103,11 @@ export default class GameScene extends Phaser.Scene {
   private laserBeamTimer: number = 0;
   private laserGraphics!: Phaser.GameObjects.Graphics;
   private laserSparks: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
+  private slotHudKeys: Phaser.GameObjects.Text[] = [];
   private slotHudPrimary: Phaser.GameObjects.Text[] = [];
   private slotHudSecondary: Phaser.GameObjects.Text[] = [];
   private modifierKey!: Phaser.Input.Keyboard.Key;
+  private modifierWasHeld: boolean = false;
 
   // Background dust particles
   private dustParticles: { r: number; theta: number }[] = [];
@@ -165,8 +167,10 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
+    this.slotHudKeys = [];
     this.slotHudPrimary = [];
     this.slotHudSecondary = [];
+    this.modifierWasHeld = false;
     this.shopUIElements = [];
     this.shopItemTexts = [];
     this.laserSparks = [];
@@ -302,19 +306,18 @@ export default class GameScene extends Phaser.Scene {
 
     this.modifierKey = keyboard.addKey('C');
 
-    keyboard.on('keydown-Q', () => {
-      const slot = CONSUMABLE_SLOTS[0];
-      const type = this.modifierKey.isDown && slot.secondary ? slot.secondary : slot.primary;
-      this.activateConsumable(type);
-    });
-    keyboard.on('keydown-W', () => {
-      const slot = CONSUMABLE_SLOTS[1];
-      const type = this.modifierKey.isDown && slot.secondary ? slot.secondary : slot.primary;
-      this.activateConsumable(type);
-    });
-    keyboard.on('keydown-E', () => {
-      this.activateConsumable(CONSUMABLE_SLOTS[2].primary);
-    });
+    const bindSlot = (event: string, slotIndex: number) => {
+      keyboard.on(event, () => {
+        const slot = CONSUMABLE_SLOTS[slotIndex];
+        const type = this.modifierKey.isDown && slot.secondary ? slot.secondary : slot.primary;
+        if (type) this.activateConsumable(type);
+      });
+    };
+
+    bindSlot('keydown-Q', 0);
+    bindSlot('keydown-W', 1);
+    bindSlot('keydown-E', 2);
+    bindSlot('keydown-R', 3);
   }
 
   // ─── Radial Positioning Helper ───────────────────────────────────────
@@ -346,28 +349,36 @@ export default class GameScene extends Phaser.Scene {
   private createConsumableHud() {
     const hudY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+    const keyLabels = ['Q', 'W', 'E', 'R'];
 
     for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
-      const hudX = this.centerX + (i - 1) * 250 * PX;
+      const hudX = this.centerX + (i - 1.5) * 350 * PX;
 
-      // Primary line
-      const primary = this.add.text(hudX, hudY, '', {
-        fontSize: `${36 * PX}px`,
+      // Static key label
+      const keyText = this.add.text(hudX, hudY, `[${keyLabels[i]}]`, {
+        fontSize: `${30 * PX}px`,
         color,
         fontFamily: "'Rajdhani', sans-serif",
-        align: 'center',
       });
-      primary.setOrigin(0.5);
+      keyText.setOrigin(1, 0.5);
+      this.slotHudKeys.push(keyText);
+
+      // Primary name (right of key label)
+      const primary = this.add.text(hudX, hudY, '', {
+        fontSize: `${30 * PX}px`,
+        color,
+        fontFamily: "'Rajdhani', sans-serif",
+      });
+      primary.setOrigin(0, 0.5);
       this.slotHudPrimary.push(primary);
 
-      // Secondary line (below primary)
-      const secondary = this.add.text(hudX, hudY + 40 * PX, '', {
-        fontSize: `${28 * PX}px`,
-        color: '#666666',
+      // Secondary name (below primary)
+      const secondary = this.add.text(hudX, hudY + 38 * PX, '', {
+        fontSize: `${22 * PX}px`,
+        color: '#888888',
         fontFamily: "'Rajdhani', sans-serif",
-        align: 'center',
       });
-      secondary.setOrigin(0.5);
+      secondary.setOrigin(0, 0.5);
       this.slotHudSecondary.push(secondary);
     }
   }
@@ -379,45 +390,92 @@ export default class GameScene extends Phaser.Scene {
   private updateConsumableHud() {
     const modHeld = this.isModifierHeld();
     const playfieldColor = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+    const topY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;
+    const bottomY = topY + 38 * PX;
+
+    const topFontSize = 30 * PX;
+    const bottomFontSize = 22 * PX;
+
+    // Detect modifier transition and animate primary/secondary swap
+    if (modHeld !== this.modifierWasHeld) {
+      this.modifierWasHeld = modHeld;
+      for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
+        const primary = this.slotHudPrimary[i];
+        const secondary = this.slotHudSecondary[i];
+        this.tweens.killTweensOf(primary);
+        this.tweens.killTweensOf(secondary);
+
+        primary.setData('fs', primary.getData('fs') ?? topFontSize);
+        secondary.setData('fs', secondary.getData('fs') ?? bottomFontSize);
+
+        this.tweens.add({
+          targets: primary,
+          y: modHeld ? bottomY : topY,
+          duration: 120,
+          ease: 'Quad.easeOut',
+        });
+        this.tweens.add({
+          targets: primary.data.values,
+          fs: modHeld ? bottomFontSize : topFontSize,
+          duration: 120,
+          ease: 'Quad.easeOut',
+          onUpdate: () => primary.setFontSize(primary.getData('fs')),
+        });
+        this.tweens.add({
+          targets: secondary,
+          y: modHeld ? topY : bottomY,
+          duration: 120,
+          ease: 'Quad.easeOut',
+        });
+        this.tweens.add({
+          targets: secondary.data.values,
+          fs: modHeld ? topFontSize : bottomFontSize,
+          duration: 120,
+          ease: 'Quad.easeOut',
+          onUpdate: () => secondary.setFontSize(secondary.getData('fs')),
+        });
+      }
+    }
 
     for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
       const slot = CONSUMABLE_SLOTS[i];
       const primaryText = this.slotHudPrimary[i];
       const secondaryText = this.slotHudSecondary[i];
 
-      // Primary
-      const pDef = getConsumableDefinition(slot.primary);
-      const pName = pDef ? pDef.name : slot.primary;
-      const pCount = this.powerUpManager.getConsumableCount(slot.primary);
-      const keyLabel = ['Q', 'W', 'E'][i];
-      primaryText.setText(`[${keyLabel}] ${pName} x${pCount}`);
+      const primaryActive = !(modHeld && slot.secondary);
+      const primaryColor = primaryActive ? playfieldColor : '#888888';
+      const secondaryColor = modHeld ? playfieldColor : '#888888';
 
-      if (pCount === 0) {
-        primaryText.setColor('#444444');
-      } else if (modHeld && slot.secondary) {
-        primaryText.setColor('#666666');
-      } else {
-        primaryText.setColor(playfieldColor);
-      }
-
-      // Secondary
-      if (slot.secondary) {
-        const sDef = getConsumableDefinition(slot.secondary);
-        const sName = sDef ? sDef.name : slot.secondary;
-        const sCount = this.powerUpManager.getConsumableCount(slot.secondary);
-        secondaryText.setText(`${sName} x${sCount}`);
-
-        if (sCount === 0) {
-          secondaryText.setColor('#444444');
-        } else if (modHeld) {
-          secondaryText.setColor(playfieldColor);
+      // Primary text always shows the slot's primary consumable
+      if (slot.primary) {
+        const count = this.powerUpManager.getConsumableCount(slot.primary);
+        if (count === 0) {
+          primaryText.setText(' ---');
         } else {
-          secondaryText.setColor('#666666');
+          const def = getConsumableDefinition(slot.primary);
+          const name = def ? def.name : slot.primary;
+          primaryText.setText(` ${name} x${count}`);
         }
-        secondaryText.setVisible(true);
       } else {
-        secondaryText.setVisible(false);
+        primaryText.setText(' ---');
       }
+      primaryText.setColor(primaryColor);
+
+      // Secondary text always shows the slot's secondary consumable
+      if (slot.secondary) {
+        const count = this.powerUpManager.getConsumableCount(slot.secondary);
+        if (count === 0) {
+          secondaryText.setText(' ---');
+        } else {
+          const def = getConsumableDefinition(slot.secondary);
+          const name = def ? def.name : slot.secondary;
+          secondaryText.setText(` ${name} x${count}`);
+        }
+      } else {
+        secondaryText.setText(' ---');
+      }
+      secondaryText.setColor(secondaryColor);
+      secondaryText.setVisible(true);
     }
   }
 
@@ -480,6 +538,7 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+      ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
     ];
@@ -1114,21 +1173,15 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Gamepad consumable activation (A/B/X with LB modifier)
-    if (this.gamepadManager.isAJustPressed()) {
-      const slot = CONSUMABLE_SLOTS[0];
-      const type =
-        this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
-      this.activateConsumable(type);
-    }
-    if (this.gamepadManager.isBJustPressed()) {
-      const slot = CONSUMABLE_SLOTS[1];
-      const type =
-        this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
-      this.activateConsumable(type);
-    }
-    if (this.gamepadManager.isButtonJustPressed(2)) {
-      this.activateConsumable(CONSUMABLE_SLOTS[2].primary);
+    // Gamepad consumable activation (A/B/X/Y with LB modifier)
+    const gpButtons = [0, 1, 2, 3]; // A, B, X, Y
+    for (let si = 0; si < gpButtons.length; si++) {
+      if (this.gamepadManager.isButtonJustPressed(gpButtons[si])) {
+        const slot = CONSUMABLE_SLOTS[si];
+        const type =
+          this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
+        if (type) this.activateConsumable(type);
+      }
     }
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
@@ -2033,6 +2086,7 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+      ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
       ...this.powerUpHudElements,
@@ -2357,6 +2411,7 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+      ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
       ...this.powerUpHudElements,
