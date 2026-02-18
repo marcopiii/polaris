@@ -45,6 +45,14 @@ const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.LEGENDARY]: 5,
 };
 
+export const CONSUMABLE_MATTER_COST: Record<PowerUpRarity, number> = {
+  [PowerUpRarity.COMMON]: 5,
+  [PowerUpRarity.UNCOMMON]: 10,
+  [PowerUpRarity.RARE]: 20,
+  [PowerUpRarity.EPIC]: 40,
+  [PowerUpRarity.LEGENDARY]: 80,
+};
+
 const STACK_DECAY = 0.9;
 const STACK_CAP = 5;
 
@@ -355,19 +363,31 @@ export default class PowerUpManager {
     return base * Math.pow(STACK_DECAY, stacks);
   }
 
-  /** Return 3 weighted-random power-ups (no duplicates, rarity-weighted with stack decay) */
-  getRandomSelection(): PowerUpDefinition[] {
-    let defs = [...POWER_UP_DEFINITIONS];
+  /** Return up to `count` weighted-random passives (no duplicates, rarity-weighted with stack decay) */
+  getRandomPassiveSelection(count: number = 3): PowerUpDefinition[] {
+    const defs = POWER_UP_DEFINITIONS.filter((p) => !p.consumable);
+    return this.weightedRandomPick(defs, count);
+  }
 
-    // If consumable inventory is full, exclude consumables from pool
-    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) {
-      defs = defs.filter((p) => !p.consumable);
-    }
+  /** Return up to `count` weighted-random consumables, respecting inventory cap */
+  getRandomConsumableSelection(count: number = 3): PowerUpDefinition[] {
+    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return [];
+    const defs = POWER_UP_DEFINITIONS.filter((p) => p.consumable);
+    return this.weightedRandomPick(defs, count);
+  }
 
+  /** Get the matter cost for a consumable power-up type */
+  getConsumableCost(type: PowerUpType): number {
+    const def = POWER_UP_DEFINITIONS.find((d) => d.type === type);
+    if (!def) return 0;
+    return CONSUMABLE_MATTER_COST[def.rarity];
+  }
+
+  private weightedRandomPick(defs: PowerUpDefinition[], count: number): PowerUpDefinition[] {
     const pool = defs.map((def) => ({ def, weight: this.getEffectiveWeight(def) }));
     const selected: PowerUpDefinition[] = [];
 
-    for (let i = 0; i < 3 && pool.length > 0; i++) {
+    for (let i = 0; i < count && pool.length > 0; i++) {
       const totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
       let roll = gameRandom() * totalWeight;
 
