@@ -1,12 +1,5 @@
 import Phaser from 'phaser';
-import {
-  ENEMY_SIZE,
-  ENEMY_SPEED,
-  COLORS,
-  PLAYFIELD_RADIUS,
-  ENEMY_HEALTH_MODEL,
-  HealthModel,
-} from '../constants';
+import { ENEMY_SIZE, ENEMY_SPEED, COLORS, PLAYFIELD_RADIUS } from '../constants';
 import type { PolarCoordinates } from '../types';
 import { polarToCartesian } from '../utils/PolarCoordinates';
 
@@ -52,11 +45,7 @@ export default class Enemy {
 
   /** Compute the visual/collision size for a given health value. */
   static sizeForHealth(health: number): number {
-    if (ENEMY_HEALTH_MODEL === HealthModel.CIRCLE) {
-      return ENEMY_SIZE * Math.sqrt(health);
-    } else {
-      return ENEMY_SIZE * Math.cbrt(health);
-    }
+    return ENEMY_SIZE * Math.sqrt(health);
   }
 
   private updatePosition() {

@@ -26,12 +26,6 @@ export const PLAYER_SIZE = 10 * PX;
 export const ENEMY_SIZE = 16 * PX;
 export const ENEMY_SPEED = 0.1; // 10% of playfield radius per second
 
-// Enemy Health System
-export enum HealthModel {
-  CIRCLE = 'CIRCLE', // health ∝ area: size = ENEMY_SIZE × √hits
-}
-export const ENEMY_HEALTH_MODEL: HealthModel = HealthModel.CIRCLE;
-
 // Enemy Level Distribution — Power Weights
 // weight(L) = (playerLvl - threshold(L) + 1) ^ ENEMY_LEVEL_EXP
 // threshold(L) = ENEMY_LEVEL_GAP * (L - 1) - 1  (for L >= 2)
