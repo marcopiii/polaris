@@ -132,6 +132,10 @@ export default class Enemy {
     });
   }
 
+  getHealth(): number {
+    return this.health;
+  }
+
   getRadius(): number {
     return this.polar.r;
   }
