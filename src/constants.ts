@@ -81,9 +81,9 @@ export const SPAWN_RATE_LEVEL_INCREMENT: Record<Difficulty, number> = {
 
 // Spawn Distribution (angular clustering)
 export const SPAWN_DISTRIBUTION_HARMONICS = 4; // number of sine components
-export const SPAWN_DISTRIBUTION_AMPLITUDE_MAX = 1.2; // peak amplitude per harmonic
+export const SPAWN_DISTRIBUTION_AMPLITUDE_MAX = 1.8; // peak amplitude per harmonic
 export const SPAWN_DISTRIBUTION_MORPH_INTERVAL = 3.5; // seconds between new random targets
-export const SPAWN_DISTRIBUTION_LERP_SPEED = 1.0; // exponential lerp rate (higher = faster)
+export const SPAWN_DISTRIBUTION_LERP_SPEED = 1.5; // exponential lerp rate (higher = faster)
 export const SPAWN_DISTRIBUTION_RESOLUTION = 360; // CDF discretization bins
 
 // Scoring
