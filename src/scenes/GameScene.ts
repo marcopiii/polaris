@@ -479,6 +479,26 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private pulseConsumableSlot(type: PowerUpType) {
+    for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
+      const slot = CONSUMABLE_SLOTS[i];
+      if (slot.primary !== type && slot.secondary !== type) continue;
+      const targets = [this.slotHudKeys[i], this.slotHudPrimary[i], this.slotHudSecondary[i]];
+      for (const el of targets) {
+        this.tweens.killTweensOf(el);
+        this.tweens.add({
+          targets: el,
+          scaleX: 1.25,
+          scaleY: 1.25,
+          duration: 100,
+          yoyo: true,
+          ease: 'Quad.easeOut',
+        });
+      }
+      break;
+    }
+  }
+
   private createRadialHud(
     angleDeg: number,
     label: string
@@ -2573,6 +2593,8 @@ export default class GameScene extends Phaser.Scene {
     // Update matter balance display
     balText.setText(`MATTER: ${this.scoreManager.getMatter()}`);
     this.updateStreakHud();
+    this.updateConsumableHud();
+    this.pulseConsumableSlot(consumable.type);
 
     // Grey out purchased item
     const item = this.shopItemTexts[index];
