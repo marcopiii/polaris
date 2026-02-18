@@ -34,10 +34,8 @@ import LevelManager from '../managers/LevelManager';
 import AudioManager from '../managers/AudioManager';
 import PowerUpManager, {
   PowerUpType,
-  RARITY_COLORS,
   CONSUMABLE_MATTER_COST,
-  MAX_EQUIPPED_SLOTS,
-  MAX_CONSUMABLE_INVENTORY,
+  CONSUMABLE_SLOTS,
   getConsumableDefinition,
   type PowerUpDefinition,
 } from '../managers/PowerUpManager';
@@ -105,7 +103,9 @@ export default class GameScene extends Phaser.Scene {
   private laserBeamTimer: number = 0;
   private laserGraphics!: Phaser.GameObjects.Graphics;
   private laserSparks: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
-  private slotHudElements: Phaser.GameObjects.Text[] = [];
+  private slotHudPrimary: Phaser.GameObjects.Text[] = [];
+  private slotHudSecondary: Phaser.GameObjects.Text[] = [];
+  private modifierKey!: Phaser.Input.Keyboard.Key;
 
   // Background dust particles
   private dustParticles: { r: number; theta: number }[] = [];
@@ -126,10 +126,6 @@ export default class GameScene extends Phaser.Scene {
     angles: number[];
     purchased: Set<number>;
   } = { consumables: [], nextLevel: 0, angles: [], purchased: new Set() };
-
-  // Equip screen state
-  private equipUIElements: Phaser.GameObjects.GameObject[] = [];
-  private nextLevelForEquipScreen: number = 0;
 
   // Streak HUD
   private streakLabel!: Phaser.GameObjects.Text;
@@ -169,10 +165,10 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
-    this.slotHudElements = [];
+    this.slotHudPrimary = [];
+    this.slotHudSecondary = [];
     this.shopUIElements = [];
     this.shopItemTexts = [];
-    this.equipUIElements = [];
     this.laserSparks = [];
     this.dustParticles = [];
     this.pauseUIElements = [];
@@ -304,10 +300,21 @@ export default class GameScene extends Phaser.Scene {
     const keyboard = this.input.keyboard;
     if (!keyboard) return;
 
-    keyboard.on('keydown-ONE', () => this.activateSlot(0));
-    keyboard.on('keydown-TWO', () => this.activateSlot(1));
-    keyboard.on('keydown-THREE', () => this.activateSlot(2));
-    keyboard.on('keydown-FOUR', () => this.activateSlot(3));
+    this.modifierKey = keyboard.addKey('C');
+
+    keyboard.on('keydown-Q', () => {
+      const slot = CONSUMABLE_SLOTS[0];
+      const type = this.modifierKey.isDown && slot.secondary ? slot.secondary : slot.primary;
+      this.activateConsumable(type);
+    });
+    keyboard.on('keydown-W', () => {
+      const slot = CONSUMABLE_SLOTS[1];
+      const type = this.modifierKey.isDown && slot.secondary ? slot.secondary : slot.primary;
+      this.activateConsumable(type);
+    });
+    keyboard.on('keydown-E', () => {
+      this.activateConsumable(CONSUMABLE_SLOTS[2].primary);
+    });
   }
 
   // ─── Radial Positioning Helper ───────────────────────────────────────
@@ -338,34 +345,78 @@ export default class GameScene extends Phaser.Scene {
 
   private createConsumableHud() {
     const hudY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;
+    const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
 
-    for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
-      const hudX = this.centerX + (i - 1.5) * 200 * PX;
-      const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
-      const text = this.add.text(hudX, hudY, '', {
+    for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
+      const hudX = this.centerX + (i - 1) * 250 * PX;
+
+      // Primary line
+      const primary = this.add.text(hudX, hudY, '', {
         fontSize: `${36 * PX}px`,
         color,
         fontFamily: "'Rajdhani', sans-serif",
         align: 'center',
       });
-      text.setOrigin(0.5);
-      this.slotHudElements.push(text);
+      primary.setOrigin(0.5);
+      this.slotHudPrimary.push(primary);
+
+      // Secondary line (below primary)
+      const secondary = this.add.text(hudX, hudY + 40 * PX, '', {
+        fontSize: `${28 * PX}px`,
+        color: '#666666',
+        fontFamily: "'Rajdhani', sans-serif",
+        align: 'center',
+      });
+      secondary.setOrigin(0.5);
+      this.slotHudSecondary.push(secondary);
     }
   }
 
-  private updateConsumableHud() {
-    for (let i = 0; i < this.slotHudElements.length; i++) {
-      const text = this.slotHudElements[i];
-      const type = this.powerUpManager.getEquippedSlot(i);
+  private isModifierHeld(): boolean {
+    return this.modifierKey?.isDown || this.gamepadManager.isLBPressed();
+  }
 
-      if (type) {
-        const def = getConsumableDefinition(type);
-        const name = def ? def.name : type;
-        text.setText(`[${i + 1}] ${name}`);
-        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
+  private updateConsumableHud() {
+    const modHeld = this.isModifierHeld();
+    const playfieldColor = '#' + COLORS.playfield.toString(16).padStart(6, '0');
+
+    for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
+      const slot = CONSUMABLE_SLOTS[i];
+      const primaryText = this.slotHudPrimary[i];
+      const secondaryText = this.slotHudSecondary[i];
+
+      // Primary
+      const pDef = getConsumableDefinition(slot.primary);
+      const pName = pDef ? pDef.name : slot.primary;
+      const pCount = this.powerUpManager.getConsumableCount(slot.primary);
+      const keyLabel = ['Q', 'W', 'E'][i];
+      primaryText.setText(`[${keyLabel}] ${pName} x${pCount}`);
+
+      if (pCount === 0) {
+        primaryText.setColor('#444444');
+      } else if (modHeld && slot.secondary) {
+        primaryText.setColor('#666666');
       } else {
-        text.setText(`[${i + 1}] ---`);
-        text.setColor('#' + COLORS.playfield.toString(16).padStart(6, '0'));
+        primaryText.setColor(playfieldColor);
+      }
+
+      // Secondary
+      if (slot.secondary) {
+        const sDef = getConsumableDefinition(slot.secondary);
+        const sName = sDef ? sDef.name : slot.secondary;
+        const sCount = this.powerUpManager.getConsumableCount(slot.secondary);
+        secondaryText.setText(`${sName} x${sCount}`);
+
+        if (sCount === 0) {
+          secondaryText.setColor('#444444');
+        } else if (modHeld) {
+          secondaryText.setColor(playfieldColor);
+        } else {
+          secondaryText.setColor('#666666');
+        }
+        secondaryText.setVisible(true);
+      } else {
+        secondaryText.setVisible(false);
       }
     }
   }
@@ -429,7 +480,8 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
-      ...this.slotHudElements,
+      ...this.slotHudPrimary,
+      ...this.slotHudSecondary,
     ];
 
     hudElements.forEach((el, i) => {
@@ -513,12 +565,11 @@ export default class GameScene extends Phaser.Scene {
 
   // ─── Consumable Activation ────────────────────────────────────────────
 
-  private activateSlot(slot: number) {
+  private activateConsumable(type: PowerUpType) {
     if (this.isPowerUpSelectionActive) return;
     if (this.laserBeamTimer > 0) return;
 
-    const type = this.powerUpManager.useEquippedSlot(slot);
-    if (!type) return;
+    if (!this.powerUpManager.useConsumable(type)) return;
 
     switch (type) {
       case PowerUpType.SHOCKWAVE:
@@ -537,6 +588,8 @@ export default class GameScene extends Phaser.Scene {
         this.activateOrbitalFlare();
         break;
     }
+
+    this.updateConsumableHud();
   }
 
   private activateShockwave() {
@@ -1061,11 +1114,22 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Gamepad consumable activation (A/B/X/Y map to slots 0-3)
-    if (this.gamepadManager.isAJustPressed()) this.activateSlot(0);
-    if (this.gamepadManager.isBJustPressed()) this.activateSlot(1);
-    if (this.gamepadManager.isButtonJustPressed(2)) this.activateSlot(2);
-    if (this.gamepadManager.isButtonJustPressed(3)) this.activateSlot(3);
+    // Gamepad consumable activation (A/B/X with LB modifier)
+    if (this.gamepadManager.isAJustPressed()) {
+      const slot = CONSUMABLE_SLOTS[0];
+      const type =
+        this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
+      this.activateConsumable(type);
+    }
+    if (this.gamepadManager.isBJustPressed()) {
+      const slot = CONSUMABLE_SLOTS[1];
+      const type =
+        this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
+      this.activateConsumable(type);
+    }
+    if (this.gamepadManager.isButtonJustPressed(2)) {
+      this.activateConsumable(CONSUMABLE_SLOTS[2].primary);
+    }
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
@@ -1878,10 +1942,6 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
-    for (const el of this.equipUIElements) {
-      el.destroy();
-    }
-    this.equipUIElements = [];
 
     this.scene.start('MainMenuScene');
   }
@@ -1973,7 +2033,8 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
-      ...this.slotHudElements,
+      ...this.slotHudPrimary,
+      ...this.slotHudSecondary,
       ...this.powerUpHudElements,
     ];
     for (const el of hudElements) {
@@ -2253,13 +2314,9 @@ export default class GameScene extends Phaser.Scene {
 
     const consumables = this.powerUpManager.getRandomConsumableSelection(3);
 
-    // If no consumables available, skip to equip screen or restore
+    // If no consumables available, skip to restore
     if (consumables.length === 0) {
-      if (this.powerUpManager.hasAnyConsumables()) {
-        this.showEquipScreen(nextLevel);
-      } else {
-        this.restorePlayfield(nextLevel);
-      }
+      this.restorePlayfield(nextLevel);
       return;
     }
 
@@ -2300,7 +2357,8 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
-      ...this.slotHudElements,
+      ...this.slotHudPrimary,
+      ...this.slotHudSecondary,
       ...this.powerUpHudElements,
     ];
     for (const el of hudEls) {
@@ -2574,11 +2632,7 @@ export default class GameScene extends Phaser.Scene {
     this.shopBalanceText = null;
     this.shopSelectionData = { consumables: [], nextLevel: 0, angles: [], purchased: new Set() };
 
-    if (this.powerUpManager.hasAnyConsumables()) {
-      this.showEquipScreen(nextLevel);
-    } else {
-      this.restorePlayfield(nextLevel);
-    }
+    this.restorePlayfield(nextLevel);
   }
 
   private restorePlayfield(nextLevel: number) {
@@ -2598,351 +2652,6 @@ export default class GameScene extends Phaser.Scene {
         this.levelManager.startLevel(nextLevel);
       },
     });
-  }
-
-  // ─── Equip Consumables Screen ─────────────────────────────────────────
-
-  private showEquipScreen(nextLevel: number) {
-    // In benchmark mode, skip equip screen entirely
-    if (BENCHMARK_MODE) {
-      this.isPowerUpSelectionActive = false;
-      this.levelManager.startLevel(nextLevel);
-      return;
-    }
-
-    this.nextLevelForEquipScreen = nextLevel;
-    // isPowerUpSelectionActive stays true to keep game paused
-    this.renderEquipScreen();
-  }
-
-  private renderEquipScreen() {
-    // Clear previous equip UI
-    for (const el of this.equipUIElements) {
-      el.destroy();
-    }
-    this.equipUIElements = [];
-
-    // Backdrop
-    const backdrop = this.add.graphics();
-    backdrop.fillStyle(0x000000, 0.7);
-    backdrop.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.equipUIElements.push(backdrop);
-
-    // Title
-    const title = this.add.text(this.centerX, this.centerY - 350 * PX, 'EQUIP CONSUMABLES', {
-      fontSize: `${42 * PX}px`,
-      color: '#ffffff',
-      fontFamily: "'Rajdhani', sans-serif",
-    });
-    title.setOrigin(0.5);
-    this.equipUIElements.push(title);
-
-    const subtitle = this.add.text(
-      this.centerX,
-      this.centerY - 290 * PX,
-      `Inventory: ${this.powerUpManager.getTotalConsumableCount()} / ${MAX_CONSUMABLE_INVENTORY}`,
-      {
-        fontSize: `${22 * PX}px`,
-        color: '#aaaaaa',
-        fontFamily: "'Rajdhani', sans-serif",
-      }
-    );
-    subtitle.setOrigin(0.5);
-    this.equipUIElements.push(subtitle);
-
-    const hint = this.add.text(
-      this.centerX,
-      this.centerY - 255 * PX,
-      'Click an inventory item to equip. Click an equipped slot to unequip.',
-      {
-        fontSize: `${16 * PX}px`,
-        color: '#666666',
-        fontFamily: "'Rajdhani', sans-serif",
-      }
-    );
-    hint.setOrigin(0.5);
-    this.equipUIElements.push(hint);
-
-    // ─── 4 Equip Slots ───
-    for (let i = 0; i < MAX_EQUIPPED_SLOTS; i++) {
-      const slotX = this.centerX + (i - 1.5) * 200 * PX;
-      const slotY = this.centerY - 150 * PX;
-      const equipped = this.powerUpManager.getEquippedSlot(i);
-
-      const slotGfx = this.add.graphics();
-
-      if (equipped) {
-        const def = getConsumableDefinition(equipped);
-        const rarityColor = def ? RARITY_COLORS[def.rarity] : 0xffffff;
-
-        // Filled slot
-        slotGfx.fillStyle(0x444444, 0.9);
-        slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-        slotGfx.lineStyle(2 * PX, rarityColor, 0.8);
-        slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-
-        this.equipUIElements.push(slotGfx);
-
-        // Slot number
-        const slotNum = this.add.text(slotX, slotY - 25 * PX, `[${i + 1}]`, {
-          fontSize: `${16 * PX}px`,
-          color: '#888888',
-          fontFamily: "'Rajdhani', sans-serif",
-        });
-        slotNum.setOrigin(0.5);
-        this.equipUIElements.push(slotNum);
-
-        // Item name
-        const itemName = this.add.text(slotX, slotY + 5 * PX, def?.name ?? equipped, {
-          fontSize: `${20 * PX}px`,
-          color: '#ffffff',
-          fontFamily: "'Rajdhani', sans-serif",
-        });
-        itemName.setOrigin(0.5);
-        this.equipUIElements.push(itemName);
-
-        // Click to unequip
-        const hitArea = this.add.rectangle(slotX, slotY, 160 * PX, 90 * PX, 0x000000, 0);
-        hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerdown', () => {
-          this.powerUpManager.unequipSlot(i);
-          this.renderEquipScreen();
-        });
-        hitArea.on('pointerover', () => {
-          slotGfx.clear();
-          slotGfx.fillStyle(0x555555, 0.95);
-          slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-          slotGfx.lineStyle(3 * PX, rarityColor, 1);
-          slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-        });
-        hitArea.on('pointerout', () => {
-          slotGfx.clear();
-          slotGfx.fillStyle(0x444444, 0.9);
-          slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-          slotGfx.lineStyle(2 * PX, rarityColor, 0.8);
-          slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-        });
-        this.equipUIElements.push(hitArea);
-      } else {
-        // Empty slot
-        slotGfx.fillStyle(0x222222, 0.7);
-        slotGfx.fillRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-        slotGfx.lineStyle(2 * PX, 0x666666, 0.4);
-        slotGfx.strokeRoundedRect(slotX - 80 * PX, slotY - 45 * PX, 160 * PX, 90 * PX, 12 * PX);
-
-        this.equipUIElements.push(slotGfx);
-
-        const slotNum = this.add.text(slotX, slotY - 10 * PX, `[${i + 1}]`, {
-          fontSize: `${16 * PX}px`,
-          color: '#666666',
-          fontFamily: "'Rajdhani', sans-serif",
-        });
-        slotNum.setOrigin(0.5);
-        this.equipUIElements.push(slotNum);
-
-        const emptyText = this.add.text(slotX, slotY + 15 * PX, 'Empty', {
-          fontSize: `${16 * PX}px`,
-          color: '#555555',
-          fontFamily: "'Rajdhani', sans-serif",
-        });
-        emptyText.setOrigin(0.5);
-        this.equipUIElements.push(emptyText);
-      }
-    }
-
-    // ─── Inventory Section ───
-    const invEntries = this.powerUpManager.getInventoryEntries();
-
-    if (invEntries.length > 0) {
-      const invTitle = this.add.text(this.centerX, this.centerY + 20 * PX, 'INVENTORY', {
-        fontSize: `${22 * PX}px`,
-        color: '#aaaaaa',
-        fontFamily: "'Rajdhani', sans-serif",
-      });
-      invTitle.setOrigin(0.5);
-      this.equipUIElements.push(invTitle);
-
-      invEntries.forEach((entry, idx) => {
-        const itemY = this.centerY + (80 + idx * 60) * PX;
-        const def = getConsumableDefinition(entry.type);
-        const name = def?.name ?? entry.type;
-        const rarityColor = def ? RARITY_COLORS[def.rarity] : 0xaaaaaa;
-
-        // Item background
-        const itemGfx = this.add.graphics();
-        itemGfx.fillStyle(0x333333, 0.8);
-        itemGfx.fillRoundedRect(
-          this.centerX - 200 * PX,
-          itemY - 22 * PX,
-          400 * PX,
-          44 * PX,
-          8 * PX
-        );
-        itemGfx.lineStyle(2 * PX, rarityColor, 0.5);
-        itemGfx.strokeRoundedRect(
-          this.centerX - 200 * PX,
-          itemY - 22 * PX,
-          400 * PX,
-          44 * PX,
-          8 * PX
-        );
-        this.equipUIElements.push(itemGfx);
-
-        // Item text
-        const itemText = this.add.text(this.centerX, itemY, `${name}  x${entry.count}`, {
-          fontSize: `${22 * PX}px`,
-          color: '#ffffff',
-          fontFamily: "'Rajdhani', sans-serif",
-        });
-        itemText.setOrigin(0.5);
-        this.equipUIElements.push(itemText);
-
-        // Click to equip to first empty slot
-        const hitArea = this.add.rectangle(this.centerX, itemY, 400 * PX, 44 * PX, 0x000000, 0);
-        hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerdown', () => {
-          // Find first empty slot
-          for (let s = 0; s < MAX_EQUIPPED_SLOTS; s++) {
-            if (!this.powerUpManager.getEquippedSlot(s)) {
-              this.powerUpManager.equipToSlot(s, entry.type);
-              this.renderEquipScreen();
-              return;
-            }
-          }
-        });
-        hitArea.on('pointerover', () => {
-          itemGfx.clear();
-          itemGfx.fillStyle(0x444444, 0.9);
-          itemGfx.fillRoundedRect(
-            this.centerX - 200 * PX,
-            itemY - 22 * PX,
-            400 * PX,
-            44 * PX,
-            8 * PX
-          );
-          itemGfx.lineStyle(3 * PX, rarityColor, 0.8);
-          itemGfx.strokeRoundedRect(
-            this.centerX - 200 * PX,
-            itemY - 22 * PX,
-            400 * PX,
-            44 * PX,
-            8 * PX
-          );
-        });
-        hitArea.on('pointerout', () => {
-          itemGfx.clear();
-          itemGfx.fillStyle(0x333333, 0.8);
-          itemGfx.fillRoundedRect(
-            this.centerX - 200 * PX,
-            itemY - 22 * PX,
-            400 * PX,
-            44 * PX,
-            8 * PX
-          );
-          itemGfx.lineStyle(2 * PX, rarityColor, 0.5);
-          itemGfx.strokeRoundedRect(
-            this.centerX - 200 * PX,
-            itemY - 22 * PX,
-            400 * PX,
-            44 * PX,
-            8 * PX
-          );
-        });
-        this.equipUIElements.push(hitArea);
-      });
-    } else {
-      const emptyInv = this.add.text(
-        this.centerX,
-        this.centerY + 60 * PX,
-        'All consumables are equipped',
-        {
-          fontSize: `${20 * PX}px`,
-          color: '#666666',
-          fontFamily: "'Rajdhani', sans-serif",
-        }
-      );
-      emptyInv.setOrigin(0.5);
-      this.equipUIElements.push(emptyInv);
-    }
-
-    // ─── READY Button ───
-    const readyY = this.centerY + 320 * PX;
-
-    const readyGfx = this.add.graphics();
-    readyGfx.fillStyle(0x228833, 0.9);
-    readyGfx.fillRoundedRect(this.centerX - 100 * PX, readyY - 30 * PX, 200 * PX, 60 * PX, 12 * PX);
-    readyGfx.lineStyle(2 * PX, 0x44cc55, 0.8);
-    readyGfx.strokeRoundedRect(
-      this.centerX - 100 * PX,
-      readyY - 30 * PX,
-      200 * PX,
-      60 * PX,
-      12 * PX
-    );
-    this.equipUIElements.push(readyGfx);
-
-    const readyText = this.add.text(this.centerX, readyY, 'READY', {
-      fontSize: `${28 * PX}px`,
-      color: '#ffffff',
-      fontFamily: "'Rajdhani', sans-serif",
-      fontStyle: 'bold',
-    });
-    readyText.setOrigin(0.5);
-    this.equipUIElements.push(readyText);
-
-    const readyHit = this.add.rectangle(this.centerX, readyY, 200 * PX, 60 * PX, 0x000000, 0);
-    readyHit.setInteractive({ useHandCursor: true });
-    readyHit.on('pointerdown', () => {
-      this.confirmEquipment();
-    });
-    readyHit.on('pointerover', () => {
-      readyGfx.clear();
-      readyGfx.fillStyle(0x33aa44, 0.95);
-      readyGfx.fillRoundedRect(
-        this.centerX - 100 * PX,
-        readyY - 30 * PX,
-        200 * PX,
-        60 * PX,
-        12 * PX
-      );
-      readyGfx.lineStyle(3 * PX, 0x66ee77, 1);
-      readyGfx.strokeRoundedRect(
-        this.centerX - 100 * PX,
-        readyY - 30 * PX,
-        200 * PX,
-        60 * PX,
-        12 * PX
-      );
-    });
-    readyHit.on('pointerout', () => {
-      readyGfx.clear();
-      readyGfx.fillStyle(0x228833, 0.9);
-      readyGfx.fillRoundedRect(
-        this.centerX - 100 * PX,
-        readyY - 30 * PX,
-        200 * PX,
-        60 * PX,
-        12 * PX
-      );
-      readyGfx.lineStyle(2 * PX, 0x44cc55, 0.8);
-      readyGfx.strokeRoundedRect(
-        this.centerX - 100 * PX,
-        readyY - 30 * PX,
-        200 * PX,
-        60 * PX,
-        12 * PX
-      );
-    });
-    this.equipUIElements.push(readyHit);
-  }
-
-  private confirmEquipment() {
-    for (const el of this.equipUIElements) {
-      el.destroy();
-    }
-    this.equipUIElements = [];
-
-    this.restorePlayfield(this.nextLevelForEquipScreen);
   }
 
   // ─── Game Over ────────────────────────────────────────────────────────
@@ -2982,10 +2691,6 @@ export default class GameScene extends Phaser.Scene {
       el.destroy();
     }
     this.powerUpUIElements = [];
-    for (const el of this.equipUIElements) {
-      el.destroy();
-    }
-    this.equipUIElements = [];
 
     this.audioManager.playSound('gameOver');
     this.scene.start('GameOverScene', {

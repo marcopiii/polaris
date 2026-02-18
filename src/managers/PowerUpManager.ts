@@ -29,14 +29,6 @@ export enum PowerUpRarity {
   LEGENDARY = 'LEGENDARY',
 }
 
-export const RARITY_COLORS: Record<PowerUpRarity, number> = {
-  [PowerUpRarity.COMMON]: 0xaaaaaa,
-  [PowerUpRarity.UNCOMMON]: 0x4488ff,
-  [PowerUpRarity.RARE]: 0xaa44ff,
-  [PowerUpRarity.EPIC]: 0xff4488,
-  [PowerUpRarity.LEGENDARY]: 0xffaa00,
-};
-
 const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.COMMON]: 90,
   [PowerUpRarity.UNCOMMON]: 60,
@@ -64,8 +56,13 @@ export interface PowerUpDefinition {
   consumable: boolean;
 }
 
-export const MAX_CONSUMABLE_INVENTORY = 16;
-export const MAX_EQUIPPED_SLOTS = 4;
+const MAX_CONSUMABLE_INVENTORY = 16;
+
+export const CONSUMABLE_SLOTS: { primary: PowerUpType; secondary?: PowerUpType }[] = [
+  { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
+  { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SHOCKWAVE },
+  { primary: PowerUpType.ORBITAL_FLARE },
+];
 
 const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.SHOCKWAVE,
@@ -189,13 +186,12 @@ export function getConsumableDefinition(type: PowerUpType): PowerUpDefinition | 
 
 export default class PowerUpManager {
   private stacks: Map<PowerUpType, number> = new Map();
-  private inventory: Map<PowerUpType, number> = new Map();
-  private equipped: (PowerUpType | null)[] = [null, null, null, null];
+  private consumableCounts: Map<PowerUpType, number> = new Map();
 
   addPowerUp(type: PowerUpType): void {
     if (CONSUMABLE_TYPES.has(type)) {
       if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return;
-      this.inventory.set(type, this.getInventoryCount(type) + 1);
+      this.consumableCounts.set(type, this.getConsumableCount(type) + 1);
     } else {
       this.stacks.set(type, this.getStacks(type) + 1);
     }
@@ -212,88 +208,29 @@ export default class PowerUpManager {
     }
   }
 
-  /** Count of a consumable type in inventory only (not equipped) */
-  getInventoryCount(type: PowerUpType): number {
-    return this.inventory.get(type) ?? 0;
-  }
-
-  /** Total owned count of a consumable type (inventory + equipped) */
   getConsumableCount(type: PowerUpType): number {
-    let count = this.inventory.get(type) ?? 0;
-    for (const slot of this.equipped) {
-      if (slot === type) count++;
-    }
-    return count;
+    return this.consumableCounts.get(type) ?? 0;
   }
 
-  /** Total number of consumables owned (inventory + equipped) */
   getTotalConsumableCount(): number {
     let total = 0;
-    for (const count of this.inventory.values()) {
+    for (const count of this.consumableCounts.values()) {
       total += count;
-    }
-    for (const slot of this.equipped) {
-      if (slot !== null) total++;
     }
     return total;
   }
 
-  getEquippedSlot(slot: number): PowerUpType | null {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
-    return this.equipped[slot] ?? null;
-  }
-
-  /** Equip a consumable from inventory to a slot. Returns true on success. */
-  equipToSlot(slot: number, type: PowerUpType): boolean {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
-    if (!CONSUMABLE_TYPES.has(type)) return false;
-    const invCount = this.getInventoryCount(type);
-    if (invCount <= 0) return false;
-
-    // If slot already has something, unequip it first
-    this.unequipSlot(slot);
-
-    // Remove from inventory, place in slot
-    this.inventory.set(type, invCount - 1);
-    if (this.getInventoryCount(type) <= 0) this.inventory.delete(type);
-    this.equipped[slot] = type;
+  /** Use a consumable by type. Returns true if successfully consumed. */
+  useConsumable(type: PowerUpType): boolean {
+    const count = this.getConsumableCount(type);
+    if (count <= 0) return false;
+    this.consumableCounts.set(type, count - 1);
+    if (count - 1 <= 0) this.consumableCounts.delete(type);
     return true;
   }
 
-  /** Unequip a slot back to inventory. Returns true if slot had something. */
-  unequipSlot(slot: number): boolean {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
-    const type = this.equipped[slot];
-    if (!type) return false;
-
-    this.inventory.set(type, this.getInventoryCount(type) + 1);
-    this.equipped[slot] = null;
-    return true;
-  }
-
-  /** Use the consumable in the given equipped slot. Returns the type, or null. */
-  useEquippedSlot(slot: number): PowerUpType | null {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
-    const type = this.equipped[slot];
-    if (!type) return null;
-    this.equipped[slot] = null;
-    return type;
-  }
-
-  /** Check if the player owns any consumables (inventory or equipped) */
   hasAnyConsumables(): boolean {
     return this.getTotalConsumableCount() > 0;
-  }
-
-  /** Get inventory entries (type + count) for equip screen UI */
-  getInventoryEntries(): { type: PowerUpType; count: number }[] {
-    const entries: { type: PowerUpType; count: number }[] = [];
-    for (const [type, count] of this.inventory.entries()) {
-      if (count > 0) {
-        entries.push({ type, count });
-      }
-    }
-    return entries;
   }
 
   isConsumable(type: PowerUpType): boolean {
@@ -418,7 +355,6 @@ export default class PowerUpManager {
 
   reset(): void {
     this.stacks.clear();
-    this.inventory.clear();
-    this.equipped = [null, null, null, null];
+    this.consumableCounts.clear();
   }
 }
