@@ -35,6 +35,7 @@ import AudioManager from '../managers/AudioManager';
 import PowerUpManager, {
   PowerUpType,
   RARITY_COLORS,
+  CONSUMABLE_MATTER_COST,
   MAX_EQUIPPED_SLOTS,
   MAX_CONSUMABLE_INVENTORY,
   getConsumableDefinition,
@@ -114,6 +115,18 @@ export default class GameScene extends Phaser.Scene {
   private aimingDotGraphics!: Phaser.GameObjects.Graphics;
   private aimingDotVisible: boolean = false;
 
+  // Consumable shop state
+  private shopUIElements: Phaser.GameObjects.GameObject[] = [];
+  private shopSelectedIndex: number = 0;
+  private shopItemTexts: { name: Phaser.GameObjects.Text; cost: Phaser.GameObjects.Text }[] = [];
+  private shopBalanceText: Phaser.GameObjects.Text | null = null;
+  private shopSelectionData: {
+    consumables: PowerUpDefinition[];
+    nextLevel: number;
+    angles: number[];
+    purchased: Set<number>;
+  } = { consumables: [], nextLevel: 0, angles: [], purchased: new Set() };
+
   // Equip screen state
   private equipUIElements: Phaser.GameObjects.GameObject[] = [];
   private nextLevelForEquipScreen: number = 0;
@@ -126,6 +139,8 @@ export default class GameScene extends Phaser.Scene {
   private powerUpHudElements: Phaser.GameObjects.Text[] = [];
   private levelLabel!: Phaser.GameObjects.Text;
   private levelValue!: Phaser.GameObjects.Text;
+  private matterLabel!: Phaser.GameObjects.Text;
+  private matterValue!: Phaser.GameObjects.Text;
   private scoreLabel!: Phaser.GameObjects.Text;
   private scoreValue2!: Phaser.GameObjects.Text;
   private fpsText!: Phaser.GameObjects.Text;
@@ -155,6 +170,8 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpItemTexts = [];
     this.powerUpHudElements = [];
     this.slotHudElements = [];
+    this.shopUIElements = [];
+    this.shopItemTexts = [];
     this.equipUIElements = [];
     this.laserSparks = [];
     this.dustParticles = [];
@@ -396,6 +413,10 @@ export default class GameScene extends Phaser.Scene {
     const level = this.createRadialHud(-28, 'LEVEL');
     this.levelLabel = level.label;
     this.levelValue = level.value;
+
+    const matter = this.createRadialHud(-36, 'MATTER');
+    this.matterLabel = matter.label;
+    this.matterValue = matter.value;
   }
 
   private animateHudEntrance() {
@@ -406,6 +427,8 @@ export default class GameScene extends Phaser.Scene {
       this.scoreValue2,
       this.levelLabel,
       this.levelValue,
+      this.matterLabel,
+      this.matterValue,
       ...this.slotHudElements,
     ];
 
@@ -425,6 +448,7 @@ export default class GameScene extends Phaser.Scene {
     this.streakValue.setText(`${this.scoreManager.getHitStreak()}`);
     this.levelValue.setText(`${this.levelManager.getCurrentLevel()}`);
     this.scoreValue2.setText(`${this.scoreManager.getScore()}`);
+    this.matterValue.setText(`${this.scoreManager.getMatter()}`);
   }
 
   // ─── Power-Up Stack HUD (bottom-left) ─────────────────────────────────
@@ -527,6 +551,7 @@ export default class GameScene extends Phaser.Scene {
       if (enemy.active) {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
+        this.scoreManager.addMatter(enemy.getHealth());
         this.scoreManager.addKill(enemy.tier);
         enemy.destroy();
       }
@@ -633,6 +658,7 @@ export default class GameScene extends Phaser.Scene {
 
         if (sweep.checkCollision(enemyBounds.x, enemyBounds.y, enemyBounds.radius)) {
           ParticleEffects.createEnemyDeathParticles(this, enemyBounds.x, enemyBounds.y);
+          this.scoreManager.addMatter(enemy.getHealth());
           this.scoreManager.addKill(enemy.tier);
           this.audioManager.playSound('hit');
           enemy.destroy();
@@ -698,6 +724,7 @@ export default class GameScene extends Phaser.Scene {
             this.orbitalBullets.splice(i, 1);
           }
 
+          this.scoreManager.addMatter(1);
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
@@ -831,6 +858,7 @@ export default class GameScene extends Phaser.Scene {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
+        this.scoreManager.addMatter(enemy.getHealth());
         this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
@@ -1028,6 +1056,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.isPowerUpSelectionActive || this.benchmarkDone) {
       this.updateAimingDot();
       this.updatePowerUpGamepadNavigation();
+      this.updateShopGamepadNavigation();
       this.gamepadManager.updatePrevState();
       return;
     }
@@ -1400,6 +1429,7 @@ export default class GameScene extends Phaser.Scene {
             this.bullets.splice(i, 1);
           }
 
+          this.scoreManager.addMatter(1);
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
@@ -1479,6 +1509,7 @@ export default class GameScene extends Phaser.Scene {
       ParticleEffects.createEnemyDeathParticles(this, targetBounds.x, targetBounds.y);
       currentX = targetBounds.x;
       currentY = targetBounds.y;
+      this.scoreManager.addMatter(closestEnemy.getHealth());
       closestEnemy.destroy();
       this.scoreManager.addKill(closestEnemy.tier);
 
@@ -1539,6 +1570,7 @@ export default class GameScene extends Phaser.Scene {
           const hitX = enemyBounds.x;
           const hitY = enemyBounds.y;
 
+          this.scoreManager.addMatter(enemy.getHealth());
           enemy.destroy();
           this.enemies.splice(j, 1);
           this.scoreManager.addKill(enemy.tier);
@@ -1864,7 +1896,7 @@ export default class GameScene extends Phaser.Scene {
 
     // In benchmark mode, auto-select the first power-up
     if (BENCHMARK_MODE) {
-      const selection = this.powerUpManager.getRandomSelection();
+      const selection = this.powerUpManager.getRandomPassiveSelection();
       if (selection.length > 0) {
         this.selectPowerUp(selection[0], nextLevel);
       }
@@ -1888,7 +1920,7 @@ export default class GameScene extends Phaser.Scene {
         this.repositionHud(this.playfieldVisualRadius);
       },
       onComplete: () => {
-        this.buildPieMenu(nextLevel);
+        this.buildPassiveMenu(nextLevel);
       },
     });
   }
@@ -1902,6 +1934,7 @@ export default class GameScene extends Phaser.Scene {
       { angleDeg: -12, label: this.streakLabel, value: this.streakValue },
       { angleDeg: -20, label: this.scoreLabel, value: this.scoreValue2 },
       { angleDeg: -28, label: this.levelLabel, value: this.levelValue },
+      { angleDeg: -36, label: this.matterLabel, value: this.matterValue },
     ];
 
     const hudDist = radius + 15 * PX;
@@ -1919,7 +1952,7 @@ export default class GameScene extends Phaser.Scene {
     this.repositionPowerUpHud(radius);
   }
 
-  private buildPieMenu(nextLevel: number) {
+  private buildPassiveMenu(nextLevel: number) {
     // Backdrop matching game background, with hole for collapsed playfield
     const backdrop = this.add.graphics();
     backdrop.fillStyle(COLORS.background, 1);
@@ -1938,6 +1971,8 @@ export default class GameScene extends Phaser.Scene {
       this.scoreValue2,
       this.levelLabel,
       this.levelValue,
+      this.matterLabel,
+      this.matterValue,
       ...this.slotHudElements,
       ...this.powerUpHudElements,
     ];
@@ -1946,7 +1981,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Get 3 weighted-random power-ups
-    const selection = this.powerUpManager.getRandomSelection();
+    const selection = this.powerUpManager.getRandomPassiveSelection();
 
     // Check if terminal shrink option is available (terminal has grown beyond initial)
     const shrinkAvailable = this.savedTerminalRadius > TERMINAL_RADIUS_INITIAL;
@@ -1965,7 +2000,7 @@ export default class GameScene extends Phaser.Scene {
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = powerUpAngles[2] + angStep;
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
-    const title = this.add.text(titleLayout.x, titleLayout.y, 'POWER UPS', {
+    const title = this.add.text(titleLayout.x, titleLayout.y, 'PASSIVES', {
       fontSize: `${HUD_FONT_SECONDARY}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
@@ -1975,7 +2010,7 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpUIElements.push(title);
 
     selection.forEach((powerUp, index) => {
-      const rarityLabel = powerUp.consumable ? 'CONSUMABLE' : powerUp.rarity;
+      const rarityLabel = powerUp.rarity;
       const layout = this.radialTextLayout(powerUpAngles[index], hudDist);
 
       // Name (main line)
@@ -2168,12 +2203,8 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpItemTexts = [];
     this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
 
-    // Show equip screen if player has consumables, otherwise restore and start next level
-    if (this.powerUpManager.hasAnyConsumables()) {
-      this.showEquipScreen(nextLevel);
-    } else {
-      this.restorePlayfield(nextLevel);
-    }
+    // Show consumable shop phase
+    this.showConsumableShop(nextLevel);
   }
 
   private selectTerminalShrink(nextLevel: number) {
@@ -2207,13 +2238,347 @@ export default class GameScene extends Phaser.Scene {
         this.drawPlayfield();
       },
       onComplete: () => {
-        if (this.powerUpManager.hasAnyConsumables()) {
-          this.showEquipScreen(nextLevel);
-        } else {
-          this.restorePlayfield(nextLevel);
-        }
+        this.showConsumableShop(nextLevel);
       },
     });
+  }
+
+  private showConsumableShop(nextLevel: number) {
+    // In benchmark mode, skip consumable shop entirely
+    if (BENCHMARK_MODE) {
+      this.isPowerUpSelectionActive = false;
+      this.levelManager.startLevel(nextLevel);
+      return;
+    }
+
+    const consumables = this.powerUpManager.getRandomConsumableSelection(3);
+
+    // If no consumables available, skip to equip screen or restore
+    if (consumables.length === 0) {
+      if (this.powerUpManager.hasAnyConsumables()) {
+        this.showEquipScreen(nextLevel);
+      } else {
+        this.restorePlayfield(nextLevel);
+      }
+      return;
+    }
+
+    this.shopSelectedIndex = 0;
+    this.shopItemTexts = [];
+
+    const hudDist = this.playfieldVisualRadius + 15 * PX;
+    const angStep = 10;
+    const centerDeg = -12; // RIGHT side, mirroring the passive menu's left side
+    const itemAngles = [centerDeg + angStep, centerDeg, centerDeg - angStep];
+    const doneAngleDeg = itemAngles[2] - angStep - 2;
+    const allAngles = [...itemAngles.slice(0, consumables.length), doneAngleDeg];
+
+    this.shopSelectionData = {
+      consumables,
+      nextLevel,
+      angles: allAngles,
+      purchased: new Set(),
+    };
+
+    // Backdrop ring (same as passive menu)
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(COLORS.background, 1);
+    backdrop.beginPath();
+    backdrop.arc(this.centerX, this.centerY, GAME_WIDTH, 0, Math.PI * 2, false);
+    backdrop.arc(this.centerX, this.centerY, this.playfieldVisualRadius, 0, Math.PI * 2, true);
+    backdrop.closePath();
+    backdrop.fillPath();
+    this.shopUIElements.push(backdrop);
+
+    // Bring HUD elements above backdrop
+    const hudEls = [
+      this.streakLabel,
+      this.streakValue,
+      this.scoreLabel,
+      this.scoreValue2,
+      this.levelLabel,
+      this.levelValue,
+      this.matterLabel,
+      this.matterValue,
+      ...this.slotHudElements,
+      ...this.powerUpHudElements,
+    ];
+    for (const el of hudEls) {
+      this.children.bringToTop(el);
+    }
+
+    // Title
+    const titleAngleDeg = itemAngles[0] + angStep;
+    const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
+    const title = this.add.text(titleLayout.x, titleLayout.y, 'CONSUMABLES', {
+      fontSize: `${HUD_FONT_SECONDARY}px`,
+      color: '#ffffff',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    title.setOrigin(titleLayout.originX, 0.5);
+    title.setRotation(titleLayout.rotation);
+    this.shopUIElements.push(title);
+
+    // Matter balance below title
+    const balAngle = (titleAngleDeg * Math.PI) / 180;
+    const balLineOffset = -40 * PX;
+    const balLayout = this.radialTextLayout(titleAngleDeg, hudDist);
+    const balX = balLayout.x + Math.sin(-balAngle) * balLineOffset;
+    const balY = balLayout.y + Math.cos(-balAngle) * balLineOffset;
+    const balText = this.add.text(balX, balY, `MATTER: ${this.scoreManager.getMatter()}`, {
+      fontSize: `${28 * PX}px`,
+      color: '#aaaaaa',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    balText.setOrigin(balLayout.originX, 0.5);
+    balText.setRotation(balLayout.rotation);
+    this.shopUIElements.push(balText);
+    this.shopBalanceText = balText;
+
+    // Shop items
+    consumables.forEach((consumable, index) => {
+      const cost = CONSUMABLE_MATTER_COST[consumable.rarity];
+      const affordable = this.scoreManager.getMatter() >= cost;
+      const layout = this.radialTextLayout(itemAngles[index], hudDist);
+
+      const nameText = this.add.text(layout.x, layout.y, consumable.name, {
+        fontSize: `${52 * PX}px`,
+        color: affordable ? '#cccccc' : '#555555',
+        fontFamily: "'Rajdhani', sans-serif",
+      });
+      nameText.setOrigin(layout.originX, 0.5);
+      nameText.setRotation(layout.rotation);
+
+      const angle = (itemAngles[index] * Math.PI) / 180;
+      const lineOffset = -40 * PX;
+      const rx = layout.x + Math.sin(-angle) * lineOffset;
+      const ry = layout.y + Math.cos(-angle) * lineOffset;
+      const costText = this.add.text(rx, ry, `${consumable.rarity} — ${cost}`, {
+        fontSize: `${28 * PX}px`,
+        color: affordable ? '#888888' : '#444444',
+        fontFamily: "'Rajdhani', sans-serif",
+      });
+      costText.setOrigin(layout.originX, 0.5);
+      costText.setRotation(layout.rotation);
+
+      if (affordable) {
+        nameText.setInteractive({ useHandCursor: true });
+        nameText.on('pointerover', () => {
+          if (this.shopSelectionData.purchased.has(index)) return;
+          nameText.setColor('#ffffff');
+          costText.setColor('#cccccc');
+        });
+        nameText.on('pointerout', () => {
+          if (this.shopSelectionData.purchased.has(index)) return;
+          nameText.setColor('#cccccc');
+          costText.setColor('#888888');
+        });
+        nameText.on('pointerdown', () => {
+          this.purchaseConsumable(index, this.shopBalanceText!);
+        });
+      }
+
+      // Pop in animation
+      nameText.setScale(0);
+      costText.setScale(0);
+      this.tweens.add({
+        targets: [nameText, costText],
+        scale: 1,
+        duration: 300,
+        delay: index * 60,
+        ease: 'Back.easeOut',
+      });
+
+      this.shopItemTexts.push({ name: nameText, cost: costText });
+      this.shopUIElements.push(nameText);
+      this.shopUIElements.push(costText);
+    });
+
+    // DONE option
+    const doneLayout = this.radialTextLayout(doneAngleDeg, hudDist);
+    const doneNameText = this.add.text(doneLayout.x, doneLayout.y, 'Done', {
+      fontSize: `${52 * PX}px`,
+      color: '#44cc55',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    doneNameText.setOrigin(doneLayout.originX, 0.5);
+    doneNameText.setRotation(doneLayout.rotation);
+
+    const doneAngle = (doneAngleDeg * Math.PI) / 180;
+    const doneLineOffset = -40 * PX;
+    const drx = doneLayout.x + Math.sin(-doneAngle) * doneLineOffset;
+    const dry = doneLayout.y + Math.cos(-doneAngle) * doneLineOffset;
+    const doneDescText = this.add.text(drx, dry, 'Proceed to next level', {
+      fontSize: `${28 * PX}px`,
+      color: '#338844',
+      fontFamily: "'Rajdhani', sans-serif",
+    });
+    doneDescText.setOrigin(doneLayout.originX, 0.5);
+    doneDescText.setRotation(doneLayout.rotation);
+
+    doneNameText.setInteractive({ useHandCursor: true });
+    doneNameText.on('pointerover', () => {
+      doneNameText.setColor('#66ee77');
+      doneDescText.setColor('#44cc55');
+    });
+    doneNameText.on('pointerout', () => {
+      doneNameText.setColor('#44cc55');
+      doneDescText.setColor('#338844');
+    });
+    doneNameText.on('pointerdown', () => {
+      this.closeConsumableShop();
+    });
+
+    doneNameText.setScale(0);
+    doneDescText.setScale(0);
+    this.tweens.add({
+      targets: [doneNameText, doneDescText],
+      scale: 1,
+      duration: 300,
+      delay: consumables.length * 60,
+      ease: 'Back.easeOut',
+    });
+
+    this.shopItemTexts.push({ name: doneNameText, cost: doneDescText });
+    this.shopUIElements.push(doneNameText);
+    this.shopUIElements.push(doneDescText);
+
+    this.drawShopHighlight();
+  }
+
+  private purchaseConsumable(index: number, balText: Phaser.GameObjects.Text) {
+    const { consumables, purchased } = this.shopSelectionData;
+    if (purchased.has(index)) return;
+    const consumable = consumables[index];
+    const cost = CONSUMABLE_MATTER_COST[consumable.rarity];
+
+    if (!this.scoreManager.spendMatter(cost)) return;
+
+    this.powerUpManager.addPowerUp(consumable.type);
+    purchased.add(index);
+
+    // Update matter balance display
+    balText.setText(`MATTER: ${this.scoreManager.getMatter()}`);
+    this.updateStreakHud();
+
+    // Grey out purchased item
+    const item = this.shopItemTexts[index];
+    item.name.setColor('#335533');
+    item.cost.setColor('#223322');
+    item.name.removeInteractive();
+
+    // Refresh affordability of remaining items
+    for (let i = 0; i < consumables.length; i++) {
+      if (purchased.has(i)) continue;
+      const c = consumables[i];
+      const cCost = CONSUMABLE_MATTER_COST[c.rarity];
+      const canAfford = this.scoreManager.getMatter() >= cCost;
+      const shopItem = this.shopItemTexts[i];
+      if (!canAfford) {
+        shopItem.name.setColor('#555555');
+        shopItem.cost.setColor('#444444');
+        shopItem.name.removeInteractive();
+      }
+    }
+  }
+
+  private drawShopHighlight() {
+    const { consumables, purchased } = this.shopSelectionData;
+
+    this.shopItemTexts.forEach((item, index) => {
+      const isDoneItem = index === consumables.length;
+      const isSelected = index === this.shopSelectedIndex;
+      const isPurchased = purchased.has(index);
+
+      if (isDoneItem) {
+        item.name.setColor(isSelected ? '#66ee77' : '#44cc55');
+        item.name.setScale(isSelected ? 1.15 : 1);
+        item.cost.setColor(isSelected ? '#44cc55' : '#338844');
+        item.cost.setScale(isSelected ? 1.15 : 1);
+      } else if (isPurchased) {
+        item.name.setColor('#335533');
+        item.name.setScale(1);
+        item.cost.setColor('#223322');
+        item.cost.setScale(1);
+      } else {
+        const consumable = consumables[index];
+        const cost = CONSUMABLE_MATTER_COST[consumable.rarity];
+        const affordable = this.scoreManager.getMatter() >= cost;
+
+        if (affordable) {
+          item.name.setColor(isSelected ? '#ffffff' : '#cccccc');
+          item.name.setScale(isSelected ? 1.15 : 1);
+          item.cost.setColor(isSelected ? '#cccccc' : '#888888');
+          item.cost.setScale(isSelected ? 1.15 : 1);
+        } else {
+          item.name.setColor('#555555');
+          item.name.setScale(1);
+          item.cost.setColor('#444444');
+          item.cost.setScale(1);
+        }
+      }
+    });
+  }
+
+  private updateShopGamepadNavigation() {
+    const { consumables, angles } = this.shopSelectionData;
+    const totalItems = consumables.length + 1; // +1 for DONE
+    if (!this.isPowerUpSelectionActive || totalItems === 0) return;
+    if (this.shopUIElements.length === 0) return; // shop not active
+
+    // Left stick navigation
+    const aimAngle = this.gamepadManager.getAimAngle();
+    if (aimAngle !== null) {
+      const stickDeg = ((aimAngle * 180) / Math.PI + 360) % 360;
+      let bestIndex = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < angles.length; i++) {
+        const diff = Math.abs(((stickDeg - angles[i] + 540) % 360) - 180);
+        if (diff < bestDist) {
+          bestDist = diff;
+          bestIndex = i;
+        }
+      }
+      this.shopSelectedIndex = bestIndex;
+      this.drawShopHighlight();
+    }
+
+    // D-pad
+    let nav = 0;
+    if (this.gamepadManager.isDpadDownJustPressed()) nav = 1;
+    else if (this.gamepadManager.isDpadUpJustPressed()) nav = -1;
+    if (nav !== 0) {
+      this.shopSelectedIndex = Math.max(0, Math.min(totalItems - 1, this.shopSelectedIndex + nav));
+      this.drawShopHighlight();
+    }
+
+    // A button to select
+    if (this.gamepadManager.isAJustPressed()) {
+      if (this.shopSelectedIndex < consumables.length && this.shopBalanceText) {
+        this.purchaseConsumable(this.shopSelectedIndex, this.shopBalanceText);
+        this.drawShopHighlight();
+      } else {
+        this.closeConsumableShop();
+      }
+    }
+  }
+
+  private closeConsumableShop() {
+    const nextLevel = this.shopSelectionData.nextLevel;
+
+    for (const el of this.shopUIElements) {
+      el.destroy();
+    }
+    this.shopUIElements = [];
+    this.shopItemTexts = [];
+    this.shopBalanceText = null;
+    this.shopSelectionData = { consumables: [], nextLevel: 0, angles: [], purchased: new Set() };
+
+    if (this.powerUpManager.hasAnyConsumables()) {
+      this.showEquipScreen(nextLevel);
+    } else {
+      this.restorePlayfield(nextLevel);
+    }
   }
 
   private restorePlayfield(nextLevel: number) {
