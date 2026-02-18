@@ -37,13 +37,16 @@ const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.LEGENDARY]: 5,
 };
 
-export const CONSUMABLE_MATTER_COST: Record<PowerUpRarity, number> = {
-  [PowerUpRarity.COMMON]: 5,
-  [PowerUpRarity.UNCOMMON]: 10,
-  [PowerUpRarity.RARE]: 20,
-  [PowerUpRarity.EPIC]: 40,
-  [PowerUpRarity.LEGENDARY]: 80,
-};
+const CONSUMABLE_BASE_COST = 32;
+const CONSUMABLE_BASE_WEIGHT = RARITY_WEIGHTS[PowerUpRarity.COMMON];
+
+function getConsumableCost(weight: number): number {
+  return Math.round(CONSUMABLE_BASE_COST * Math.pow(CONSUMABLE_BASE_WEIGHT / weight, 0.6));
+}
+
+export const CONSUMABLE_MATTER_COST: Record<PowerUpRarity, number> = Object.fromEntries(
+  Object.entries(RARITY_WEIGHTS).map(([rarity, weight]) => [rarity, getConsumableCost(weight)])
+) as Record<PowerUpRarity, number>;
 
 const STACK_DECAY = 0.9;
 const STACK_CAP = 5;
