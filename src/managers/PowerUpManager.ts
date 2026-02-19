@@ -188,7 +188,7 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.FISSION_ROUND,
     name: 'Fission Round',
     description: 'Killing shot splits into 2 new rounds',
-    rarity: PowerUpRarity.UNCOMMON,
+    rarity: PowerUpRarity.RARE,
     consumable: true,
   },
 ];

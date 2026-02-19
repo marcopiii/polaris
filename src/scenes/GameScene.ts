@@ -796,8 +796,8 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager.playSound('shoot');
   }
 
-  private spawnFissionBullets(originX: number, originY: number) {
-    for (let i = 0; i < FISSION_SPAWN_COUNT; i++) {
+  private spawnFissionBullets(originX: number, originY: number, count: number = FISSION_SPAWN_COUNT) {
+    for (let i = 0; i < count; i++) {
       const angle = gameRandom() * Math.PI * 2;
       const dist = 100;
       const tx = originX + Math.cos(angle) * dist;
@@ -1625,11 +1625,15 @@ export default class GameScene extends Phaser.Scene {
             this.applyVisionRecovery();
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
 
-            // Fission: spawn new bullets from the killed enemy
+            // Fission: spawn 2 bullets on kill (1 propagation + 1 bonus)
             if (bullet.isFission) {
-              this.spawnFissionBullets(hitX, hitY);
+              this.spawnFissionBullets(hitX, hitY, 2);
             }
           } else {
+            // Fission: spawn 1 bullet on hit (always propagates)
+            if (bullet.isFission) {
+              this.spawnFissionBullets(hitX, hitY, 1);
+            }
             const pushbackDist = this.powerUpManager.getPushbackDistance();
             if (pushbackDist > 0) {
               enemy.pushBack(pushbackDist);
