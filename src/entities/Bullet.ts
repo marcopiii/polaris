@@ -24,6 +24,7 @@ export default class Bullet {
   public pierceChance: number;
   public isManual: boolean = false;
   public hasHitEnemy: boolean = false;
+  public isFission: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -68,7 +69,8 @@ export default class Bullet {
     const angle = Math.atan2(this.velocityY, this.velocityX);
 
     // Draw glowing oval
-    this.graphics.fillStyle(COLORS.bullet, 1);
+    const color = this.isFission ? COLORS.fission : COLORS.bullet;
+    this.graphics.fillStyle(color, 1);
 
     // Save transform state
     this.graphics.save();
@@ -79,9 +81,9 @@ export default class Bullet {
     this.graphics.fillEllipse(0, 0, BULLET_WIDTH, BULLET_HEIGHT);
 
     // Add glow effect (multiple layers with alpha)
-    this.graphics.fillStyle(COLORS.bullet, 0.5);
+    this.graphics.fillStyle(color, 0.5);
     this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 2 * PX, BULLET_HEIGHT + 2 * PX);
-    this.graphics.fillStyle(COLORS.bullet, 0.2);
+    this.graphics.fillStyle(color, 0.2);
     this.graphics.fillEllipse(0, 0, BULLET_WIDTH + 4 * PX, BULLET_HEIGHT + 4 * PX);
 
     this.graphics.restore();

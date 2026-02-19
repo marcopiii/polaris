@@ -15,6 +15,8 @@ import {
   LASER_MAX_ANGULAR_SPEED,
   SHIELD_MAX_SLOTS,
   SHIELD_ORBIT_SPEED,
+  FISSION_SPAWN_COUNT,
+  FISSION_BULLET_SPEED,
   HUD_FONT_PRIMARY,
   HUD_FONT_SECONDARY,
   PX,
@@ -666,6 +668,9 @@ export default class GameScene extends Phaser.Scene {
       case PowerUpType.ORBITAL_FLARE:
         this.activateOrbitalFlare();
         break;
+      case PowerUpType.FISSION_ROUND:
+        this.activateFissionRound();
+        break;
     }
 
     this.updateConsumableHud();
@@ -766,6 +771,52 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.shake(100, 0.006);
     this.gamepadManager.vibrate(100, 0.2, 0.6);
     this.audioManager.playSound('shoot');
+  }
+
+  private activateFissionRound() {
+    const aimAngle = this.player.getRotation();
+    const dist = 100;
+    const tx = this.player.x + Math.cos(aimAngle) * dist;
+    const ty = this.player.y + Math.sin(aimAngle) * dist;
+
+    const bullet = new Bullet(
+      this,
+      this.player.x,
+      this.player.y,
+      tx,
+      ty,
+      this.centerX,
+      this.centerY,
+      FISSION_BULLET_SPEED / 2.5, // speedMultiplier relative to BULLET_SPEED
+      this.powerUpManager.getPierceChance()
+    );
+    bullet.isFission = true;
+    this.bullets.push(bullet);
+
+    this.audioManager.playSound('shoot');
+  }
+
+  private spawnFissionBullets(originX: number, originY: number) {
+    for (let i = 0; i < FISSION_SPAWN_COUNT; i++) {
+      const angle = gameRandom() * Math.PI * 2;
+      const dist = 100;
+      const tx = originX + Math.cos(angle) * dist;
+      const ty = originY + Math.sin(angle) * dist;
+
+      const bullet = new Bullet(
+        this,
+        originX,
+        originY,
+        tx,
+        ty,
+        this.centerX,
+        this.centerY,
+        FISSION_BULLET_SPEED / 2.5,
+        0
+      );
+      bullet.isFission = true;
+      this.bullets.push(bullet);
+    }
   }
 
   private updateSweepShots(delta: number) {
@@ -1573,6 +1624,11 @@ export default class GameScene extends Phaser.Scene {
             this.scoreManager.addKill(enemy.tier);
             this.applyVisionRecovery();
             ParticleEffects.createEnemyDeathParticles(this, hitX, hitY);
+
+            // Fission: spawn new bullets from the killed enemy
+            if (bullet.isFission) {
+              this.spawnFissionBullets(hitX, hitY);
+            }
           } else {
             const pushbackDist = this.powerUpManager.getPushbackDistance();
             if (pushbackDist > 0) {

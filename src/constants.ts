@@ -117,6 +117,10 @@ export const ORBITAL_BULLET_SIZE = 8 * PX; // visual/collision radius
 export const ORBITAL_FLARE_WIDTH = 20 * PX;
 export const ORBITAL_FLARE_HEIGHT = 12 * PX;
 
+// Fission Round
+export const FISSION_SPAWN_COUNT = 2; // bullets spawned per kill
+export const FISSION_BULLET_SPEED = 2.0; // radii per second (slightly slower than normal)
+
 // Orbital Shield
 export const SHIELD_ORBIT_OFFSET = 60 * PX; // pixels outside the terminal radius
 export const SHIELD_MAX_SLOTS = 8; // max shields around the player
@@ -149,4 +153,5 @@ export const COLORS = {
   playfield: 0xbbbbbb,
   background: 0x333333,
   terminalRadiusHint: 0xba0000,
+  fission: 0x00ff88,
 };
