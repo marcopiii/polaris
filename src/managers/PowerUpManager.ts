@@ -19,6 +19,7 @@ export enum PowerUpType {
   LASER_BEAM = 'LASER_BEAM',
   SWEEPSHOT = 'SWEEPSHOT',
   ORBITAL_FLARE = 'ORBITAL_FLARE',
+  FISSION_ROUND = 'FISSION_ROUND',
 }
 
 export enum PowerUpRarity {
@@ -29,14 +30,6 @@ export enum PowerUpRarity {
   LEGENDARY = 'LEGENDARY',
 }
 
-export const RARITY_COLORS: Record<PowerUpRarity, number> = {
-  [PowerUpRarity.COMMON]: 0xaaaaaa,
-  [PowerUpRarity.UNCOMMON]: 0x4488ff,
-  [PowerUpRarity.RARE]: 0xaa44ff,
-  [PowerUpRarity.EPIC]: 0xff4488,
-  [PowerUpRarity.LEGENDARY]: 0xffaa00,
-};
-
 const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.COMMON]: 90,
   [PowerUpRarity.UNCOMMON]: 60,
@@ -44,6 +37,17 @@ const RARITY_WEIGHTS: Record<PowerUpRarity, number> = {
   [PowerUpRarity.EPIC]: 15,
   [PowerUpRarity.LEGENDARY]: 5,
 };
+
+const CONSUMABLE_BASE_COST = 32;
+const CONSUMABLE_BASE_WEIGHT = RARITY_WEIGHTS[PowerUpRarity.COMMON];
+
+function getConsumableCost(weight: number): number {
+  return Math.round(CONSUMABLE_BASE_COST * Math.pow(CONSUMABLE_BASE_WEIGHT / weight, 0.6));
+}
+
+export const CONSUMABLE_MATTER_COST: Record<PowerUpRarity, number> = Object.fromEntries(
+  Object.entries(RARITY_WEIGHTS).map(([rarity, weight]) => [rarity, getConsumableCost(weight)])
+) as Record<PowerUpRarity, number>;
 
 const STACK_DECAY = 0.9;
 const STACK_CAP = 5;
@@ -56,8 +60,14 @@ export interface PowerUpDefinition {
   consumable: boolean;
 }
 
-export const MAX_CONSUMABLE_INVENTORY = 16;
-export const MAX_EQUIPPED_SLOTS = 4;
+const MAX_CONSUMABLE_INVENTORY = 16;
+
+export const CONSUMABLE_SLOTS: { primary?: PowerUpType; secondary?: PowerUpType }[] = [
+  { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
+  { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SHOCKWAVE },
+  { primary: PowerUpType.ORBITAL_FLARE },
+  { primary: PowerUpType.FISSION_ROUND },
+];
 
 const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.SHOCKWAVE,
@@ -65,6 +75,7 @@ const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.LASER_BEAM,
   PowerUpType.SWEEPSHOT,
   PowerUpType.ORBITAL_FLARE,
+  PowerUpType.FISSION_ROUND,
 ]);
 
 const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
@@ -173,6 +184,13 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     rarity: PowerUpRarity.EPIC,
     consumable: true,
   },
+  {
+    type: PowerUpType.FISSION_ROUND,
+    name: 'Fission Round',
+    description: 'Killing shot splits into 2 new rounds',
+    rarity: PowerUpRarity.RARE,
+    consumable: true,
+  },
 ];
 
 export function getConsumableDefinition(type: PowerUpType): PowerUpDefinition | undefined {
@@ -181,13 +199,12 @@ export function getConsumableDefinition(type: PowerUpType): PowerUpDefinition | 
 
 export default class PowerUpManager {
   private stacks: Map<PowerUpType, number> = new Map();
-  private inventory: Map<PowerUpType, number> = new Map();
-  private equipped: (PowerUpType | null)[] = [null, null, null, null];
+  private consumableCounts: Map<PowerUpType, number> = new Map();
 
   addPowerUp(type: PowerUpType): void {
     if (CONSUMABLE_TYPES.has(type)) {
       if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return;
-      this.inventory.set(type, this.getInventoryCount(type) + 1);
+      this.consumableCounts.set(type, this.getConsumableCount(type) + 1);
     } else {
       this.stacks.set(type, this.getStacks(type) + 1);
     }
@@ -204,88 +221,29 @@ export default class PowerUpManager {
     }
   }
 
-  /** Count of a consumable type in inventory only (not equipped) */
-  getInventoryCount(type: PowerUpType): number {
-    return this.inventory.get(type) ?? 0;
-  }
-
-  /** Total owned count of a consumable type (inventory + equipped) */
   getConsumableCount(type: PowerUpType): number {
-    let count = this.inventory.get(type) ?? 0;
-    for (const slot of this.equipped) {
-      if (slot === type) count++;
-    }
-    return count;
+    return this.consumableCounts.get(type) ?? 0;
   }
 
-  /** Total number of consumables owned (inventory + equipped) */
   getTotalConsumableCount(): number {
     let total = 0;
-    for (const count of this.inventory.values()) {
+    for (const count of this.consumableCounts.values()) {
       total += count;
-    }
-    for (const slot of this.equipped) {
-      if (slot !== null) total++;
     }
     return total;
   }
 
-  getEquippedSlot(slot: number): PowerUpType | null {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
-    return this.equipped[slot] ?? null;
-  }
-
-  /** Equip a consumable from inventory to a slot. Returns true on success. */
-  equipToSlot(slot: number, type: PowerUpType): boolean {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
-    if (!CONSUMABLE_TYPES.has(type)) return false;
-    const invCount = this.getInventoryCount(type);
-    if (invCount <= 0) return false;
-
-    // If slot already has something, unequip it first
-    this.unequipSlot(slot);
-
-    // Remove from inventory, place in slot
-    this.inventory.set(type, invCount - 1);
-    if (this.getInventoryCount(type) <= 0) this.inventory.delete(type);
-    this.equipped[slot] = type;
+  /** Use a consumable by type. Returns true if successfully consumed. */
+  useConsumable(type: PowerUpType): boolean {
+    const count = this.getConsumableCount(type);
+    if (count <= 0) return false;
+    this.consumableCounts.set(type, count - 1);
+    if (count - 1 <= 0) this.consumableCounts.delete(type);
     return true;
   }
 
-  /** Unequip a slot back to inventory. Returns true if slot had something. */
-  unequipSlot(slot: number): boolean {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return false;
-    const type = this.equipped[slot];
-    if (!type) return false;
-
-    this.inventory.set(type, this.getInventoryCount(type) + 1);
-    this.equipped[slot] = null;
-    return true;
-  }
-
-  /** Use the consumable in the given equipped slot. Returns the type, or null. */
-  useEquippedSlot(slot: number): PowerUpType | null {
-    if (slot < 0 || slot >= MAX_EQUIPPED_SLOTS) return null;
-    const type = this.equipped[slot];
-    if (!type) return null;
-    this.equipped[slot] = null;
-    return type;
-  }
-
-  /** Check if the player owns any consumables (inventory or equipped) */
   hasAnyConsumables(): boolean {
     return this.getTotalConsumableCount() > 0;
-  }
-
-  /** Get inventory entries (type + count) for equip screen UI */
-  getInventoryEntries(): { type: PowerUpType; count: number }[] {
-    const entries: { type: PowerUpType; count: number }[] = [];
-    for (const [type, count] of this.inventory.entries()) {
-      if (count > 0) {
-        entries.push({ type, count });
-      }
-    }
-    return entries;
   }
 
   isConsumable(type: PowerUpType): boolean {
@@ -355,19 +313,31 @@ export default class PowerUpManager {
     return base * Math.pow(STACK_DECAY, stacks);
   }
 
-  /** Return 3 weighted-random power-ups (no duplicates, rarity-weighted with stack decay) */
-  getRandomSelection(): PowerUpDefinition[] {
-    let defs = [...POWER_UP_DEFINITIONS];
+  /** Return up to `count` weighted-random passives (no duplicates, rarity-weighted with stack decay) */
+  getRandomPassiveSelection(count: number = 3): PowerUpDefinition[] {
+    const defs = POWER_UP_DEFINITIONS.filter((p) => !p.consumable);
+    return this.weightedRandomPick(defs, count);
+  }
 
-    // If consumable inventory is full, exclude consumables from pool
-    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) {
-      defs = defs.filter((p) => !p.consumable);
-    }
+  /** Return up to `count` weighted-random consumables, respecting inventory cap */
+  getRandomConsumableSelection(count: number = 3): PowerUpDefinition[] {
+    if (this.getTotalConsumableCount() >= MAX_CONSUMABLE_INVENTORY) return [];
+    const defs = POWER_UP_DEFINITIONS.filter((p) => p.consumable);
+    return this.weightedRandomPick(defs, count);
+  }
 
+  /** Get the matter cost for a consumable power-up type */
+  getConsumableCost(type: PowerUpType): number {
+    const def = POWER_UP_DEFINITIONS.find((d) => d.type === type);
+    if (!def) return 0;
+    return CONSUMABLE_MATTER_COST[def.rarity];
+  }
+
+  private weightedRandomPick(defs: PowerUpDefinition[], count: number): PowerUpDefinition[] {
     const pool = defs.map((def) => ({ def, weight: this.getEffectiveWeight(def) }));
     const selected: PowerUpDefinition[] = [];
 
-    for (let i = 0; i < 3 && pool.length > 0; i++) {
+    for (let i = 0; i < count && pool.length > 0; i++) {
       const totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
       let roll = gameRandom() * totalWeight;
 
@@ -398,7 +368,6 @@ export default class PowerUpManager {
 
   reset(): void {
     this.stacks.clear();
-    this.inventory.clear();
-    this.equipped = [null, null, null, null];
+    this.consumableCounts.clear();
   }
 }

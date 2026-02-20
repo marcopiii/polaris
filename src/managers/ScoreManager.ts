@@ -4,6 +4,7 @@ export default class ScoreManager {
   private score: number = 0;
   private kills: number = 0;
   private hitStreak: number = 0;
+  private matter: number = 0;
   private difficulty: Difficulty;
 
   constructor(difficulty: Difficulty) {
@@ -36,9 +37,24 @@ export default class ScoreManager {
     return this.kills;
   }
 
+  addMatter(amount: number) {
+    this.matter += amount;
+  }
+
+  getMatter(): number {
+    return this.matter;
+  }
+
+  spendMatter(amount: number): boolean {
+    if (this.matter < amount) return false;
+    this.matter -= amount;
+    return true;
+  }
+
   reset() {
     this.score = 0;
     this.kills = 0;
     this.hitStreak = 0;
+    this.matter = 0;
   }
 }
