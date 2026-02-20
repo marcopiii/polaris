@@ -92,12 +92,10 @@ export default class GameScene extends Phaser.Scene {
     selection: PowerUpDefinition[];
     nextLevel: number;
     angles: number[];
-    shrinkAvailable: boolean;
   } = {
     selection: [],
     nextLevel: 0,
     angles: [],
-    shrinkAvailable: false,
   };
 
   // Consumable state
@@ -2102,19 +2100,12 @@ export default class GameScene extends Phaser.Scene {
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomPassiveSelection();
 
-    // Check if terminal shrink option is available (terminal has grown beyond initial)
-    const shrinkAvailable = this.savedTerminalRadius > TERMINAL_RADIUS_INITIAL;
-
     // Layout: radial text on the left side, tilted to align with circle center
     const hudDist = this.playfieldVisualRadius + 15 * PX;
     const angStep = 10; // degrees between items
     const centerDeg = 192; // center item angle (degrees), left side
     const powerUpAngles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
-    const allAngles = [...powerUpAngles];
-    if (shrinkAvailable) {
-      allAngles.push(powerUpAngles[0] - angStep - 2); // Below power-ups with extra gap
-    }
-    this.powerUpSelectionData = { selection, nextLevel, angles: allAngles, shrinkAvailable };
+    this.powerUpSelectionData = { selection, nextLevel, angles: powerUpAngles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = powerUpAngles[2] + angStep;
@@ -2185,87 +2176,22 @@ export default class GameScene extends Phaser.Scene {
       this.powerUpUIElements.push(rarityText);
     });
 
-    // Add terminal shrink option if available
-    if (shrinkAvailable) {
-      const shrinkAngleDeg = allAngles[selection.length];
-      const shrinkLayout = this.radialTextLayout(shrinkAngleDeg, hudDist);
-
-      const shrinkNameText = this.add.text(shrinkLayout.x, shrinkLayout.y, 'Terminal Shrink', {
-        fontSize: `${52 * PX}px`,
-        color: '#cc4444',
-        fontFamily: "'Rajdhani', sans-serif",
-      });
-      shrinkNameText.setOrigin(shrinkLayout.originX, 0.5);
-      shrinkNameText.setRotation(shrinkLayout.rotation);
-
-      const shrinkAngle = (shrinkAngleDeg * Math.PI) / 180;
-      const shrinkLineOffset = -40 * PX;
-      const srx = shrinkLayout.x + Math.sin(-shrinkAngle) * shrinkLineOffset;
-      const sry = shrinkLayout.y + Math.cos(-shrinkAngle) * shrinkLineOffset;
-      const shrinkDescText = this.add.text(srx, sry, 'Shrink the terminal radius', {
-        fontSize: `${28 * PX}px`,
-        color: '#884444',
-        fontFamily: "'Rajdhani', sans-serif",
-      });
-      shrinkDescText.setOrigin(shrinkLayout.originX, 0.5);
-      shrinkDescText.setRotation(shrinkLayout.rotation);
-
-      shrinkNameText.setInteractive({ useHandCursor: true });
-      shrinkNameText.on('pointerover', () => {
-        shrinkNameText.setColor('#ff6666');
-        shrinkDescText.setColor('#cc6666');
-      });
-      shrinkNameText.on('pointerout', () => {
-        shrinkNameText.setColor('#cc4444');
-        shrinkDescText.setColor('#884444');
-      });
-      shrinkNameText.on('pointerdown', () => {
-        this.selectTerminalShrink(nextLevel);
-      });
-
-      // Pop in animation
-      shrinkNameText.setScale(0);
-      shrinkDescText.setScale(0);
-      this.tweens.add({
-        targets: [shrinkNameText, shrinkDescText],
-        scale: 1,
-        duration: 300,
-        delay: selection.length * 60,
-        ease: 'Back.easeOut',
-      });
-
-      this.powerUpItemTexts.push({ name: shrinkNameText, rarity: shrinkDescText });
-      this.powerUpUIElements.push(shrinkNameText);
-      this.powerUpUIElements.push(shrinkDescText);
-    }
-
     this.drawPowerUpHighlight();
   }
 
   private drawPowerUpHighlight() {
-    const { shrinkAvailable, selection } = this.powerUpSelectionData;
-
     this.powerUpItemTexts.forEach((item, index) => {
-      const isShrinkItem = shrinkAvailable && index === selection.length;
       const isSelected = index === this.powerUpSelectedIndex;
-
-      if (isShrinkItem) {
-        item.name.setColor(isSelected ? '#ff6666' : '#cc4444');
-        item.name.setScale(isSelected ? 1.15 : 1);
-        item.rarity.setColor(isSelected ? '#cc6666' : '#884444');
-        item.rarity.setScale(isSelected ? 1.15 : 1);
-      } else {
-        item.name.setColor(isSelected ? '#ffffff' : '#cccccc');
-        item.name.setScale(isSelected ? 1.15 : 1);
-        item.rarity.setColor(isSelected ? '#cccccc' : '#888888');
-        item.rarity.setScale(isSelected ? 1.15 : 1);
-      }
+      item.name.setColor(isSelected ? '#ffffff' : '#cccccc');
+      item.name.setScale(isSelected ? 1.15 : 1);
+      item.rarity.setColor(isSelected ? '#cccccc' : '#888888');
+      item.rarity.setScale(isSelected ? 1.15 : 1);
     });
   }
 
   private updatePowerUpGamepadNavigation() {
-    const { selection, nextLevel, angles, shrinkAvailable } = this.powerUpSelectionData;
-    const totalItems = selection.length + (shrinkAvailable ? 1 : 0);
+    const { selection, nextLevel, angles } = this.powerUpSelectionData;
+    const totalItems = selection.length;
     if (!this.isPowerUpSelectionActive || totalItems === 0) return;
 
     // Left stick: find the item whose angle is closest to the stick direction
@@ -2298,11 +2224,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.gamepadManager.isAJustPressed()) {
-      if (this.powerUpSelectedIndex < selection.length) {
-        this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
-      } else {
-        this.selectTerminalShrink(nextLevel);
-      }
+      this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
     }
   }
 
@@ -2320,46 +2242,10 @@ export default class GameScene extends Phaser.Scene {
     }
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
+    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [] };
 
     // Show consumable shop phase
     this.showConsumableShop(nextLevel);
-  }
-
-  private selectTerminalShrink(nextLevel: number) {
-    // Apply shrink to the real saved terminal radius
-    const shrinkAmount = 0.04 * PLAYFIELD_RADIUS;
-    this.savedTerminalRadius = Math.max(
-      this.savedTerminalRadius - shrinkAmount,
-      TERMINAL_RADIUS_INITIAL
-    );
-
-    // Compute proportional target for the collapsed playfield
-    const targetTerminal =
-      this.savedTerminalRadius * (this.playfieldVisualRadius / PLAYFIELD_RADIUS);
-
-    // Destroy all power-up UI elements
-    for (const el of this.powerUpUIElements) {
-      el.destroy();
-    }
-    this.powerUpUIElements = [];
-    this.powerUpItemTexts = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
-
-    // Animate the terminal shrink visually before proceeding
-    this.audioManager.playSound('terminalShrink');
-    this.tweens.add({
-      targets: this,
-      terminalRadius: targetTerminal,
-      duration: 300,
-      ease: 'Quad.easeInOut',
-      onUpdate: () => {
-        this.drawPlayfield();
-      },
-      onComplete: () => {
-        this.showConsumableShop(nextLevel);
-      },
-    });
   }
 
   private showConsumableShop(nextLevel: number) {
