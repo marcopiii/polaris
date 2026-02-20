@@ -793,7 +793,11 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager.playSound('shoot');
   }
 
-  private spawnFissionBullets(originX: number, originY: number, count: number = FISSION_SPAWN_COUNT) {
+  private spawnFissionBullets(
+    originX: number,
+    originY: number,
+    count: number = FISSION_SPAWN_COUNT
+  ) {
     for (let i = 0; i < count; i++) {
       const angle = gameRandom() * Math.PI * 2;
       const dist = 100;

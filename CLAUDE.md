@@ -62,7 +62,6 @@ The main game logic lives in `GameScene`:
    - Update all bullets (move, check bounds)
    - Check bullet-enemy collisions
    - Check level completion
-   - Check game over condition
 
 2. **Managers** (stateless between levels, except ScoreManager):
    - `LevelManager`: Handles spawn rate calculation `rate(t) = SPAWN_RATE_INITIAL + SPAWN_RATE_ACCELERATION × t`
@@ -81,9 +80,9 @@ The main game logic lives in `GameScene`:
 
 Core gameplay mechanic with two concentric circles:
 
-- **Vision Radius**: Starts at `PLAYFIELD_RADIUS` (1800px). When an enemy crosses the terminal radius, vision decreases by `PLAYFIELD_RADIUS / (6 + stacks)` (base 300px, improved by REINFORCED_VISION power-up)
-- **Terminal Radius**: Starts at `TERMINAL_RADIUS_INITIAL` (144px). When vision reaches 0, it resets and terminal grows by `TERMINAL_RADIUS_INCREASE` (varies per difficulty, normal = 90px)
-- **Game Over**: When terminal radius >= `PLAYFIELD_RADIUS` (1800px)
+- **Vision Radius**: Starts at `PLAYFIELD_RADIUS` (1800px). When an enemy crosses the terminal radius, vision decreases by `PLAYFIELD_RADIUS / (12 + stacks)` (base 150px, improved by REINFORCED_VISION power-up)
+- **Terminal Radius**: Fixed at `TERMINAL_RADIUS_INITIAL` (144px), never grows
+- **Game Over**: When vision radius reaches the terminal radius
 
 The blur effect is implemented via **WebGL PostFX shader** (`VisionBlurShader.ts`):
 
@@ -107,7 +106,6 @@ All gameplay values are in `constants.ts`. When tweaking game feel:
 
 - `SPAWN_RATE_INITIAL` and `SPAWN_RATE_ACCELERATION`: Control difficulty curve (per-difficulty `Record`)
 - `ENEMY_SPEED` and `BULLET_SPEED`: Expressed as fractions of playfield radius per second
-- `TERMINAL_RADIUS_INCREASE`: Controls damage progression (per-difficulty `Record`)
 - Vision radius decrease is computed dynamically by `PowerUpManager.getVisionRadiusDecrease()`
 
 ## WebGL Shader Gotchas
