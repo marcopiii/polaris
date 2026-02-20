@@ -5,7 +5,6 @@ import {
   PLAYFIELD_RADIUS,
   TERMINAL_RADIUS_INITIAL,
   VISION_RADIUS_INITIAL,
-  TERMINAL_RADIUS_INCREASE,
   COLORS,
   ENEMY_SPEED,
   ENEMY_LEVEL_EXP,
@@ -1450,11 +1449,6 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Check game over
-    if (this.terminalRadius >= PLAYFIELD_RADIUS) {
-      this.gameOver();
-    }
-
     this.gamepadManager.updatePrevState();
   }
 
@@ -1825,88 +1819,18 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.shake(100, 0.005);
     this.gamepadManager.vibrate(100, 0.2, 0.6);
 
-    if (newVisionRadius <= 0) {
-      // Smoothly transition vision radius to 0, then reset
+    if (newVisionRadius <= this.terminalRadius) {
+      // Vision has reached terminal radius — game over
       this.tweens.add({
         targets: this,
-        visionRadius: 0,
+        visionRadius: this.terminalRadius,
         duration: 200,
         ease: 'Quad.easeOut',
         onUpdate: () => {
           this.drawPlayfield();
         },
         onComplete: () => {
-          // Save old terminal radius before increasing
-          const oldTerminalRadius = this.terminalRadius;
-          const newTerminalRadius = this.terminalRadius + TERMINAL_RADIUS_INCREASE[this.difficulty];
-
-          this.audioManager.playSound('terminalGrow');
-
-          // Strong screen shake for terminal grow
-          this.cameras.main.shake(300, 0.01);
-          this.gamepadManager.vibrate(300, 0.5, 1.0);
-
-          // Smoothly increase terminal radius
-          this.tweens.add({
-            targets: this,
-            terminalRadius: newTerminalRadius,
-            duration: 300,
-            ease: 'Quad.easeOut',
-            onUpdate: () => {
-              this.drawPlayfield();
-            },
-          });
-
-          // Visual effect for terminal growth (starts from old radius)
-          ParticleEffects.createTerminalGrowEffect(
-            this,
-            this.centerX,
-            this.centerY,
-            oldTerminalRadius
-          );
-
-          // Kill enemies progressively as wave reaches them
-          const waveDuration = 500;
-          const waveStart = oldTerminalRadius;
-          const waveEnd = PLAYFIELD_RADIUS;
-          const waveDistance = waveEnd - waveStart;
-
-          for (const e of this.enemies) {
-            const enemyDistance = e.getRadius();
-
-            // Calculate when wave reaches this enemy
-            if (enemyDistance >= waveStart && enemyDistance <= waveEnd) {
-              const progress = (enemyDistance - waveStart) / waveDistance;
-              const delay = progress * waveDuration;
-
-              this.time.delayedCall(delay, () => {
-                if (e.active) {
-                  const bounds = e.getBounds();
-                  ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
-                  e.destroy();
-                }
-              });
-            } else {
-              // Enemy outside wave range, destroy immediately
-              e.destroy();
-            }
-          }
-
-          // Clear enemy array after wave completes
-          this.time.delayedCall(waveDuration, () => {
-            this.enemies = this.enemies.filter((e) => e.active);
-          });
-
-          // Smoothly transition back to full vision
-          this.tweens.add({
-            targets: this,
-            visionRadius: VISION_RADIUS_INITIAL,
-            duration: 200,
-            ease: 'Quad.easeOut',
-            onUpdate: () => {
-              this.drawPlayfield();
-            },
-          });
+          this.gameOver();
         },
       });
     } else {

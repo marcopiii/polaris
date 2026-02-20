@@ -255,9 +255,9 @@ export default class PowerUpManager {
     return 1000 / (3 + this.getStacks(PowerUpType.RAPID_FIRE));
   }
 
-  /** Vision radius decrease: PLAYFIELD_RADIUS / (6 + stacks) — base 300px */
+  /** Vision radius decrease: PLAYFIELD_RADIUS / (12 + stacks) — base 150px */
   getVisionRadiusDecrease(): number {
-    return PLAYFIELD_RADIUS / (6 + this.getStacks(PowerUpType.REINFORCED_VISION));
+    return PLAYFIELD_RADIUS / (12 + this.getStacks(PowerUpType.REINFORCED_VISION));
   }
 
   /** Bullet count: 1 + stacks */
