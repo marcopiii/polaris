@@ -166,6 +166,43 @@ export class AudioGenerator {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
+  playExplosion() {
+    const t = this.audioContext.currentTime;
+
+    // Layer 1: Sawtooth "boom" sweeping 150Hz → 30Hz
+    const boomDuration = 0.6;
+    const boomOsc = this.audioContext.createOscillator();
+    const boomGain = this.audioContext.createGain();
+
+    boomOsc.type = 'sawtooth';
+    boomOsc.connect(boomGain);
+    boomGain.connect(this.masterGain);
+
+    boomOsc.frequency.setValueAtTime(150, t);
+    boomOsc.frequency.exponentialRampToValueAtTime(30, t + boomDuration);
+
+    boomGain.gain.setValueAtTime(0.5, t);
+    boomGain.gain.exponentialRampToValueAtTime(0.01, t + boomDuration);
+
+    boomOsc.start(t);
+    boomOsc.stop(t + boomDuration);
+
+    // Layer 2: White noise "crack" with sharp attack
+    const crackDuration = 0.3;
+    const noiseSource = this.audioContext.createBufferSource();
+    noiseSource.buffer = this.createNoiseBuffer(crackDuration);
+    const noiseGain = this.audioContext.createGain();
+
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+
+    noiseGain.gain.setValueAtTime(0.4, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + crackDuration);
+
+    noiseSource.start(t);
+    noiseSource.stop(t + crackDuration);
+  }
+
   playLightning() {
     const duration = 0.12;
     const oscillator = this.audioContext.createOscillator();

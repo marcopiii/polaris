@@ -4,8 +4,6 @@ import {
   GAME_HEIGHT,
   PLAYFIELD_RADIUS,
   TERMINAL_RADIUS_INITIAL,
-  VISION_RADIUS_INITIAL,
-  TERMINAL_RADIUS_INCREASE,
   COLORS,
   ENEMY_SPEED,
   ENEMY_LEVEL_EXP,
@@ -79,6 +77,7 @@ export default class GameScene extends Phaser.Scene {
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
   private isPaused: boolean = false;
+  private isDeathSequenceActive: boolean = false;
   private pauseUIElements: Phaser.GameObjects.GameObject[] = [];
   private pauseButton!: Phaser.GameObjects.Text;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -93,12 +92,10 @@ export default class GameScene extends Phaser.Scene {
     selection: PowerUpDefinition[];
     nextLevel: number;
     angles: number[];
-    shrinkAvailable: boolean;
   } = {
     selection: [],
     nextLevel: 0,
     angles: [],
-    shrinkAvailable: false,
   };
 
   // Consumable state
@@ -157,7 +154,7 @@ export default class GameScene extends Phaser.Scene {
     this.centerX = GAME_WIDTH / 2;
     this.centerY = GAME_HEIGHT / 2;
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
-    this.visionRadius = VISION_RADIUS_INITIAL;
+    this.visionRadius = PLAYFIELD_RADIUS;
 
     // Reset arrays to avoid stale references from previous scene runs
     this.enemies = [];
@@ -179,6 +176,7 @@ export default class GameScene extends Phaser.Scene {
     this.dustParticles = [];
     this.pauseUIElements = [];
     this.isPaused = false;
+    this.isDeathSequenceActive = false;
     this.isPowerUpSelectionActive = false;
     this.playfieldTremble = 0;
     this.playfieldVisualRadius = PLAYFIELD_RADIUS;
@@ -796,7 +794,11 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager.playSound('shoot');
   }
 
-  private spawnFissionBullets(originX: number, originY: number, count: number = FISSION_SPAWN_COUNT) {
+  private spawnFissionBullets(
+    originX: number,
+    originY: number,
+    count: number = FISSION_SPAWN_COUNT
+  ) {
     for (let i = 0; i < count; i++) {
       const angle = gameRandom() * Math.PI * 2;
       const dist = 100;
@@ -1221,6 +1223,20 @@ export default class GameScene extends Phaser.Scene {
     // Update blur effect every frame
     this.updateBlurEffect();
 
+    // During death sequence: only update enemies (movement) and redraw playfield
+    if (this.isDeathSequenceActive) {
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        const enemy = this.enemies[i];
+        if (!enemy.active) {
+          this.enemies.splice(i, 1);
+          continue;
+        }
+        enemy.update(delta, 1);
+      }
+      this.drawPlayfield();
+      return;
+    }
+
     // Check pause toggle (Escape key or gamepad Start)
     const escPressed = this.escKey && Phaser.Input.Keyboard.JustDown(this.escKey);
     const startPressed = this.gamepadManager.isStartJustPressed();
@@ -1407,7 +1423,7 @@ export default class GameScene extends Phaser.Scene {
       // Reset vision radius with smooth transition
       this.tweens.add({
         targets: this,
-        visionRadius: VISION_RADIUS_INITIAL,
+        visionRadius: PLAYFIELD_RADIUS,
         duration: 300,
         ease: 'Quad.easeOut',
         onUpdate: () => {
@@ -1448,11 +1464,6 @@ export default class GameScene extends Phaser.Scene {
           this.showPowerUpSelection(completedLevel);
         });
       }
-    }
-
-    // Check game over
-    if (this.terminalRadius >= PLAYFIELD_RADIUS) {
-      this.gameOver();
     }
 
     this.gamepadManager.updatePrevState();
@@ -1825,88 +1836,18 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.shake(100, 0.005);
     this.gamepadManager.vibrate(100, 0.2, 0.6);
 
-    if (newVisionRadius <= 0) {
-      // Smoothly transition vision radius to 0, then reset
+    if (newVisionRadius <= this.terminalRadius) {
+      // Vision has reached terminal radius — game over
       this.tweens.add({
         targets: this,
-        visionRadius: 0,
+        visionRadius: this.terminalRadius,
         duration: 200,
         ease: 'Quad.easeOut',
         onUpdate: () => {
           this.drawPlayfield();
         },
         onComplete: () => {
-          // Save old terminal radius before increasing
-          const oldTerminalRadius = this.terminalRadius;
-          const newTerminalRadius = this.terminalRadius + TERMINAL_RADIUS_INCREASE[this.difficulty];
-
-          this.audioManager.playSound('terminalGrow');
-
-          // Strong screen shake for terminal grow
-          this.cameras.main.shake(300, 0.01);
-          this.gamepadManager.vibrate(300, 0.5, 1.0);
-
-          // Smoothly increase terminal radius
-          this.tweens.add({
-            targets: this,
-            terminalRadius: newTerminalRadius,
-            duration: 300,
-            ease: 'Quad.easeOut',
-            onUpdate: () => {
-              this.drawPlayfield();
-            },
-          });
-
-          // Visual effect for terminal growth (starts from old radius)
-          ParticleEffects.createTerminalGrowEffect(
-            this,
-            this.centerX,
-            this.centerY,
-            oldTerminalRadius
-          );
-
-          // Kill enemies progressively as wave reaches them
-          const waveDuration = 500;
-          const waveStart = oldTerminalRadius;
-          const waveEnd = PLAYFIELD_RADIUS;
-          const waveDistance = waveEnd - waveStart;
-
-          for (const e of this.enemies) {
-            const enemyDistance = e.getRadius();
-
-            // Calculate when wave reaches this enemy
-            if (enemyDistance >= waveStart && enemyDistance <= waveEnd) {
-              const progress = (enemyDistance - waveStart) / waveDistance;
-              const delay = progress * waveDuration;
-
-              this.time.delayedCall(delay, () => {
-                if (e.active) {
-                  const bounds = e.getBounds();
-                  ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
-                  e.destroy();
-                }
-              });
-            } else {
-              // Enemy outside wave range, destroy immediately
-              e.destroy();
-            }
-          }
-
-          // Clear enemy array after wave completes
-          this.time.delayedCall(waveDuration, () => {
-            this.enemies = this.enemies.filter((e) => e.active);
-          });
-
-          // Smoothly transition back to full vision
-          this.tweens.add({
-            targets: this,
-            visionRadius: VISION_RADIUS_INITIAL,
-            duration: 200,
-            ease: 'Quad.easeOut',
-            onUpdate: () => {
-              this.drawPlayfield();
-            },
-          });
+          this.playDeathExplosion();
         },
       });
     } else {
@@ -2178,19 +2119,12 @@ export default class GameScene extends Phaser.Scene {
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomPassiveSelection();
 
-    // Check if terminal shrink option is available (terminal has grown beyond initial)
-    const shrinkAvailable = this.savedTerminalRadius > TERMINAL_RADIUS_INITIAL;
-
     // Layout: radial text on the left side, tilted to align with circle center
     const hudDist = this.playfieldVisualRadius + 15 * PX;
     const angStep = 10; // degrees between items
     const centerDeg = 192; // center item angle (degrees), left side
     const powerUpAngles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
-    const allAngles = [...powerUpAngles];
-    if (shrinkAvailable) {
-      allAngles.push(powerUpAngles[0] - angStep - 2); // Below power-ups with extra gap
-    }
-    this.powerUpSelectionData = { selection, nextLevel, angles: allAngles, shrinkAvailable };
+    this.powerUpSelectionData = { selection, nextLevel, angles: powerUpAngles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = powerUpAngles[2] + angStep;
@@ -2261,87 +2195,22 @@ export default class GameScene extends Phaser.Scene {
       this.powerUpUIElements.push(rarityText);
     });
 
-    // Add terminal shrink option if available
-    if (shrinkAvailable) {
-      const shrinkAngleDeg = allAngles[selection.length];
-      const shrinkLayout = this.radialTextLayout(shrinkAngleDeg, hudDist);
-
-      const shrinkNameText = this.add.text(shrinkLayout.x, shrinkLayout.y, 'Terminal Shrink', {
-        fontSize: `${52 * PX}px`,
-        color: '#cc4444',
-        fontFamily: "'Rajdhani', sans-serif",
-      });
-      shrinkNameText.setOrigin(shrinkLayout.originX, 0.5);
-      shrinkNameText.setRotation(shrinkLayout.rotation);
-
-      const shrinkAngle = (shrinkAngleDeg * Math.PI) / 180;
-      const shrinkLineOffset = -40 * PX;
-      const srx = shrinkLayout.x + Math.sin(-shrinkAngle) * shrinkLineOffset;
-      const sry = shrinkLayout.y + Math.cos(-shrinkAngle) * shrinkLineOffset;
-      const shrinkDescText = this.add.text(srx, sry, 'Shrink the terminal radius', {
-        fontSize: `${28 * PX}px`,
-        color: '#884444',
-        fontFamily: "'Rajdhani', sans-serif",
-      });
-      shrinkDescText.setOrigin(shrinkLayout.originX, 0.5);
-      shrinkDescText.setRotation(shrinkLayout.rotation);
-
-      shrinkNameText.setInteractive({ useHandCursor: true });
-      shrinkNameText.on('pointerover', () => {
-        shrinkNameText.setColor('#ff6666');
-        shrinkDescText.setColor('#cc6666');
-      });
-      shrinkNameText.on('pointerout', () => {
-        shrinkNameText.setColor('#cc4444');
-        shrinkDescText.setColor('#884444');
-      });
-      shrinkNameText.on('pointerdown', () => {
-        this.selectTerminalShrink(nextLevel);
-      });
-
-      // Pop in animation
-      shrinkNameText.setScale(0);
-      shrinkDescText.setScale(0);
-      this.tweens.add({
-        targets: [shrinkNameText, shrinkDescText],
-        scale: 1,
-        duration: 300,
-        delay: selection.length * 60,
-        ease: 'Back.easeOut',
-      });
-
-      this.powerUpItemTexts.push({ name: shrinkNameText, rarity: shrinkDescText });
-      this.powerUpUIElements.push(shrinkNameText);
-      this.powerUpUIElements.push(shrinkDescText);
-    }
-
     this.drawPowerUpHighlight();
   }
 
   private drawPowerUpHighlight() {
-    const { shrinkAvailable, selection } = this.powerUpSelectionData;
-
     this.powerUpItemTexts.forEach((item, index) => {
-      const isShrinkItem = shrinkAvailable && index === selection.length;
       const isSelected = index === this.powerUpSelectedIndex;
-
-      if (isShrinkItem) {
-        item.name.setColor(isSelected ? '#ff6666' : '#cc4444');
-        item.name.setScale(isSelected ? 1.15 : 1);
-        item.rarity.setColor(isSelected ? '#cc6666' : '#884444');
-        item.rarity.setScale(isSelected ? 1.15 : 1);
-      } else {
-        item.name.setColor(isSelected ? '#ffffff' : '#cccccc');
-        item.name.setScale(isSelected ? 1.15 : 1);
-        item.rarity.setColor(isSelected ? '#cccccc' : '#888888');
-        item.rarity.setScale(isSelected ? 1.15 : 1);
-      }
+      item.name.setColor(isSelected ? '#ffffff' : '#cccccc');
+      item.name.setScale(isSelected ? 1.15 : 1);
+      item.rarity.setColor(isSelected ? '#cccccc' : '#888888');
+      item.rarity.setScale(isSelected ? 1.15 : 1);
     });
   }
 
   private updatePowerUpGamepadNavigation() {
-    const { selection, nextLevel, angles, shrinkAvailable } = this.powerUpSelectionData;
-    const totalItems = selection.length + (shrinkAvailable ? 1 : 0);
+    const { selection, nextLevel, angles } = this.powerUpSelectionData;
+    const totalItems = selection.length;
     if (!this.isPowerUpSelectionActive || totalItems === 0) return;
 
     // Left stick: find the item whose angle is closest to the stick direction
@@ -2374,11 +2243,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.gamepadManager.isAJustPressed()) {
-      if (this.powerUpSelectedIndex < selection.length) {
-        this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
-      } else {
-        this.selectTerminalShrink(nextLevel);
-      }
+      this.selectPowerUp(selection[this.powerUpSelectedIndex], nextLevel);
     }
   }
 
@@ -2396,46 +2261,10 @@ export default class GameScene extends Phaser.Scene {
     }
     this.powerUpUIElements = [];
     this.powerUpItemTexts = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
+    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [] };
 
     // Show consumable shop phase
     this.showConsumableShop(nextLevel);
-  }
-
-  private selectTerminalShrink(nextLevel: number) {
-    // Apply shrink to the real saved terminal radius
-    const shrinkAmount = 0.04 * PLAYFIELD_RADIUS;
-    this.savedTerminalRadius = Math.max(
-      this.savedTerminalRadius - shrinkAmount,
-      TERMINAL_RADIUS_INITIAL
-    );
-
-    // Compute proportional target for the collapsed playfield
-    const targetTerminal =
-      this.savedTerminalRadius * (this.playfieldVisualRadius / PLAYFIELD_RADIUS);
-
-    // Destroy all power-up UI elements
-    for (const el of this.powerUpUIElements) {
-      el.destroy();
-    }
-    this.powerUpUIElements = [];
-    this.powerUpItemTexts = [];
-    this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [], shrinkAvailable: false };
-
-    // Animate the terminal shrink visually before proceeding
-    this.audioManager.playSound('terminalShrink');
-    this.tweens.add({
-      targets: this,
-      terminalRadius: targetTerminal,
-      duration: 300,
-      ease: 'Quad.easeInOut',
-      onUpdate: () => {
-        this.drawPlayfield();
-      },
-      onComplete: () => {
-        this.showConsumableShop(nextLevel);
-      },
-    });
   }
 
   private showConsumableShop(nextLevel: number) {
@@ -2788,6 +2617,88 @@ export default class GameScene extends Phaser.Scene {
         this.isPowerUpSelectionActive = false;
         this.levelManager.startLevel(nextLevel);
       },
+    });
+  }
+
+  // ─── Death Explosion ──────────────────────────────────────────────────
+
+  private playDeathExplosion() {
+    this.isDeathSequenceActive = true;
+
+    const savedRadius = this.terminalRadius;
+
+    // Animate vision expanding back to 100%
+    this.tweens.add({
+      targets: this,
+      visionRadius: PLAYFIELD_RADIUS,
+      duration: 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        // Player grows and trembles before exploding
+        const tremble = { t: 0 };
+        this.tweens.add({
+          targets: tremble,
+          t: 1,
+          duration: 400,
+          ease: 'Quad.easeIn',
+          onUpdate: () => {
+            const scale = 1.0 + tremble.t * 8.0;
+            const shake = tremble.t * 4 * PX * (Math.random() - 0.5);
+            this.player.x = this.centerX + shake;
+            this.player.y = this.centerY + shake;
+            this.player.setScale(scale);
+          },
+          onComplete: () => {
+            // Explode the player
+            ParticleEffects.createPlayerDeathParticles(this, this.centerX, this.centerY);
+            this.player.destroy();
+
+            // Camera shake + gamepad vibration
+            this.cameras.main.shake(400, 0.012);
+            this.gamepadManager.vibrate(400, 0.6, 1.0);
+
+            // Transition to game over after explosion finishes
+            this.time.delayedCall(1000, () => {
+              this.gameOver();
+            });
+          },
+        });
+      },
+    });
+
+    // Terminal radius explodes 100ms after vision expansion starts
+    this.time.delayedCall(100, () => {
+      this.terminalRadius = 0;
+      this.drawPlayfield();
+      ParticleEffects.createTerminalExplosion(this, this.centerX, this.centerY, savedRadius);
+      this.audioManager.playSound('explosion');
+
+      // Kill each enemy when the shockwave reaches it
+      // Shockwave: Quad.easeOut from savedRadius to PLAYFIELD_RADIUS*1.2 over 650ms
+      const shockwaveEnd = PLAYFIELD_RADIUS * 1.2;
+      const shockwaveRange = shockwaveEnd - savedRadius;
+      const shockwaveDuration = 650;
+
+      for (const enemy of [...this.enemies]) {
+        const enemyDist = distance(enemy.x, enemy.y, this.centerX, this.centerY);
+
+        let delay: number;
+        if (enemyDist <= savedRadius) {
+          delay = 0;
+        } else {
+          // Inverse of Quad.easeOut: t = 1 - sqrt(1 - fraction)
+          const fraction = Math.min((enemyDist - savedRadius) / shockwaveRange, 1);
+          delay = shockwaveDuration * (1 - Math.sqrt(1 - fraction));
+        }
+
+        this.time.delayedCall(delay, () => {
+          if (enemy.active) {
+            const bounds = enemy.getBounds();
+            ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
+            enemy.destroy();
+          }
+        });
+      }
     });
   }
 
