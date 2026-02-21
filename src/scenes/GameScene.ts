@@ -2263,6 +2263,10 @@ export default class GameScene extends Phaser.Scene {
     this.powerUpItemTexts = [];
     this.powerUpSelectionData = { selection: [], nextLevel: 0, angles: [] };
 
+    // Consume the current gamepad button state so the same A press
+    // doesn't immediately trigger the consumable shop
+    this.gamepadManager.updatePrevState();
+
     // Show consumable shop phase
     this.showConsumableShop(nextLevel);
   }
