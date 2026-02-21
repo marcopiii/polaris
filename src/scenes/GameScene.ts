@@ -2172,16 +2172,16 @@ export default class GameScene extends Phaser.Scene {
 
     // Layout: radial text on the left side with tight angular spacing
     const hudDist = this.playfieldVisualRadius + 15 * PX;
-    const angStep = 2.5; // degrees between items (tight spacing at large radius)
-    const centerDeg = 191.5; // center item angle (degrees), left side
-    const powerUpAngles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
+    const angStep = 3.5; // degrees between items
+    const firstDeg = 189; // first item angle (fixed)
+    const powerUpAngles = [firstDeg, firstDeg + angStep, firstDeg + angStep * 2];
     this.powerUpSelectionData = { selection, nextLevel, angles: powerUpAngles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = powerUpAngles[2] + angStep;
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const title = this.add.text(titleLayout.x, titleLayout.y, 'PASSIVES', {
-      fontSize: `${HUD_FONT_SECONDARY}px`,
+      fontSize: `${40 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2195,7 +2195,7 @@ export default class GameScene extends Phaser.Scene {
 
       // Name (main line)
       const nameText = this.add.text(layout.x, layout.y, powerUp.name, {
-        fontSize: `${52 * PX}px`,
+        fontSize: `${64 * PX}px`,
         color: '#cccccc',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2204,11 +2204,11 @@ export default class GameScene extends Phaser.Scene {
 
       // Rarity label (below the name — offset perpendicular to the radial direction)
       const angle = (powerUpAngles[index] * Math.PI) / 180;
-      const lineOffset = -40 * PX;
+      const lineOffset = -52 * PX;
       const rx = layout.x + Math.sin(-angle) * lineOffset;
       const ry = layout.y + Math.cos(-angle) * lineOffset;
       const rarityText = this.add.text(rx, ry, rarityLabel, {
-        fontSize: `${28 * PX}px`,
+        fontSize: `${34 * PX}px`,
         color: '#888888',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2361,11 +2361,11 @@ export default class GameScene extends Phaser.Scene {
     this.shopItemTexts = [];
 
     const hudDist = this.playfieldVisualRadius + 15 * PX;
-    const angStep = 2.5; // tight spacing at large radius
-    const centerDeg = -11.5; // RIGHT side
-    const itemAngles = [centerDeg + angStep, centerDeg, centerDeg - angStep];
-    const doneAngleDeg = centerDeg - angStep * 2;
-    const titleAngleDeg = centerDeg + angStep * 2;
+    const angStep = 3.5; // degrees between items
+    const firstDeg = -9; // first item angle (fixed)
+    const itemAngles = [firstDeg, firstDeg - angStep, firstDeg - angStep * 2];
+    const doneAngleDeg = firstDeg - angStep * 3;
+    const titleAngleDeg = firstDeg + angStep;
     const allAngles = [...itemAngles.slice(0, consumables.length), doneAngleDeg];
 
     this.shopSelectionData = {
@@ -2408,7 +2408,7 @@ export default class GameScene extends Phaser.Scene {
     // Title
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const title = this.add.text(titleLayout.x, titleLayout.y, 'CONSUMABLES', {
-      fontSize: `${HUD_FONT_SECONDARY}px`,
+      fontSize: `${40 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2418,12 +2418,12 @@ export default class GameScene extends Phaser.Scene {
 
     // Matter balance below title
     const balAngle = (titleAngleDeg * Math.PI) / 180;
-    const balLineOffset = -40 * PX;
+    const balLineOffset = -52 * PX;
     const balLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const balX = balLayout.x + Math.sin(-balAngle) * balLineOffset;
     const balY = balLayout.y + Math.cos(-balAngle) * balLineOffset;
     const balText = this.add.text(balX, balY, `MATTER: ${this.scoreManager.getMatter()}`, {
-      fontSize: `${28 * PX}px`,
+      fontSize: `${34 * PX}px`,
       color: '#aaaaaa',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2439,7 +2439,7 @@ export default class GameScene extends Phaser.Scene {
       const layout = this.radialTextLayout(itemAngles[index], hudDist);
 
       const nameText = this.add.text(layout.x, layout.y, consumable.name, {
-        fontSize: `${52 * PX}px`,
+        fontSize: `${64 * PX}px`,
         color: affordable ? '#cccccc' : '#555555',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2447,11 +2447,11 @@ export default class GameScene extends Phaser.Scene {
       nameText.setRotation(layout.rotation);
 
       const angle = (itemAngles[index] * Math.PI) / 180;
-      const lineOffset = -40 * PX;
+      const lineOffset = -52 * PX;
       const rx = layout.x + Math.sin(-angle) * lineOffset;
       const ry = layout.y + Math.cos(-angle) * lineOffset;
       const costText = this.add.text(rx, ry, `${consumable.rarity} — ${cost}`, {
-        fontSize: `${28 * PX}px`,
+        fontSize: `${34 * PX}px`,
         color: affordable ? '#888888' : '#444444',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2494,7 +2494,7 @@ export default class GameScene extends Phaser.Scene {
     // DONE option
     const doneLayout = this.radialTextLayout(doneAngleDeg, hudDist);
     const doneNameText = this.add.text(doneLayout.x, doneLayout.y, 'Done', {
-      fontSize: `${52 * PX}px`,
+      fontSize: `${64 * PX}px`,
       color: '#44cc55',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2502,11 +2502,11 @@ export default class GameScene extends Phaser.Scene {
     doneNameText.setRotation(doneLayout.rotation);
 
     const doneAngle = (doneAngleDeg * Math.PI) / 180;
-    const doneLineOffset = -40 * PX;
+    const doneLineOffset = -52 * PX;
     const drx = doneLayout.x + Math.sin(-doneAngle) * doneLineOffset;
     const dry = doneLayout.y + Math.cos(-doneAngle) * doneLineOffset;
     const doneDescText = this.add.text(drx, dry, 'Proceed to next level', {
-      fontSize: `${28 * PX}px`,
+      fontSize: `${34 * PX}px`,
       color: '#338844',
       fontFamily: "'Rajdhani', sans-serif",
     });
