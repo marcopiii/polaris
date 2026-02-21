@@ -1149,15 +1149,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Draw level progress arc (230° to 310°, 80° wide)
-    const arcRadius = radius + 50 * PX;
+    const arcRadius = radius + 30 * PX;
     const arcStartDeg = 230;
     const arcEndDeg = 310;
     const arcStart = (arcStartDeg * Math.PI) / 180;
     const arcEnd = (arcEndDeg * Math.PI) / 180;
     const progress = this.levelManager.getLevelProgress();
 
-    // Empty part (playfield color)
-    this.playfieldGraphics.lineStyle(10 * PX, COLORS.playfield, 1);
+    // Empty part (dark)
+    this.playfieldGraphics.lineStyle(10 * PX, 0x666666, 1);
     this.playfieldGraphics.beginPath();
     this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, arcEnd, false);
     this.playfieldGraphics.strokePath();
