@@ -4,7 +4,6 @@ import {
   GAME_HEIGHT,
   PLAYFIELD_RADIUS,
   TERMINAL_RADIUS_INITIAL,
-  VISION_RADIUS_INITIAL,
   COLORS,
   ENEMY_SPEED,
   ENEMY_LEVEL_EXP,
@@ -78,6 +77,7 @@ export default class GameScene extends Phaser.Scene {
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
   private isPaused: boolean = false;
+  private isDeathSequenceActive: boolean = false;
   private pauseUIElements: Phaser.GameObjects.GameObject[] = [];
   private pauseButton!: Phaser.GameObjects.Text;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -154,7 +154,7 @@ export default class GameScene extends Phaser.Scene {
     this.centerX = GAME_WIDTH / 2;
     this.centerY = GAME_HEIGHT / 2;
     this.terminalRadius = TERMINAL_RADIUS_INITIAL;
-    this.visionRadius = VISION_RADIUS_INITIAL;
+    this.visionRadius = PLAYFIELD_RADIUS;
 
     // Reset arrays to avoid stale references from previous scene runs
     this.enemies = [];
@@ -176,6 +176,7 @@ export default class GameScene extends Phaser.Scene {
     this.dustParticles = [];
     this.pauseUIElements = [];
     this.isPaused = false;
+    this.isDeathSequenceActive = false;
     this.isPowerUpSelectionActive = false;
     this.playfieldTremble = 0;
     this.playfieldVisualRadius = PLAYFIELD_RADIUS;
@@ -1222,6 +1223,20 @@ export default class GameScene extends Phaser.Scene {
     // Update blur effect every frame
     this.updateBlurEffect();
 
+    // During death sequence: only update enemies (movement) and redraw playfield
+    if (this.isDeathSequenceActive) {
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        const enemy = this.enemies[i];
+        if (!enemy.active) {
+          this.enemies.splice(i, 1);
+          continue;
+        }
+        enemy.update(delta, 1);
+      }
+      this.drawPlayfield();
+      return;
+    }
+
     // Check pause toggle (Escape key or gamepad Start)
     const escPressed = this.escKey && Phaser.Input.Keyboard.JustDown(this.escKey);
     const startPressed = this.gamepadManager.isStartJustPressed();
@@ -1408,7 +1423,7 @@ export default class GameScene extends Phaser.Scene {
       // Reset vision radius with smooth transition
       this.tweens.add({
         targets: this,
-        visionRadius: VISION_RADIUS_INITIAL,
+        visionRadius: PLAYFIELD_RADIUS,
         duration: 300,
         ease: 'Quad.easeOut',
         onUpdate: () => {
@@ -1832,7 +1847,7 @@ export default class GameScene extends Phaser.Scene {
           this.drawPlayfield();
         },
         onComplete: () => {
-          this.gameOver();
+          this.playDeathExplosion();
         },
       });
     } else {
@@ -2602,6 +2617,88 @@ export default class GameScene extends Phaser.Scene {
         this.isPowerUpSelectionActive = false;
         this.levelManager.startLevel(nextLevel);
       },
+    });
+  }
+
+  // ─── Death Explosion ──────────────────────────────────────────────────
+
+  private playDeathExplosion() {
+    this.isDeathSequenceActive = true;
+
+    const savedRadius = this.terminalRadius;
+
+    // Animate vision expanding back to 100%
+    this.tweens.add({
+      targets: this,
+      visionRadius: PLAYFIELD_RADIUS,
+      duration: 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        // Player grows and trembles before exploding
+        const tremble = { t: 0 };
+        this.tweens.add({
+          targets: tremble,
+          t: 1,
+          duration: 400,
+          ease: 'Quad.easeIn',
+          onUpdate: () => {
+            const scale = 1.0 + tremble.t * 8.0;
+            const shake = tremble.t * 4 * PX * (Math.random() - 0.5);
+            this.player.x = this.centerX + shake;
+            this.player.y = this.centerY + shake;
+            this.player.setScale(scale);
+          },
+          onComplete: () => {
+            // Explode the player
+            ParticleEffects.createPlayerDeathParticles(this, this.centerX, this.centerY);
+            this.player.destroy();
+
+            // Camera shake + gamepad vibration
+            this.cameras.main.shake(400, 0.012);
+            this.gamepadManager.vibrate(400, 0.6, 1.0);
+
+            // Transition to game over after explosion finishes
+            this.time.delayedCall(1000, () => {
+              this.gameOver();
+            });
+          },
+        });
+      },
+    });
+
+    // Terminal radius explodes 100ms after vision expansion starts
+    this.time.delayedCall(100, () => {
+      this.terminalRadius = 0;
+      this.drawPlayfield();
+      ParticleEffects.createTerminalExplosion(this, this.centerX, this.centerY, savedRadius);
+      this.audioManager.playSound('explosion');
+
+      // Kill each enemy when the shockwave reaches it
+      // Shockwave: Quad.easeOut from savedRadius to PLAYFIELD_RADIUS*1.2 over 650ms
+      const shockwaveEnd = PLAYFIELD_RADIUS * 1.2;
+      const shockwaveRange = shockwaveEnd - savedRadius;
+      const shockwaveDuration = 650;
+
+      for (const enemy of [...this.enemies]) {
+        const enemyDist = distance(enemy.x, enemy.y, this.centerX, this.centerY);
+
+        let delay: number;
+        if (enemyDist <= savedRadius) {
+          delay = 0;
+        } else {
+          // Inverse of Quad.easeOut: t = 1 - sqrt(1 - fraction)
+          const fraction = Math.min((enemyDist - savedRadius) / shockwaveRange, 1);
+          delay = shockwaveDuration * (1 - Math.sqrt(1 - fraction));
+        }
+
+        this.time.delayedCall(delay, () => {
+          if (enemy.active) {
+            const bounds = enemy.getBounds();
+            ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
+            enemy.destroy();
+          }
+        });
+      }
     });
   }
 

@@ -173,6 +173,7 @@ export default class Player {
 
   setScale(scale: number) {
     this.scale = scale;
+    this.draw();
   }
 
   getScale(): number {

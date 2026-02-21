@@ -32,6 +32,9 @@ export default class AudioManager {
         case 'gameOver':
           this.audioGenerator.playGameOver();
           break;
+        case 'explosion':
+          this.audioGenerator.playExplosion();
+          break;
         case 'lightning':
           this.audioGenerator.playLightning();
           break;

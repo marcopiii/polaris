@@ -49,7 +49,6 @@ export const BULLET_SPEED = 2.5; // 2.5 playfield radius per second
 
 // Damage system
 export const TERMINAL_RADIUS_INITIAL = 72 * PX;
-export const VISION_RADIUS_INITIAL = PLAYFIELD_RADIUS; // 100% of playfield
 
 // Level system
 export const LEVEL_BASE_DURATION = 20; // seconds
