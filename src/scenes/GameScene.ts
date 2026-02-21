@@ -1147,6 +1147,29 @@ export default class GameScene extends Phaser.Scene {
       this.playfieldGraphics.lineStyle(2 * PX, COLORS.terminalRadiusHint, 1);
       this.playfieldGraphics.strokeCircle(this.centerX, this.centerY, this.terminalRadius);
     }
+
+    // Draw level progress arc (230° to 310°, 80° wide)
+    const arcRadius = radius + 50 * PX;
+    const arcStartDeg = 230;
+    const arcEndDeg = 310;
+    const arcStart = (arcStartDeg * Math.PI) / 180;
+    const arcEnd = (arcEndDeg * Math.PI) / 180;
+    const progress = this.levelManager.getLevelProgress();
+
+    // Empty part (playfield color)
+    this.playfieldGraphics.lineStyle(10 * PX, COLORS.playfield, 1);
+    this.playfieldGraphics.beginPath();
+    this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, arcEnd, false);
+    this.playfieldGraphics.strokePath();
+
+    // Filled part (white)
+    if (progress > 0) {
+      const fillEnd = arcStart + (arcEnd - arcStart) * progress;
+      this.playfieldGraphics.lineStyle(10 * PX, 0xffffff, 1);
+      this.playfieldGraphics.beginPath();
+      this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, fillEnd, false);
+      this.playfieldGraphics.strokePath();
+    }
   }
 
   private updateAimingDot() {
