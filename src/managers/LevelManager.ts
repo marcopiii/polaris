@@ -24,7 +24,7 @@ export default class LevelManager {
     this.currentLevel = levelNumber;
     this.levelDuration = LEVEL_BASE_DURATION + LEVEL_DURATION_INCREMENT * (levelNumber - 1);
     this.levelTimer = 0;
-    this.timeSinceLastSpawn = 0;
+    this.timeSinceLastSpawn = Infinity; // Trigger first spawn immediately
     this.enemiesSpawnedThisLevel = 0;
     this.isLevelActive = true;
   }
