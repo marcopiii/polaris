@@ -82,6 +82,7 @@ export default class GameScene extends Phaser.Scene {
   private pauseButton!: Phaser.GameObjects.Text;
   private escKey!: Phaser.Input.Keyboard.Key;
   private playfieldVisualRadius: number = PLAYFIELD_RADIUS;
+  private progressArcOffset: number = 0;
   private savedTerminalRadius: number = 0;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
@@ -180,6 +181,7 @@ export default class GameScene extends Phaser.Scene {
     this.isPowerUpSelectionActive = false;
     this.playfieldTremble = 0;
     this.playfieldVisualRadius = PLAYFIELD_RADIUS;
+    this.progressArcOffset = 0;
     this.savedTerminalRadius = 0;
     this.laserBeamTimer = 0;
     this.laserScaleUpDone = false;
@@ -298,6 +300,12 @@ export default class GameScene extends Phaser.Scene {
 
     // Start first level
     this.levelManager.startLevel(START_LEVEL);
+    this.tweens.add({
+      targets: this,
+      progressArcOffset: 30 * PX,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
   }
 
   private setupConsumableKeys() {
@@ -1149,26 +1157,28 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Draw level progress arc (230° to 310°, 80° wide)
-    const arcRadius = radius + 30 * PX;
-    const arcStartDeg = 230;
-    const arcEndDeg = 310;
-    const arcStart = (arcStartDeg * Math.PI) / 180;
-    const arcEnd = (arcEndDeg * Math.PI) / 180;
-    const progress = this.levelManager.getLevelProgress();
+    if (this.progressArcOffset > 0) {
+      const arcRadius = radius + this.progressArcOffset;
+      const arcStartDeg = 230;
+      const arcEndDeg = 310;
+      const arcStart = (arcStartDeg * Math.PI) / 180;
+      const arcEnd = (arcEndDeg * Math.PI) / 180;
+      const progress = this.levelManager.getLevelProgress();
 
-    // Empty part (dark)
-    this.playfieldGraphics.lineStyle(10 * PX, 0x666666, 1);
-    this.playfieldGraphics.beginPath();
-    this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, arcEnd, false);
-    this.playfieldGraphics.strokePath();
-
-    // Filled part (white)
-    if (progress > 0) {
-      const fillEnd = arcStart + (arcEnd - arcStart) * progress;
-      this.playfieldGraphics.lineStyle(10 * PX, 0xffffff, 1);
+      // Empty part (dark)
+      this.playfieldGraphics.lineStyle(10 * PX, 0x666666, 1);
       this.playfieldGraphics.beginPath();
-      this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, fillEnd, false);
+      this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, arcEnd, false);
       this.playfieldGraphics.strokePath();
+
+      // Filled part (white)
+      if (progress > 0) {
+        const fillEnd = arcStart + (arcEnd - arcStart) * progress;
+        this.playfieldGraphics.lineStyle(10 * PX, 0xffffff, 1);
+        this.playfieldGraphics.beginPath();
+        this.playfieldGraphics.arc(this.centerX, this.centerY, arcRadius, arcStart, fillEnd, false);
+        this.playfieldGraphics.strokePath();
+      }
     }
   }
 
@@ -1452,6 +1462,14 @@ export default class GameScene extends Phaser.Scene {
         onUpdate: () => {
           this.drawPlayfield();
         },
+      });
+
+      // Collapse progress arc back into the playfield
+      this.tweens.add({
+        targets: this,
+        progressArcOffset: 0,
+        duration: 200,
+        ease: 'Quad.easeIn',
       });
 
       // Audio feedback
@@ -2643,6 +2661,12 @@ export default class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.isPowerUpSelectionActive = false;
         this.levelManager.startLevel(nextLevel);
+        this.tweens.add({
+          targets: this,
+          progressArcOffset: 30 * PX,
+          duration: 300,
+          ease: 'Back.easeOut',
+        });
       },
     });
   }
