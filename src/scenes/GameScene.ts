@@ -1186,7 +1186,9 @@ export default class GameScene extends Phaser.Scene {
 
   private updateAimingDot() {
     const shouldShowDot =
-      (this.player.isFiringActive() || this.player.isGamepadAiming()) && this.terminalRadius > 0;
+      (this.player.isFiringActive() || this.player.isGamepadAiming()) &&
+      this.terminalRadius > 0 &&
+      !this.isPowerUpSelectionActive;
     if (shouldShowDot !== this.aimingDotVisible) {
       this.aimingDotVisible = shouldShowDot;
       this.tweens.killTweensOf(this.aimingDotGraphics);
@@ -1288,6 +1290,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Pause game while power-up selection, equip screen, or benchmark end is active
     if (this.isPowerUpSelectionActive || this.benchmarkDone) {
+      this.player.x = this.centerX;
+      this.player.y = this.centerY;
+      this.player.draw();
       this.updateAimingDot();
       this.updatePowerUpGamepadNavigation();
       this.updateShopGamepadNavigation();

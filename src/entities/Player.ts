@@ -47,7 +47,7 @@ export default class Player {
     });
   }
 
-  private draw() {
+  draw() {
     this.graphics.clear();
 
     // Draw player circle with scale
