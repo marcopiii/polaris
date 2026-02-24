@@ -2153,8 +2153,8 @@ export default class GameScene extends Phaser.Scene {
     backdrop.fillPath();
     this.powerUpUIElements.push(backdrop);
 
-    // Bring HUD elements above backdrop
-    const hudElements = [
+    // Hide score HUD during passive/consumable menus
+    const scoreHudEls = [
       this.streakLabel,
       this.streakValue,
       this.scoreLabel,
@@ -2163,6 +2163,13 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(false);
+    }
+
+    // Bring remaining HUD elements above backdrop
+    const hudElements = [
       ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
@@ -2367,7 +2374,7 @@ export default class GameScene extends Phaser.Scene {
 
     const hudDist = this.playfieldVisualRadius + 15 * PX;
     const angStep = 3.5; // degrees between items
-    const firstDeg = -9; // first item angle (fixed)
+    const firstDeg = 20; // first item angle (fixed)
     const itemAngles = [firstDeg, firstDeg - angStep, firstDeg - angStep * 2];
     const doneAngleDeg = firstDeg - angStep * 3;
     const titleAngleDeg = firstDeg + angStep;
@@ -2391,8 +2398,8 @@ export default class GameScene extends Phaser.Scene {
     backdrop.fillPath();
     this.shopUIElements.push(backdrop);
 
-    // Bring HUD elements above backdrop
-    const hudEls = [
+    // Hide score HUD during consumable shop
+    const scoreHudEls = [
       this.streakLabel,
       this.streakValue,
       this.scoreLabel,
@@ -2401,6 +2408,13 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(false);
+    }
+
+    // Bring remaining HUD elements above backdrop
+    const hudEls = [
       ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
@@ -2419,6 +2433,7 @@ export default class GameScene extends Phaser.Scene {
     });
     title.setOrigin(titleLayout.originX, 0.5);
     title.setRotation(titleLayout.rotation);
+    title.setScale(0);
     this.shopUIElements.push(title);
 
     // Matter balance below title
@@ -2434,8 +2449,17 @@ export default class GameScene extends Phaser.Scene {
     });
     balText.setOrigin(balLayout.originX, 0.5);
     balText.setRotation(balLayout.rotation);
+    balText.setScale(0);
     this.shopUIElements.push(balText);
     this.shopBalanceText = balText;
+
+    // Pop in title and balance
+    this.tweens.add({
+      targets: [title, balText],
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
 
     // Shop items
     consumables.forEach((consumable, index) => {
@@ -2682,6 +2706,21 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private restorePlayfield(nextLevel: number) {
+    // Restore score HUD visibility
+    const scoreHudEls = [
+      this.streakLabel,
+      this.streakValue,
+      this.scoreLabel,
+      this.scoreValue2,
+      this.levelLabel,
+      this.levelValue,
+      this.matterLabel,
+      this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(true);
+    }
+
     // Tween center back to middle, shrink playfield to normal, restore radii
     this.tweens.add({
       targets: this,
