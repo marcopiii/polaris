@@ -21,6 +21,7 @@ export enum PowerUpType {
   SWEEPSHOT = 'SWEEPSHOT',
   ORBITAL_FLARE = 'ORBITAL_FLARE',
   FISSION_ROUND = 'FISSION_ROUND',
+  SPIRAL_NEBULAE = 'SPIRAL_NEBULAE',
 }
 
 export enum PowerUpRarity {
@@ -65,7 +66,7 @@ const MAX_CONSUMABLE_INVENTORY = 16;
 
 export const CONSUMABLE_SLOTS: { primary?: PowerUpType; secondary?: PowerUpType }[] = [
   { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
-  { primary: PowerUpType.NOVA_BURST },
+  { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SPIRAL_NEBULAE },
   { primary: PowerUpType.ORBITAL_FLARE },
   { primary: PowerUpType.FISSION_ROUND },
 ];
@@ -76,6 +77,7 @@ const CONSUMABLE_TYPES = new Set<PowerUpType>([
   PowerUpType.SWEEPSHOT,
   PowerUpType.ORBITAL_FLARE,
   PowerUpType.FISSION_ROUND,
+  PowerUpType.SPIRAL_NEBULAE,
 ]);
 
 const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
@@ -181,6 +183,13 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     type: PowerUpType.FISSION_ROUND,
     name: 'Fission Round',
     description: 'Killing shot splits into 2 new rounds',
+    rarity: PowerUpRarity.RARE,
+    consumable: true,
+  },
+  {
+    type: PowerUpType.SPIRAL_NEBULAE,
+    name: 'Spiral Nebulae',
+    description: 'Triple spiral of bullets for 1.5s',
     rarity: PowerUpRarity.RARE,
     consumable: true,
   },

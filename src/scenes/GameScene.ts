@@ -15,6 +15,10 @@ import {
   SHIELD_ORBIT_SPEED,
   FISSION_SPAWN_COUNT,
   FISSION_BULLET_SPEED,
+  SPIRAL_NEBULAE_DURATION,
+  SPIRAL_NEBULAE_FIRE_INTERVAL,
+  SPIRAL_NEBULAE_ARM_COUNT,
+  SPIRAL_NEBULAE_ROTATION_STEP,
   HUD_FONT_PRIMARY,
   HUD_FONT_SECONDARY,
   PX,
@@ -102,6 +106,9 @@ export default class GameScene extends Phaser.Scene {
 
   // Consumable state
   private laserBeamTimer: number = 0;
+  private spiralNebulaeTimer: number = 0;
+  private spiralNebulaeFireTimer: number = 0;
+  private spiralNebulaeBatchAngle: number = 0;
   private laserGraphics!: Phaser.GameObjects.Graphics;
   private laserSparks: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   private slotHudKeys: Phaser.GameObjects.Text[] = [];
@@ -187,6 +194,9 @@ export default class GameScene extends Phaser.Scene {
     this.savedVisionRadius = 0;
     this.laserBeamTimer = 0;
     this.laserScaleUpDone = false;
+    this.spiralNebulaeTimer = 0;
+    this.spiralNebulaeFireTimer = 0;
+    this.spiralNebulaeBatchAngle = 0;
     this.dustSpawnTimer = 0;
     this.dustSpawnBatch = 0;
     this.benchmarkDone = false;
@@ -662,6 +672,7 @@ export default class GameScene extends Phaser.Scene {
   private activateConsumable(type: PowerUpType) {
     if (this.isPowerUpSelectionActive) return;
     if (this.laserBeamTimer > 0) return;
+    if (this.spiralNebulaeTimer > 0) return;
 
     if (!this.powerUpManager.useConsumable(type)) return;
 
@@ -681,6 +692,9 @@ export default class GameScene extends Phaser.Scene {
       case PowerUpType.FISSION_ROUND:
         this.activateFissionRound();
         break;
+      case PowerUpType.SPIRAL_NEBULAE:
+        this.activateSpiralNebulae();
+        break;
     }
 
     this.updateConsumableHud();
@@ -689,6 +703,7 @@ export default class GameScene extends Phaser.Scene {
   private tryActivateShockwave() {
     if (this.isPowerUpSelectionActive) return;
     if (this.laserBeamTimer > 0) return;
+    if (this.spiralNebulaeTimer > 0) return;
     if (this.isDeathSequenceActive) return;
     this.activateShockwave();
   }
@@ -745,6 +760,58 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.shake(100, 0.008);
     this.gamepadManager.vibrate(100, 0.3, 0.8);
     this.audioManager.playSound('shoot');
+  }
+
+  private activateSpiralNebulae() {
+    this.spiralNebulaeTimer = SPIRAL_NEBULAE_DURATION;
+    this.spiralNebulaeFireTimer = 0; // fire immediately on first frame
+    this.spiralNebulaeBatchAngle = this.player.getRotation();
+    this.audioManager.playSound('shoot');
+  }
+
+  private updateSpiralNebulae(delta: number) {
+    if (this.spiralNebulaeTimer <= 0) return;
+
+    this.spiralNebulaeTimer -= delta;
+    this.spiralNebulaeFireTimer -= delta;
+
+    if (this.spiralNebulaeTimer <= 0) {
+      this.spiralNebulaeTimer = 0;
+      return;
+    }
+
+    // Subtle screen vibration while active
+    this.cameras.main.shake(delta, 0.002);
+    this.gamepadManager.vibrate(delta, 0.05, 0.15);
+
+    // Fire batches at the configured interval
+    while (this.spiralNebulaeFireTimer <= 0) {
+      this.spiralNebulaeFireTimer += SPIRAL_NEBULAE_FIRE_INTERVAL;
+
+      const armSpacing = (2 * Math.PI) / SPIRAL_NEBULAE_ARM_COUNT;
+      for (let i = 0; i < SPIRAL_NEBULAE_ARM_COUNT; i++) {
+        const angle = this.spiralNebulaeBatchAngle + i * armSpacing;
+        const dist = 100;
+        const tx = this.player.x + Math.cos(angle) * dist;
+        const ty = this.player.y + Math.sin(angle) * dist;
+        const bullet = new Bullet(
+          this,
+          this.player.x,
+          this.player.y,
+          tx,
+          ty,
+          this.centerX,
+          this.centerY,
+          1,
+          this.powerUpManager.getPierceChance()
+        );
+        bullet.fromConsumable = true;
+        this.bullets.push(bullet);
+      }
+
+      // Rotate for next batch
+      this.spiralNebulaeBatchAngle += SPIRAL_NEBULAE_ROTATION_STEP;
+    }
   }
 
   private laserScaleUpDone: boolean = false;
@@ -1332,6 +1399,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)
     this.updateLaserBeam(delta);
+
+    // Update spiral nebulae
+    this.updateSpiralNebulae(delta);
 
     // Update HUD
     this.updateConsumableHud();
