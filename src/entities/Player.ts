@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
-import { PLAYER_SIZE, COLORS, PLAYFIELD_RADIUS, LASER_ANGULAR_ACCEL } from '../constants';
+import {
+  PLAYER_SIZE,
+  COLORS,
+  PLAYFIELD_RADIUS,
+  LASER_ANGULAR_ACCEL,
+  PLAYER_BASE_SURFACE,
+  PLAYER_HEAT_PER_SHOT,
+  PLAYER_COOLING_RATE,
+} from '../constants';
 import { angleBetween } from '../utils/MathUtils';
 import GamepadManager from '../managers/GamepadManager';
 
@@ -15,6 +23,8 @@ export default class Player {
   private isShooting: boolean = false;
   private firing: boolean = false;
   private scale: number = 1.0;
+  private heatSurface: number = PLAYER_BASE_SURFACE;
+  private scaleOverride: number | null = null;
   private benchmarkMode: boolean;
   private gamepadManager: GamepadManager | null = null;
   private gamepadAimActive: boolean = false;
@@ -125,6 +135,10 @@ export default class Player {
       this.angularVelocity = 0;
     }
 
+    // Cool down heat
+    const dt = delta / 1000;
+    this.heatSurface = Math.max(PLAYER_BASE_SURFACE, this.heatSurface - PLAYER_COOLING_RATE * dt);
+
     // Update cooldown
     if (this.shootCooldown > 0) {
       this.shootCooldown -= delta;
@@ -156,14 +170,13 @@ export default class Player {
         targetY = pointer.y;
       }
 
-      // Pulse effect when shooting
-      this.scene.tweens.add({
-        targets: this,
-        scale: 1.4,
-        duration: 80,
-        yoyo: true,
-        ease: 'Quad.easeOut',
-      });
+      // Increase heat on shot
+      this.heatSurface += PLAYER_HEAT_PER_SHOT;
+    }
+
+    // Derive scale from heat when not overridden
+    if (this.scaleOverride === null) {
+      this.scale = Math.sqrt(this.heatSurface / PLAYER_BASE_SURFACE);
     }
 
     this.draw();
@@ -172,12 +185,35 @@ export default class Player {
   }
 
   setScale(scale: number) {
+    this.scaleOverride = scale;
     this.scale = scale;
     this.draw();
   }
 
+  clearScaleOverride() {
+    this.scaleOverride = null;
+    this.scale = Math.sqrt(this.heatSurface / PLAYER_BASE_SURFACE);
+  }
+
   getScale(): number {
     return this.scale;
+  }
+
+  /** Current scale derived from heat (ignores scale override). */
+  getHeatScale(): number {
+    return Math.sqrt(this.heatSurface / PLAYER_BASE_SURFACE);
+  }
+
+  /** Current radius in pixels based on heat (ignores scale override). */
+  getHeatRadius(): number {
+    return PLAYER_SIZE * this.getHeatScale();
+  }
+
+  resetHeat() {
+    this.heatSurface = PLAYER_BASE_SURFACE;
+    if (this.scaleOverride === null) {
+      this.scale = 1.0;
+    }
   }
 
   getRotation(): number {

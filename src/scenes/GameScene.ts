@@ -957,15 +957,16 @@ export default class GameScene extends Phaser.Scene {
     this.laserBeamTimer -= delta;
 
     if (this.laserBeamTimer <= 0) {
-      // Beam just ended — tween back to normal
+      // Beam just ended — tween back to heat-derived scale
       this.laserGraphics.clear();
       const downTarget = { value: this.player.getScale() };
       this.tweens.add({
         targets: downTarget,
-        value: 1.0,
+        value: this.player.getHeatScale(),
         duration: 200,
         ease: 'Quad.easeOut',
         onUpdate: () => this.player.setScale(downTarget.value),
+        onComplete: () => this.player.clearScaleOverride(),
       });
       return;
     }
@@ -1347,6 +1348,12 @@ export default class GameScene extends Phaser.Scene {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
 
+    // Check if player overheated (heat radius reached terminal radius)
+    if (this.player.getHeatRadius() >= this.terminalRadius) {
+      this.playDeathExplosion();
+      return;
+    }
+
     this.updateAimingDot();
 
     // Update spawn distribution and level manager
@@ -1456,7 +1463,7 @@ export default class GameScene extends Phaser.Scene {
       if (this.laserBeamTimer > 0) {
         this.laserBeamTimer = 0;
         this.laserGraphics.clear();
-        this.player.setScale(1.0);
+        this.player.clearScaleOverride();
         this.audioManager.stopSound('laser');
       }
 
@@ -2056,7 +2063,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.laserBeamTimer > 0) {
       this.laserBeamTimer = 0;
       this.laserGraphics.clear();
-      this.player.setScale(1.0);
+      this.player.clearScaleOverride();
       this.audioManager.stopSound('laser');
     }
 
@@ -2860,7 +2867,7 @@ export default class GameScene extends Phaser.Scene {
     // Clean up laser beam
     this.laserBeamTimer = 0;
     this.laserGraphics.clear();
-    this.player.setScale(1.0);
+    this.player.clearScaleOverride();
     this.audioManager.stopSound('laser');
 
     // Clean up any active UI
