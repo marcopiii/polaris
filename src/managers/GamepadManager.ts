@@ -83,6 +83,28 @@ export default class GamepadManager {
     return pad.buttons[5]?.pressed ?? false;
   }
 
+  /** Returns true if LT (button 6) is currently held. */
+  isLTPressed(): boolean {
+    const pad = this.getPad();
+    if (!pad) return false;
+    return pad.buttons[6]?.pressed ?? false;
+  }
+
+  /** Returns true if RT (button 7) is currently held. */
+  isRTPressed(): boolean {
+    const pad = this.getPad();
+    if (!pad) return false;
+    return pad.buttons[7]?.pressed ?? false;
+  }
+
+  /** Returns true if both LT and RT were just pressed together (at least one just pressed, both held). */
+  areBothTriggersJustPressed(): boolean {
+    const ltHeld = this.isLTPressed();
+    const rtHeld = this.isRTPressed();
+    if (!ltHeld || !rtHeld) return false;
+    return this.isButtonJustPressed(6) || this.isButtonJustPressed(7);
+  }
+
   /** Returns true if Start (button 9) was just pressed. */
   isStartJustPressed(): boolean {
     return this.isButtonJustPressed(9);

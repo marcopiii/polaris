@@ -1325,8 +1325,8 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Gamepad shockwave activation (RB)
-    if (this.gamepadManager.isButtonJustPressed(5)) {
+    // Gamepad shockwave activation (LT+RT)
+    if (this.gamepadManager.areBothTriggersJustPressed()) {
       this.tryActivateShockwave();
     }
 
