@@ -789,24 +789,28 @@ export default class GameScene extends Phaser.Scene {
       this.spiralNebulaeFireTimer += SPIRAL_NEBULAE_FIRE_INTERVAL;
 
       const armSpacing = (2 * Math.PI) / SPIRAL_NEBULAE_ARM_COUNT;
+      const spreadOffsets = [-3, 0, 3].map((d) => (d * Math.PI) / 180);
       for (let i = 0; i < SPIRAL_NEBULAE_ARM_COUNT; i++) {
-        const angle = this.spiralNebulaeBatchAngle + i * armSpacing;
-        const dist = 100;
-        const tx = this.player.x + Math.cos(angle) * dist;
-        const ty = this.player.y + Math.sin(angle) * dist;
-        const bullet = new Bullet(
-          this,
-          this.player.x,
-          this.player.y,
-          tx,
-          ty,
-          this.centerX,
-          this.centerY,
-          1,
-          this.powerUpManager.getPierceChance()
-        );
-        bullet.fromConsumable = true;
-        this.bullets.push(bullet);
+        const armAngle = this.spiralNebulaeBatchAngle + i * armSpacing;
+        for (const offset of spreadOffsets) {
+          const angle = armAngle + offset;
+          const dist = 100;
+          const tx = this.player.x + Math.cos(angle) * dist;
+          const ty = this.player.y + Math.sin(angle) * dist;
+          const bullet = new Bullet(
+            this,
+            this.player.x,
+            this.player.y,
+            tx,
+            ty,
+            this.centerX,
+            this.centerY,
+            0.5,
+            this.powerUpManager.getPierceChance()
+          );
+          bullet.fromConsumable = true;
+          this.bullets.push(bullet);
+        }
       }
 
       // Rotate for next batch
