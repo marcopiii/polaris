@@ -54,21 +54,21 @@ export const TERMINAL_RADIUS_INITIAL = 72 * PX;
 export const LEVEL_BASE_DURATION = 20; // seconds
 export const LEVEL_DURATION_INCREMENT = 3; // seconds
 export const SPAWN_RATE_INITIAL: Record<Difficulty, number> = {
-  easy: 0.35,
-  normal: 0.5,
-  hard: 0.65,
+  easy: 0.5,
+  normal: 0.65,
+  hard: 0.75,
   madness: 0.9,
 };
 export const SPAWN_RATE_ACCELERATION: Record<Difficulty, number> = {
-  easy: 0.03,
-  normal: 0.06,
-  hard: 0.08,
+  easy: 0.06,
+  normal: 0.08,
+  hard: 0.1,
   madness: 0.12,
 };
 export const SPAWN_RATE_LEVEL_INCREMENT: Record<Difficulty, number> = {
-  easy: 0.15,
-  normal: 0.25,
-  hard: 0.3,
+  easy: 0.25,
+  normal: 0.3,
+  hard: 0.35,
   madness: 0.4,
 };
 
