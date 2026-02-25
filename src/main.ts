@@ -14,6 +14,8 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: COLORS.background,
+  antialias: true,
+  roundPixels: false,
   scene: [
     BootScene,
     MainMenuScene,
