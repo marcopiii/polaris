@@ -110,6 +110,12 @@ export const ORBITAL_BULLET_SIZE = 8 * PX; // visual/collision radius
 export const ORBITAL_FLARE_WIDTH = 20 * PX;
 export const ORBITAL_FLARE_HEIGHT = 12 * PX;
 
+// Spiral Nebulae
+export const SPIRAL_NEBULAE_DURATION = 1500; // milliseconds
+export const SPIRAL_NEBULAE_FIRE_INTERVAL = 1000 / 15; // ~67ms (1/15s)
+export const SPIRAL_NEBULAE_ARM_COUNT = 3; // bullets per batch
+export const SPIRAL_NEBULAE_ROTATION_STEP = (12 * Math.PI) / 180; // 12 degrees per batch (180°/s at 15 batches/s)
+
 // Fission Round
 export const FISSION_SPAWN_COUNT = 2; // bullets spawned per kill
 export const FISSION_BULLET_SPEED = 2.0; // radii per second (slightly slower than normal)
