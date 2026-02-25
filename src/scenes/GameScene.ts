@@ -84,6 +84,7 @@ export default class GameScene extends Phaser.Scene {
   private playfieldVisualRadius: number = PLAYFIELD_RADIUS;
   private progressArcOffset: number = 0;
   private savedTerminalRadius: number = 0;
+  private savedVisionRadius: number = 0;
   private isPowerUpSelectionActive: boolean = false;
   private powerUpUIElements: Phaser.GameObjects.GameObject[] = [];
   private powerUpSelectedIndex: number = 0;
@@ -183,6 +184,7 @@ export default class GameScene extends Phaser.Scene {
     this.playfieldVisualRadius = PLAYFIELD_RADIUS;
     this.progressArcOffset = 0;
     this.savedTerminalRadius = 0;
+    this.savedVisionRadius = 0;
     this.laserBeamTimer = 0;
     this.laserScaleUpDone = false;
     this.dustSpawnTimer = 0;
@@ -1184,7 +1186,9 @@ export default class GameScene extends Phaser.Scene {
 
   private updateAimingDot() {
     const shouldShowDot =
-      (this.player.isFiringActive() || this.player.isGamepadAiming()) && this.terminalRadius > 0;
+      (this.player.isFiringActive() || this.player.isGamepadAiming()) &&
+      this.terminalRadius > 0 &&
+      !this.isPowerUpSelectionActive;
     if (shouldShowDot !== this.aimingDotVisible) {
       this.aimingDotVisible = shouldShowDot;
       this.tweens.killTweensOf(this.aimingDotGraphics);
@@ -1239,7 +1243,7 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         this.visionRadius,
-        PLAYFIELD_RADIUS
+        this.playfieldVisualRadius
       );
     }
   }
@@ -1286,6 +1290,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Pause game while power-up selection, equip screen, or benchmark end is active
     if (this.isPowerUpSelectionActive || this.benchmarkDone) {
+      this.player.x = this.centerX;
+      this.player.y = this.centerY;
+      this.player.draw();
       this.updateAimingDot();
       this.updatePowerUpGamepadNavigation();
       this.updateShopGamepadNavigation();
@@ -2078,19 +2085,26 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Save real terminal radius and collapse playfield visually
+    // Save real values before transition
     this.savedTerminalRadius = this.terminalRadius;
-    const collapsedR = 600 * PX;
-    const terminalRatio = this.terminalRadius / PLAYFIELD_RADIUS;
+    this.savedVisionRadius = this.visionRadius;
 
-    // Tween playfield visual radius down and terminal radius proportionally
+    const enlargedR = 3000;
+    const terminalRatio = this.terminalRadius / PLAYFIELD_RADIUS;
+    const visionRatio = this.visionRadius / PLAYFIELD_RADIUS;
+
+    // Tween center right + enlarge playfield, scale terminal/vision proportionally
     this.tweens.add({
       targets: this,
-      playfieldVisualRadius: collapsedR,
-      terminalRadius: terminalRatio * collapsedR,
-      duration: 400,
+      centerX: GAME_WIDTH,
+      playfieldVisualRadius: enlargedR,
+      terminalRadius: terminalRatio * enlargedR,
+      visionRadius: visionRatio * enlargedR,
+      duration: 500,
       ease: 'Quad.easeInOut',
       onUpdate: () => {
+        this.player.x = this.centerX;
+        this.player.y = this.centerY;
         this.drawPlayfield();
         this.repositionHud(this.playfieldVisualRadius);
       },
@@ -2128,18 +2142,19 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private buildPassiveMenu(nextLevel: number) {
-    // Backdrop matching game background, with hole for collapsed playfield
+    // Backdrop matching game background, with hole for shifted/enlarged playfield
     const backdrop = this.add.graphics();
     backdrop.fillStyle(COLORS.background, 1);
     backdrop.beginPath();
-    backdrop.arc(this.centerX, this.centerY, GAME_WIDTH, 0, Math.PI * 2, false);
+    const backdropR = Math.max(GAME_WIDTH, GAME_HEIGHT) * 1.5;
+    backdrop.arc(this.centerX, this.centerY, backdropR, 0, Math.PI * 2, false);
     backdrop.arc(this.centerX, this.centerY, this.playfieldVisualRadius, 0, Math.PI * 2, true);
     backdrop.closePath();
     backdrop.fillPath();
     this.powerUpUIElements.push(backdrop);
 
-    // Bring HUD elements above backdrop
-    const hudElements = [
+    // Hide score HUD during passive/consumable menus
+    const scoreHudEls = [
       this.streakLabel,
       this.streakValue,
       this.scoreLabel,
@@ -2148,6 +2163,13 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(false);
+    }
+
+    // Bring remaining HUD elements above backdrop
+    const hudElements = [
       ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
@@ -2160,18 +2182,18 @@ export default class GameScene extends Phaser.Scene {
     // Get 3 weighted-random power-ups
     const selection = this.powerUpManager.getRandomPassiveSelection();
 
-    // Layout: radial text on the left side, tilted to align with circle center
+    // Layout: radial text on the left side with tight angular spacing
     const hudDist = this.playfieldVisualRadius + 15 * PX;
-    const angStep = 10; // degrees between items
-    const centerDeg = 192; // center item angle (degrees), left side
-    const powerUpAngles = [centerDeg - angStep, centerDeg, centerDeg + angStep];
+    const angStep = 3.5; // degrees between items
+    const firstDeg = 189; // first item angle (fixed)
+    const powerUpAngles = [firstDeg, firstDeg + angStep, firstDeg + angStep * 2];
     this.powerUpSelectionData = { selection, nextLevel, angles: powerUpAngles };
 
     // Title above the items (higher on screen = after last item in angle order)
     const titleAngleDeg = powerUpAngles[2] + angStep;
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const title = this.add.text(titleLayout.x, titleLayout.y, 'PASSIVES', {
-      fontSize: `${HUD_FONT_SECONDARY}px`,
+      fontSize: `${40 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2185,7 +2207,7 @@ export default class GameScene extends Phaser.Scene {
 
       // Name (main line)
       const nameText = this.add.text(layout.x, layout.y, powerUp.name, {
-        fontSize: `${52 * PX}px`,
+        fontSize: `${64 * PX}px`,
         color: '#cccccc',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2194,11 +2216,11 @@ export default class GameScene extends Phaser.Scene {
 
       // Rarity label (below the name — offset perpendicular to the radial direction)
       const angle = (powerUpAngles[index] * Math.PI) / 180;
-      const lineOffset = -40 * PX;
+      const lineOffset = -52 * PX;
       const rx = layout.x + Math.sin(-angle) * lineOffset;
       const ry = layout.y + Math.cos(-angle) * lineOffset;
       const rarityText = this.add.text(rx, ry, rarityLabel, {
-        fontSize: `${28 * PX}px`,
+        fontSize: `${34 * PX}px`,
         color: '#888888',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2328,14 +2350,34 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Tween center from right to left, then build the consumable UI
+    this.tweens.add({
+      targets: this,
+      centerX: 0,
+      duration: 500,
+      ease: 'Quad.easeInOut',
+      onUpdate: () => {
+        this.player.x = this.centerX;
+        this.player.y = this.centerY;
+        this.drawPlayfield();
+        this.repositionHud(this.playfieldVisualRadius);
+      },
+      onComplete: () => {
+        this.buildConsumableMenu(consumables, nextLevel);
+      },
+    });
+  }
+
+  private buildConsumableMenu(consumables: PowerUpDefinition[], nextLevel: number) {
     this.shopSelectedIndex = 0;
     this.shopItemTexts = [];
 
     const hudDist = this.playfieldVisualRadius + 15 * PX;
-    const angStep = 10;
-    const centerDeg = -12; // RIGHT side, mirroring the passive menu's left side
-    const itemAngles = [centerDeg + angStep, centerDeg, centerDeg - angStep];
-    const doneAngleDeg = itemAngles[2] - angStep - 2;
+    const angStep = 3.5; // degrees between items
+    const firstDeg = 20; // first item angle (fixed)
+    const itemAngles = [firstDeg, firstDeg - angStep, firstDeg - angStep * 2];
+    const doneAngleDeg = firstDeg - angStep * 3;
+    const titleAngleDeg = firstDeg + angStep;
     const allAngles = [...itemAngles.slice(0, consumables.length), doneAngleDeg];
 
     this.shopSelectionData = {
@@ -2345,18 +2387,19 @@ export default class GameScene extends Phaser.Scene {
       purchased: new Set(),
     };
 
-    // Backdrop ring (same as passive menu)
+    // Backdrop ring
     const backdrop = this.add.graphics();
     backdrop.fillStyle(COLORS.background, 1);
     backdrop.beginPath();
-    backdrop.arc(this.centerX, this.centerY, GAME_WIDTH, 0, Math.PI * 2, false);
+    const backdropR = Math.max(GAME_WIDTH, GAME_HEIGHT) * 1.5;
+    backdrop.arc(this.centerX, this.centerY, backdropR, 0, Math.PI * 2, false);
     backdrop.arc(this.centerX, this.centerY, this.playfieldVisualRadius, 0, Math.PI * 2, true);
     backdrop.closePath();
     backdrop.fillPath();
     this.shopUIElements.push(backdrop);
 
-    // Bring HUD elements above backdrop
-    const hudEls = [
+    // Hide score HUD during consumable shop
+    const scoreHudEls = [
       this.streakLabel,
       this.streakValue,
       this.scoreLabel,
@@ -2365,6 +2408,13 @@ export default class GameScene extends Phaser.Scene {
       this.levelValue,
       this.matterLabel,
       this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(false);
+    }
+
+    // Bring remaining HUD elements above backdrop
+    const hudEls = [
       ...this.slotHudKeys,
       ...this.slotHudPrimary,
       ...this.slotHudSecondary,
@@ -2375,32 +2425,41 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Title
-    const titleAngleDeg = itemAngles[0] + angStep;
     const titleLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const title = this.add.text(titleLayout.x, titleLayout.y, 'CONSUMABLES', {
-      fontSize: `${HUD_FONT_SECONDARY}px`,
+      fontSize: `${40 * PX}px`,
       color: '#ffffff',
       fontFamily: "'Rajdhani', sans-serif",
     });
     title.setOrigin(titleLayout.originX, 0.5);
     title.setRotation(titleLayout.rotation);
+    title.setScale(0);
     this.shopUIElements.push(title);
 
     // Matter balance below title
     const balAngle = (titleAngleDeg * Math.PI) / 180;
-    const balLineOffset = -40 * PX;
+    const balLineOffset = -52 * PX;
     const balLayout = this.radialTextLayout(titleAngleDeg, hudDist);
     const balX = balLayout.x + Math.sin(-balAngle) * balLineOffset;
     const balY = balLayout.y + Math.cos(-balAngle) * balLineOffset;
     const balText = this.add.text(balX, balY, `MATTER: ${this.scoreManager.getMatter()}`, {
-      fontSize: `${28 * PX}px`,
+      fontSize: `${34 * PX}px`,
       color: '#aaaaaa',
       fontFamily: "'Rajdhani', sans-serif",
     });
     balText.setOrigin(balLayout.originX, 0.5);
     balText.setRotation(balLayout.rotation);
+    balText.setScale(0);
     this.shopUIElements.push(balText);
     this.shopBalanceText = balText;
+
+    // Pop in title and balance
+    this.tweens.add({
+      targets: [title, balText],
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
 
     // Shop items
     consumables.forEach((consumable, index) => {
@@ -2409,7 +2468,7 @@ export default class GameScene extends Phaser.Scene {
       const layout = this.radialTextLayout(itemAngles[index], hudDist);
 
       const nameText = this.add.text(layout.x, layout.y, consumable.name, {
-        fontSize: `${52 * PX}px`,
+        fontSize: `${64 * PX}px`,
         color: affordable ? '#cccccc' : '#555555',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2417,11 +2476,11 @@ export default class GameScene extends Phaser.Scene {
       nameText.setRotation(layout.rotation);
 
       const angle = (itemAngles[index] * Math.PI) / 180;
-      const lineOffset = -40 * PX;
+      const lineOffset = -52 * PX;
       const rx = layout.x + Math.sin(-angle) * lineOffset;
       const ry = layout.y + Math.cos(-angle) * lineOffset;
       const costText = this.add.text(rx, ry, `${consumable.rarity} — ${cost}`, {
-        fontSize: `${28 * PX}px`,
+        fontSize: `${34 * PX}px`,
         color: affordable ? '#888888' : '#444444',
         fontFamily: "'Rajdhani', sans-serif",
       });
@@ -2464,7 +2523,7 @@ export default class GameScene extends Phaser.Scene {
     // DONE option
     const doneLayout = this.radialTextLayout(doneAngleDeg, hudDist);
     const doneNameText = this.add.text(doneLayout.x, doneLayout.y, 'Done', {
-      fontSize: `${52 * PX}px`,
+      fontSize: `${64 * PX}px`,
       color: '#44cc55',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2472,11 +2531,11 @@ export default class GameScene extends Phaser.Scene {
     doneNameText.setRotation(doneLayout.rotation);
 
     const doneAngle = (doneAngleDeg * Math.PI) / 180;
-    const doneLineOffset = -40 * PX;
+    const doneLineOffset = -52 * PX;
     const drx = doneLayout.x + Math.sin(-doneAngle) * doneLineOffset;
     const dry = doneLayout.y + Math.cos(-doneAngle) * doneLineOffset;
     const doneDescText = this.add.text(drx, dry, 'Proceed to next level', {
-      fontSize: `${28 * PX}px`,
+      fontSize: `${34 * PX}px`,
       color: '#338844',
       fontFamily: "'Rajdhani', sans-serif",
     });
@@ -2647,14 +2706,33 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private restorePlayfield(nextLevel: number) {
-    // Expand playfield back to full size with terminal radius restoring proportionally
+    // Restore score HUD visibility
+    const scoreHudEls = [
+      this.streakLabel,
+      this.streakValue,
+      this.scoreLabel,
+      this.scoreValue2,
+      this.levelLabel,
+      this.levelValue,
+      this.matterLabel,
+      this.matterValue,
+    ];
+    for (const el of scoreHudEls) {
+      el.setVisible(true);
+    }
+
+    // Tween center back to middle, shrink playfield to normal, restore radii
     this.tweens.add({
       targets: this,
+      centerX: GAME_WIDTH / 2,
       playfieldVisualRadius: PLAYFIELD_RADIUS,
       terminalRadius: this.savedTerminalRadius,
-      duration: 300,
-      ease: 'Quad.easeOut',
+      visionRadius: this.savedVisionRadius,
+      duration: 500,
+      ease: 'Quad.easeInOut',
       onUpdate: () => {
+        this.player.x = this.centerX;
+        this.player.y = this.centerY;
         this.drawPlayfield();
         this.repositionHud(this.playfieldVisualRadius);
       },
