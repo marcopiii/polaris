@@ -1348,8 +1348,15 @@ export default class GameScene extends Phaser.Scene {
       this.shoot(shootInfo.targetX, shootInfo.targetY);
     }
 
+    // Screen tremble when heat radius approaches terminal radius
+    const heatRatio = this.player.getHeatRadius() / this.terminalRadius;
+    if (heatRatio >= 0.65) {
+      const intensity = (heatRatio - 0.65) / 0.35; // 0→1 over the 0.65→1.0 range
+      this.cameras.main.shake(delta, 0.008 * intensity);
+    }
+
     // Check if player overheated (heat radius reached terminal radius)
-    if (this.player.getHeatRadius() >= this.terminalRadius) {
+    if (heatRatio >= 1) {
       this.playDeathExplosion();
       return;
     }
