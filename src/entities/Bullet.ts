@@ -25,6 +25,7 @@ export default class Bullet {
   public isManual: boolean = false;
   public hasHitEnemy: boolean = false;
   public isFission: boolean = false;
+  public fromConsumable: boolean = false;
 
   constructor(
     scene: Phaser.Scene,

@@ -738,6 +738,7 @@ export default class GameScene extends Phaser.Scene {
         1,
         pierceChance
       );
+      bullet.fromConsumable = true;
       this.bullets.push(bullet);
     }
 
@@ -813,6 +814,7 @@ export default class GameScene extends Phaser.Scene {
       this.powerUpManager.getPierceChance()
     );
     bullet.isFission = true;
+    bullet.fromConsumable = true;
     this.bullets.push(bullet);
 
     this.audioManager.playSound('shoot');
@@ -841,6 +843,7 @@ export default class GameScene extends Phaser.Scene {
         0
       );
       bullet.isFission = true;
+      bullet.fromConsumable = true;
       this.bullets.push(bullet);
     }
   }
@@ -867,7 +870,6 @@ export default class GameScene extends Phaser.Scene {
 
         if (sweep.checkCollision(enemyBounds.x, enemyBounds.y, enemyBounds.radius)) {
           ParticleEffects.createEnemyDeathParticles(this, enemyBounds.x, enemyBounds.y);
-          this.scoreManager.addMatter(enemy.getHealth());
           this.scoreManager.addKill(enemy.tier);
           this.audioManager.playSound('hit');
           enemy.destroy();
@@ -933,7 +935,6 @@ export default class GameScene extends Phaser.Scene {
             this.orbitalBullets.splice(i, 1);
           }
 
-          this.scoreManager.addMatter(1);
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
@@ -1067,7 +1068,6 @@ export default class GameScene extends Phaser.Scene {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
         ParticleEffects.createBulletHitParticles(this, bounds.x, bounds.y);
-        this.scoreManager.addMatter(enemy.getHealth());
         this.scoreManager.addKill(enemy.tier);
         this.audioManager.playSound('hit');
         enemy.destroy();
@@ -1695,7 +1695,9 @@ export default class GameScene extends Phaser.Scene {
             this.bullets.splice(i, 1);
           }
 
-          this.scoreManager.addMatter(1);
+          if (!bullet.fromConsumable) {
+            this.scoreManager.addMatter(1);
+          }
           const killed = enemy.hit();
           if (killed) {
             this.enemies.splice(j, 1);
