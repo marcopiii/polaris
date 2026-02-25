@@ -328,6 +328,11 @@ export default class GameScene extends Phaser.Scene {
     bindSlot('keydown-W', 1);
     bindSlot('keydown-E', 2);
     bindSlot('keydown-R', 3);
+
+    // Shockwave: always-available ability on Space
+    keyboard.on('keydown-SPACE', () => {
+      this.tryActivateShockwave();
+    });
   }
 
   // ─── Radial Positioning Helper ───────────────────────────────────────
@@ -661,9 +666,6 @@ export default class GameScene extends Phaser.Scene {
     if (!this.powerUpManager.useConsumable(type)) return;
 
     switch (type) {
-      case PowerUpType.SHOCKWAVE:
-        this.activateShockwave();
-        break;
       case PowerUpType.NOVA_BURST:
         this.activateNovaBurst();
         break;
@@ -684,6 +686,13 @@ export default class GameScene extends Phaser.Scene {
     this.updateConsumableHud();
   }
 
+  private tryActivateShockwave() {
+    if (this.isPowerUpSelectionActive) return;
+    if (this.laserBeamTimer > 0) return;
+    if (this.isDeathSequenceActive) return;
+    this.activateShockwave();
+  }
+
   private activateShockwave() {
     // Visual effect
     ParticleEffects.createShockwaveEffect(this, this.centerX, this.centerY);
@@ -691,17 +700,22 @@ export default class GameScene extends Phaser.Scene {
     this.gamepadManager.vibrate(200, 0.3, 0.8);
     this.audioManager.playSound('terminalGrow');
 
-    // Kill all enemies
+    // Reset streak — shockwave is a panic ability
+    this.scoreManager.resetHitStreak();
+
+    // Kill all enemies — no score or matter awarded
     for (const enemy of this.enemies) {
       if (enemy.active) {
         const bounds = enemy.getBounds();
         ParticleEffects.createEnemyDeathParticles(this, bounds.x, bounds.y);
-        this.scoreManager.addMatter(enemy.getHealth());
-        this.scoreManager.addKill(enemy.tier);
         enemy.destroy();
       }
     }
     this.enemies = [];
+
+    // Increase terminal radius by 3% AFTER killing enemies
+    this.terminalRadius *= 1.03;
+    this.drawPlayfield();
   }
 
   private activateNovaBurst() {
@@ -1309,6 +1323,11 @@ export default class GameScene extends Phaser.Scene {
           this.gamepadManager.isLBPressed() && slot.secondary ? slot.secondary : slot.primary;
         if (type) this.activateConsumable(type);
       }
+    }
+
+    // Gamepad shockwave activation (RB)
+    if (this.gamepadManager.isButtonJustPressed(5)) {
+      this.tryActivateShockwave();
     }
 
     // Update laser beam (runs even if not active — clears graphics when timer is 0)

@@ -13,8 +13,9 @@ export enum PowerUpType {
   PUSHBACK = 'PUSHBACK',
   TAIL_GUN = 'TAIL_GUN',
   VISION_RECOVERY = 'VISION_RECOVERY',
-  // Consumables (one-use, activated during gameplay)
+  // Abilities (always available, with cost)
   SHOCKWAVE = 'SHOCKWAVE',
+  // Consumables (one-use, activated during gameplay)
   NOVA_BURST = 'NOVA_BURST',
   LASER_BEAM = 'LASER_BEAM',
   SWEEPSHOT = 'SWEEPSHOT',
@@ -64,13 +65,12 @@ const MAX_CONSUMABLE_INVENTORY = 16;
 
 export const CONSUMABLE_SLOTS: { primary?: PowerUpType; secondary?: PowerUpType }[] = [
   { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
-  { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SHOCKWAVE },
+  { primary: PowerUpType.NOVA_BURST },
   { primary: PowerUpType.ORBITAL_FLARE },
   { primary: PowerUpType.FISSION_ROUND },
 ];
 
 const CONSUMABLE_TYPES = new Set<PowerUpType>([
-  PowerUpType.SHOCKWAVE,
   PowerUpType.NOVA_BURST,
   PowerUpType.LASER_BEAM,
   PowerUpType.SWEEPSHOT,
@@ -148,13 +148,6 @@ const POWER_UP_DEFINITIONS: PowerUpDefinition[] = [
     description: 'Recover 1% vision per enemy killed',
     rarity: PowerUpRarity.RARE,
     consumable: false,
-  },
-  {
-    type: PowerUpType.SHOCKWAVE,
-    name: 'Shockwave',
-    description: 'Destroy all enemies at once',
-    rarity: PowerUpRarity.LEGENDARY,
-    consumable: true,
   },
   {
     type: PowerUpType.NOVA_BURST,
