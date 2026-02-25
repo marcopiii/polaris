@@ -63,10 +63,10 @@ export interface PowerUpDefinition {
 const MAX_CONSUMABLE_INVENTORY = 16;
 
 export const CONSUMABLE_SLOTS: { primary?: PowerUpType; secondary?: PowerUpType }[] = [
-  { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM },
-  { primary: PowerUpType.NOVA_BURST, secondary: PowerUpType.SHOCKWAVE },
-  { primary: PowerUpType.ORBITAL_FLARE },
-  { primary: PowerUpType.FISSION_ROUND },
+  { primary: PowerUpType.SWEEPSHOT, secondary: PowerUpType.LASER_BEAM }, // Gamepad A
+  { primary: PowerUpType.NOVA_BURST }, // Gamepad B
+  { primary: PowerUpType.ORBITAL_FLARE, secondary: PowerUpType.FISSION_ROUND }, // Gamepad X
+  { primary: PowerUpType.SHOCKWAVE }, // Gamepad Y
 ];
 
 const CONSUMABLE_TYPES = new Set<PowerUpType>([
