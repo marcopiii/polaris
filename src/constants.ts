@@ -49,8 +49,8 @@ export const BULLET_SPEED = 2.5; // 2.5 playfield radius per second
 
 // Player heat system
 export const PLAYER_BASE_SURFACE = 100;
-export const PLAYER_HEAT_PER_SHOT = 3; // surface units added per shot
-export const PLAYER_COOLING_RATE = 24; // surface units removed per second
+export const PLAYER_HEAT_PER_SHOT = 96; // surface units added per shot
+export const PLAYER_COOLING_RATE = 768; // surface units removed per second
 
 // Damage system
 export const TERMINAL_RADIUS_INITIAL = 72 * PX;
