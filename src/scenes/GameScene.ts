@@ -713,8 +713,8 @@ export default class GameScene extends Phaser.Scene {
     }
     this.enemies = [];
 
-    // Increase terminal radius by 3% AFTER killing enemies
-    this.terminalRadius *= 1.03;
+    // Increase terminal radius by 4% of playfield radius AFTER killing enemies
+    this.terminalRadius += PLAYFIELD_RADIUS * 0.04;
     this.drawPlayfield();
   }
 
