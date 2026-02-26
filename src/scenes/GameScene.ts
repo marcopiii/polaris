@@ -1554,9 +1554,11 @@ export default class GameScene extends Phaser.Scene {
       const completedLevel = this.levelManager.getCurrentLevel();
       this.levelManager.completeLevel();
 
-      // Clean up bullets
+      // Clean up bullets and sweep shots
       for (const bullet of this.bullets) bullet.destroy();
       this.bullets = [];
+      for (const sweep of this.sweepShots) sweep.destroy();
+      this.sweepShots = [];
       for (const flare of this.orbitalFlares) flare.destroy();
       this.orbitalFlares = [];
       for (const bullet of this.orbitalBullets) bullet.destroy();
@@ -2183,6 +2185,16 @@ export default class GameScene extends Phaser.Scene {
   // ─── Radial Power-Up Selection UI ─────────────────────────────────────
 
   private showPowerUpSelection(completedLevel: number) {
+    // Clean up any bullets fired during the transition delay
+    for (const bullet of this.bullets) bullet.destroy();
+    this.bullets = [];
+    for (const sweep of this.sweepShots) sweep.destroy();
+    this.sweepShots = [];
+    for (const flare of this.orbitalFlares) flare.destroy();
+    this.orbitalFlares = [];
+    for (const bullet of this.orbitalBullets) bullet.destroy();
+    this.orbitalBullets = [];
+
     this.isPowerUpSelectionActive = true;
     const nextLevel = completedLevel + 1;
     this.powerUpSelectedIndex = 0;
