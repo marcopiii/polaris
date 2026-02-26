@@ -213,6 +213,8 @@ export default class GameScene extends Phaser.Scene {
     this.audioManager = new AudioManager(this);
     this.powerUpManager = new PowerUpManager();
     this.gamepadManager = new GamepadManager();
+    this.input.keyboard?.on('keydown', () => this.gamepadManager.setKeyboardMode());
+    this.input.on('pointermove', () => this.gamepadManager.setKeyboardMode());
     this.spawnDistribution = new SpawnDistribution();
 
     // Set up blur effect
@@ -378,10 +380,16 @@ export default class GameScene extends Phaser.Scene {
 
   // ─── Consumable HUD ──────────────────────────────────────────────────
 
+  private getConsumableKeyLabels(): string[] {
+    return this.gamepadManager.getInputMode() === 'gamepad'
+      ? ['A', 'B', 'X', 'Y']
+      : ['Q', 'W', 'E', 'R'];
+  }
+
   private createConsumableHud() {
     const hudY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;
     const color = '#' + COLORS.playfield.toString(16).padStart(6, '0');
-    const keyLabels = ['Q', 'W', 'E', 'R'];
+    const keyLabels = this.getConsumableKeyLabels();
 
     for (let i = 0; i < CONSUMABLE_SLOTS.length; i++) {
       const hudX = this.centerX + (i - 1.5) * 350 * PX;
@@ -420,6 +428,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateConsumableHud() {
+    // Refresh key labels based on current input mode
+    const keyLabels = this.getConsumableKeyLabels();
+    for (let i = 0; i < this.slotHudKeys.length; i++) {
+      this.slotHudKeys[i].setText(`[${keyLabels[i]}]`);
+    }
+
     const modHeld = this.isModifierHeld();
     const playfieldColor = '#' + COLORS.playfield.toString(16).padStart(6, '0');
     const topY = this.centerY + PLAYFIELD_RADIUS + 50 * PX;

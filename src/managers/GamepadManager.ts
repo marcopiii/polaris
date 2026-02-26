@@ -13,16 +13,27 @@ export function saveGamepadDeadzone(value: number): void {
   localStorage.setItem(GAMEPAD_DEADZONE_STORAGE_KEY, value.toFixed(2));
 }
 
+type InputMode = 'keyboard' | 'gamepad';
+
 export default class GamepadManager {
   private prevButtons: boolean[] = [];
   private prevStickX: number = 0;
   private deadzone: number;
+  private inputMode: InputMode = 'keyboard';
 
   constructor(deadzone?: number) {
     this.deadzone = deadzone ?? loadGamepadDeadzone();
     // Snapshot current state so buttons held from the previous scene
     // don't register as "just pressed" on the first frame.
     this.updatePrevState();
+  }
+
+  getInputMode(): InputMode {
+    return this.inputMode;
+  }
+
+  setKeyboardMode(): void {
+    this.inputMode = 'keyboard';
   }
 
   private getPad(): Gamepad | null {
@@ -179,6 +190,14 @@ export default class GamepadManager {
       this.prevButtons = [];
       this.prevStickX = 0;
       return;
+    }
+
+    // Detect gamepad activity: any new button press or significant stick movement
+    const anyNewPress = pad.buttons.some((b, i) => b.pressed && !(this.prevButtons[i] ?? false));
+    const lx = pad.axes[0] ?? 0;
+    const ly = pad.axes[1] ?? 0;
+    if (anyNewPress || Math.sqrt(lx * lx + ly * ly) > this.deadzone) {
+      this.inputMode = 'gamepad';
     }
 
     this.prevButtons = pad.buttons.map((b) => b.pressed);
