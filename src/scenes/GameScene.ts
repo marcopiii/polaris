@@ -78,6 +78,8 @@ export default class GameScene extends Phaser.Scene {
   private visionRadius!: number;
 
   private playfieldGraphics!: Phaser.GameObjects.Graphics;
+  private playfieldMask!: Phaser.Display.Masks.GeometryMask;
+  private playfieldMaskGraphics!: Phaser.GameObjects.Graphics;
   private blurShader!: VisionBlurShader | null;
   private playfieldTremble: number = 0;
   private isPaused: boolean = false;
@@ -220,6 +222,11 @@ export default class GameScene extends Phaser.Scene {
     this.playfieldGraphics = this.add.graphics();
     this.dustGraphics = this.add.graphics();
     this.drawPlayfield();
+
+    // Circular mask to clip bullets at the playfield edge
+    this.playfieldMaskGraphics = this.make.graphics({ x: 0, y: 0 }, false);
+    this.playfieldMaskGraphics.fillCircle(this.centerX, this.centerY, PLAYFIELD_RADIUS);
+    this.playfieldMask = this.playfieldMaskGraphics.createGeometryMask();
 
     // Laser beam graphics layer
     this.laserGraphics = this.add.graphics();
@@ -751,7 +758,8 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         1,
-        pierceChance
+        pierceChance,
+        this.playfieldMask
       );
       bullet.fromConsumable = true;
       this.bullets.push(bullet);
@@ -806,7 +814,8 @@ export default class GameScene extends Phaser.Scene {
             this.centerX,
             this.centerY,
             0.5,
-            this.powerUpManager.getPierceChance()
+            this.powerUpManager.getPierceChance(),
+            this.playfieldMask
           );
           bullet.fromConsumable = true;
           this.bullets.push(bullet);
@@ -882,7 +891,8 @@ export default class GameScene extends Phaser.Scene {
       this.centerX,
       this.centerY,
       FISSION_BULLET_SPEED / 2.5, // speedMultiplier relative to BULLET_SPEED
-      this.powerUpManager.getPierceChance()
+      this.powerUpManager.getPierceChance(),
+      this.playfieldMask
     );
     bullet.isFission = true;
     bullet.fromConsumable = true;
@@ -911,7 +921,8 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         FISSION_BULLET_SPEED / 2.5,
-        0
+        0,
+        this.playfieldMask
       );
       bullet.isFission = true;
       bullet.fromConsumable = true;
@@ -1645,7 +1656,8 @@ export default class GameScene extends Phaser.Scene {
         this.centerX,
         this.centerY,
         1,
-        pierceChance
+        pierceChance,
+        this.playfieldMask
       );
       bullet.isManual = true;
       this.bullets.push(bullet);
@@ -1666,7 +1678,8 @@ export default class GameScene extends Phaser.Scene {
           this.centerX,
           this.centerY,
           1,
-          pierceChance
+          pierceChance,
+          this.playfieldMask
         );
         bullet.isManual = true;
         this.bullets.push(bullet);
@@ -1690,7 +1703,8 @@ export default class GameScene extends Phaser.Scene {
           this.centerX,
           this.centerY,
           1,
-          pierceChance
+          pierceChance,
+          this.playfieldMask
         );
         this.bullets.push(bullet);
       } else {
@@ -1709,7 +1723,8 @@ export default class GameScene extends Phaser.Scene {
             this.centerX,
             this.centerY,
             1,
-            pierceChance
+            pierceChance,
+            this.playfieldMask
           );
           this.bullets.push(bullet);
         }
