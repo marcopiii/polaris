@@ -35,8 +35,9 @@ export default class Player {
     this.y = y;
     this.benchmarkMode = benchmarkMode;
 
-    // Create graphics
+    // Create graphics (depth 1 so player renders above bullets/enemies)
     this.graphics = scene.add.graphics();
+    this.graphics.setDepth(1);
     this.draw();
 
     // Set up input

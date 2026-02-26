@@ -36,7 +36,8 @@ export default class Bullet {
     centerX: number,
     centerY: number,
     speedMultiplier: number = 1,
-    pierceChance: number = 0
+    pierceChance: number = 0,
+    mask?: Phaser.Display.Masks.GeometryMask
   ) {
     this.x = startX;
     this.y = startY;
@@ -60,6 +61,7 @@ export default class Bullet {
 
     // Create graphics
     this.graphics = scene.add.graphics();
+    if (mask) this.graphics.setMask(mask);
     this.draw();
   }
 
