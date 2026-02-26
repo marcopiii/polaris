@@ -50,6 +50,9 @@ export default class AudioManager {
         case 'orbitalPip':
           this.audioGenerator.playOrbitalPip();
           break;
+        case 'grave':
+          this.audioGenerator.playGrave();
+          break;
       }
     } catch (error) {
       console.warn('Audio playback failed:', error);
@@ -62,6 +65,9 @@ export default class AudioManager {
       switch (key) {
         case 'laser':
           this.audioGenerator.stopLaser();
+          break;
+        case 'grave':
+          this.audioGenerator.stopGrave();
           break;
       }
     } catch (error) {

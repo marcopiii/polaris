@@ -365,6 +365,76 @@ export class AudioGenerator {
     osc.stop(t + duration);
   }
 
+  private graveGain: GainNode | null = null;
+  private graveOsc1: OscillatorNode | null = null;
+  private graveOsc2: OscillatorNode | null = null;
+  private graveLfo: OscillatorNode | null = null;
+
+  playGrave() {
+    if (this.graveGain) return; // already playing
+
+    const t = this.audioContext.currentTime;
+    const gainNode = this.audioContext.createGain();
+
+    // Low sawtooth drone
+    const osc1 = this.audioContext.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(55, t);
+
+    // Detuned second oscillator for thickness
+    const osc2 = this.audioContext.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(57, t);
+
+    // LFO for electric pulsing
+    const lfo = this.audioContext.createOscillator();
+    const lfoGain = this.audioContext.createGain();
+    lfo.type = 'square';
+    lfo.frequency.setValueAtTime(12, t);
+    lfoGain.gain.setValueAtTime(0.15, t);
+    lfo.connect(lfoGain);
+    lfoGain.connect(gainNode.gain);
+
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(this.masterGain);
+
+    // Fade in
+    gainNode.gain.setValueAtTime(0.01, t);
+    gainNode.gain.linearRampToValueAtTime(0.3, t + 0.15);
+
+    osc1.start(t);
+    osc2.start(t);
+    lfo.start(t);
+
+    this.graveGain = gainNode;
+    this.graveOsc1 = osc1;
+    this.graveOsc2 = osc2;
+    this.graveLfo = lfo;
+  }
+
+  stopGrave() {
+    const t = this.audioContext.currentTime;
+    if (this.graveGain) {
+      this.graveGain.gain.cancelScheduledValues(t);
+      this.graveGain.gain.setValueAtTime(this.graveGain.gain.value, t);
+      this.graveGain.gain.linearRampToValueAtTime(0.01, t + 0.08);
+    }
+    if (this.graveOsc1) {
+      this.graveOsc1.stop(t + 0.08);
+      this.graveOsc1 = null;
+    }
+    if (this.graveOsc2) {
+      this.graveOsc2.stop(t + 0.08);
+      this.graveOsc2 = null;
+    }
+    if (this.graveLfo) {
+      this.graveLfo.stop(t + 0.08);
+      this.graveLfo = null;
+    }
+    this.graveGain = null;
+  }
+
   private createNoiseBuffer(duration: number): AudioBuffer {
     const bufferSize = this.audioContext.sampleRate * duration;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
